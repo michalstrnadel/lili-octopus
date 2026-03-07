@@ -1,0 +1,30 @@
+; Cursor Rules — Projekt Lili
+; Přečti AGENTS.md jako první — obsahuje kompletní kontext projektu.
+
+; === PROJEKT ===
+; Lili = autonomní digitální chobotnice (Q-Learning RL agent) na webové stránce.
+; Jeden JS soubor (public/lili.js), zero dependencies, 10letý životní cyklus.
+; Akademický experiment v digitální ontogenezi.
+
+; === CO ČÍST ===
+; 1. AGENTS.md — hlavní AI kontext (aktuální stav, co číst, konvence)
+; 2. docs/IMPLEMENTATION_PLAN.md — co implementovat (12 fází)
+; 3. LILI_PRD_v1.md — specifikace (zdroj pravdy, 860 řádků)
+
+; === PRAVIDLA ===
+; - Vše v jednom souboru: public/lili.js (IIFE wrapper, 'use strict')
+; - Zero dependencies — žádné importy, žádné npm, žádné CDN
+; - Vanilla JavaScript ES6+, Canvas 2D API, localStorage
+; - Brain Interface pattern: brain.chooseAction(), brain.learn(), brain.serialize()
+; - Komentáře v angličtině, dokumentace v češtině
+; - Zaznamenávej rozhodnutí do docs/journal/YYYY-MM-DD-topic.md
+; - Aktualizuj AGENTS.md při změně stavu projektu
+
+; === CO NEDĚLAT ===
+; - Nerozdělovat lili.js na více souborů
+; - Nepřidávat závislosti
+; - Nepoužívat generativní dialog (Lili nemluví)
+; - Neměnit reward function bez zdůvodnění
+; - Nemazat lili_genesis timestamp
+; - Nemodifikovat DOM layout (jen transform a color)
+; - Neodesílat data (vše 100% lokální)
