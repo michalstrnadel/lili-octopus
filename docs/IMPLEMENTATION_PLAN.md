@@ -62,9 +62,11 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Výstup:** Viditelný kruh (placeholder) plynule pluje po stránce, obchází DOM elementy, neprochází přes okraje.
 
-## Fáze 3: FABRIK IK — chapadla
+## Fáze 3: FABRIK IK — chapadla jako autonomní jednotky
 
-**Cíl:** 8 procedurálně animovaných chapadel s inverzní kinematikou.
+**Cíl:** 8 procedurálně animovaných chapadel s inverzní kinematikou a lokální inteligencí.
+
+**Biologický princip:** Reálné chobotnice mají 2/3 neuronů v chapadlech. Každé chapadlo je semi-autonomní — dokáže samostatně reagovat na podměty bez čekání na centrální mozek.
 
 **Úkoly:**
 - Data struktura: 8 chapadel × 8 segmentů. Segment délka modulovaná věkem (zatím fixní default).
@@ -73,17 +75,29 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
     - Forward Reach: tip → target, přepočet pozic od tipu k base (zachování délky segmentů)
     - Backward Reach: base → anchor, přepočet od base k tipu
     - 3-4 iterace per frame
-- Target generování podle kontextu:
-    - **Plavání (wander/seek):** sinusoidní vlna se zpožděním per chapadlo, fáze `(index/8)*2π`, frekvence z CFG
-    - **Blízko DOM (explore_dom):** 1-2 chapadla cílí na nejbližší hranu DOM bounding boxu
-    - **Flee:** chapadla se stahují dozadu za tělo
-    - **Idle:** gravitační klap dolů, jemné pulzování
+- **Lokální stav per chapadlo:**
+    - `localStress` — roste při kontaktu s kurzorem, klesá v klidu
+    - `touching` — jaký DOM element právě cítí (nebo null)
+    - `curiosity` — jak moc chce zkoumat (ovlivněno globální náladou)
+    - `recoilTimer` — reflexní stažení po kontaktu s hrozbou
+    - `heldElement` — DOM element který nese (nebo null)
+    - `grip` — síla úchopu (klesá s časem, stresem)
+- **Lokální chování tipů (bez centrálního mozku):**
+    - Reflexní stažení: tip se přiblíží kurzoru → okamžitý recoil
+    - Hmatová explorace: tip narazí na DOM element → lokální zvědavost → ohmatání hrany
+    - Uchopení: globální nálada „zvědavá“ + zajímavý element → grab
+    - Samovolná relaxace: v klidu se chapadla rozprostřou nezávisle
+- Target generování podle kontextu + nálady:
+    - **Plavání (mood: klidná/zvědavá):** sinusoidní vlna se zpožděním per chapadlo, fáze `(index/8)*2π`
+    - **Explorace (mood: zvědavá/hravá):** 1-3 chapadla cílí na nejbližší DOM elementy
+    - **Útok stresu (mood: plachá):** chapadla se stahují dozadu za tělo
+    - **Klid (mood: klidná):** gravitační klap dolů, jemné pulzování
 - Rendering: quadratic Bézier curves přes FABRIK uzly
 - Šířka: zužuje se base→tip (lineární interpolace)
 - Perlin noise na šířce pro organický profil
 - `globalAlpha` fade na tipech
 
-**Výstup:** Plynulá chobotnice s 8 organickými chapadly reagujícími na kontext pohybu.
+**Výstup:** Chobotnice s 8 semi-autonomními chapadly — každé cítí, reaguje a rozhoduje lokálně.
 
 ## Fáze 4: Vizuální systém — tělo, oči, chromatofory, glow
 
@@ -122,20 +136,30 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Výstup:** Chobotnice efektivně obchází DOM elementy i na stránkách s 500+ uzly.
 
-## Fáze 6: Senzorický systém
+## Fáze 6: Senzorický systém (globální + per-chapadlo)
 
-**Cíl:** Vstupy pro RL state vector.
+**Cíl:** Dvouúrovňový senzorický systém — globální vstupy pro Q-Learning + lokální vstupy per chapadlo.
 
 **Úkoly:**
+
+**Globální senzory (vstupy pro Q-Learning nálady):**
 - **Kurzor:** `mousemove` listener → `mouseX, mouseY, mouseVX, mouseVY, mouseSpeed` (exponenciální klouzavý průměr). Klasifikace: still(<2), slow(2-8), fast(8-20), aggressive(>20).
 - **Scroll:** `scroll` listener + timeout 200ms pro detekci idle/active
 - **Denní doba:** `getTimeOfDay()` → morning/afternoon/evening/night z `new Date().getHours()`
-- **Stress model:** float 0-1, exponential smoothing (`stress += (input - stress) * 0.05`). Roste při rychlém kurzoru blízko, opakovaných flee, kolizích. Klesá při idle, whitespace.
 - **DOM density:** z spatial hashe — `getNearby()` count → sparse/medium/dense
-- **Whitespace proximity:** test zda je agent v prázdném prostoru (žádné DOM elementy v okolí)
+- **Whitespace proximity:** test zda je agent v prázdném prostoru
 - **Cursor proximity:** vzdálenost kurzor↔agent → far/medium/near
 
-**Výstup:** Kompletní senzorický systém produkující diskretizovaný state vector.
+**Lokální senzory per chapadlo (vstupy pro lokální rozhodování):**
+- **Tip proximity to cursor:** vzdálenost špičky chapadla od kurzoru → recoil trigger
+- **Tip touching DOM:** jaký element tip právě dotýká (z spatial hashe)
+- **Held element state:** nese něco? jak dlouho? jak daleko od původní pozice?
+
+**Agregace (tělo):**
+- **Stress model:** float 0-1, exponential smoothing. Agreguje: globální kurzor input + počet chapadel v recoil stavu + počet kolizí.
+- **Tentacle feedback:** kolik chapadel právě exploruje / drží element / je v recoilu → informuje globální stav
+
+**Výstup:** Globální state vector pro Q-Learning + lokální stav každého chapadla pro autonomní reakce.
 
 ## Fáze 7: Age System — životní cyklus 10 let
 
@@ -155,30 +179,40 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Výstup:** Parametry Lili se plynule mění s reálným časem. Hatchling = rychlá a chaotická, Elder = téměř nehybná.
 
-## Fáze 8: Q-Learning — jádro autonomie
+## Fáze 8: Q-Learning — koordinátor nálad
 
-**Cíl:** Plný RL agent řídící chování Lili + kompletní akademická datová vrstva.
+**Cíl:** RL agent nastavující nálady/tendence organismu + kompletní akademická datová vrstva.
+
+**Biologický princip:** Q-Learning nefunguje jako velitel vydávající příkazy. Funguje jako hormonální systém — nastavuje nálady/tendence, které chapadla a tělo interpretují lokálně. Chování emerguje z kombinace nálady + lokální inteligence chapadel + prostředí.
 
 ### 8A: Q-Learning engine
 
 - **State vector:** kombinace 7 senzorických vstupů (cursor_proximity × cursor_velocity × dom_density × whitespace_proximity × scroll_state × time_of_day × age_phase) = cca 3×4×3×3×2×4×5 = 4320 stavů
-- **Action space:** 7 akcí (wander, seek_whitespace, flee, explore_dom, idle, seek_edge, follow_slow)
-- **Q-tabulka:** `Map` nebo objekt, klíč = serializovaný state string, hodnota = array[7] Q-hodnot
-- **Bellmanova rovnice:** `Q(s,a) ← Q(s,a) + α[R + γ·max(Q(s',a')) - Q(s,a)]`, α=0.1, γ=0.85
+- **Mood space (místo action space):** Q-Learning vybírá náladu, ne přímou akci:
+    - `curious` — chapadla aktivně explorují, vyšší pravděpodobnost uchopení
+    - `playful` — chapadla hledají elementy k manipulaci
+    - `shy` — chapadla se stahují za tělo, nízká interakce
+    - `calm` — chapadla se rozprostřou, pomalé pohyby, whitespace seeking
+    - `alert` — zvýšená pozornost, připravena na flee
+    - `idle` — minimální aktivita, „meditace“
+    - `exploring` — seek okrajů, zkoumání neznámých oblastí
+- **Q-tabulka:** `Map` nebo objekt, klíč = serializovaný state string, hodnota = array[7] Q-hodnot pro 7 nálad
+- **Bellmanova rovnice:** `Q(s,m) ← Q(s,m) + α[R + γ·max(Q(s',m')) - Q(s,m)]`, α=0.1, γ=0.85
 - **Epsilon-greedy:** `ε` z age systému (0.85→0.05)
-- **Reward function** (přesně dle PRD):
-    - +1.0: agent v whitespace, uživatel čte
-    - +0.8: úspěšný flee od rychlého kurzoru
-    - +0.5: explore_dom s nízkým stresem
+- **Reward function:**
+    - +1.0: agent v whitespace, uživatel čte (nálada calm/idle)
+    - +0.8: úspěšný únik od rychlého kurzoru (chapadla reflexně + nálada shy)
+    - +0.5: explorace DOM s nízkým stresem (nálada curious)
+    - +0.3: hravá interakce s elementem, uživatel nečte (nálada playful)
     - +0.3: agent na okraji, uživatel aktivní ve středu
     - -2.0: agent nad textem, kurzor stojí (blokuje čtení)
-    - -1.0: kolize s DOM elementem
+    - -1.0: držený element překáží čtení
     - -0.5: idle příliš dlouho (modulováno věkem)
-    - -0.3: flee při pomalém/dalekém kurzoru
-    - -0.2: opakování stejné akce > N kroků
+    - -0.3: shy nálada při pomalém/dalekém kurzoru (zbytečný strach)
+    - -0.2: opakování stejné nálady > N cyklů
 - **Decision cycle:** každých 30-60 framů (ne každý frame)
 - **Persistence:** Q-tabulka → JSON → `localStorage.lili_qtable`, save každých ~600 framů + `beforeunload`
-- **Napojení na steering:** výstup RL akce → nastavení vah behaviors (tabulka z PRD 5.3)
+- **Napojení:** výstup nálady → ovlivňuje: steering váhy + chapadlové parametry (curiosity, grip) + chromotoforovou reaktivitu
 
 ### 8B: Behavioral Journal — akademická datová vrstva
 
@@ -235,23 +269,55 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Výstup:** Lili se autonomně učí. Kompletní akademická data k dispozici pro analýzu kdykoli.
 
-## Fáze 9: DOM interakce a noční úklid
+## Fáze 9: DOM interakce — hmatová explorace, hra a noční úklid
 
-**Cíl:** Haptická interakce s obsahem stránky + denní reset.
+**Cíl:** Víceúrovňová haptická interakce s obsahem stránky + denní reset.
+
+**Biologický princip:** Chapadla chobotnic zkoumají prostředí hmatem a chutí. Mohou uchopovat objekty, manipulovat s nimi, předávat si je. Toto není skriptované — je to lokální rozhodnutí chapadla ovlivněné globální náladou.
 
 **Úkoly:**
-- **Word Indexer:** při bootu obalit textové uzly do `<span class="lili-word">` (jednou, nevratně)
-- **Disturb element:** `transform: rotate(±5°max) translate(±8px max)`, `transition: 0.3s ease`
-- `data-lili-touched = Date.now()` na dotčené elementy
-- Max 4 disturbed elementy současně
-- Interakce trvá 4-18s, pak smooth return (transition 0.8s)
-- **Midnight Cleanup:** kontrola každou minutu, porovnání `lili_last_cleanup` vs. aktuální datum. Při přechodu dne:
-    - Všechny `[data-lili-touched]` elementy → `transition: 1.2s ease-out`, reset transform + color
-    - Po 1.4s: remove transition + data atribut
+
+**Word Indexer:**
+- Při bootu obalit textové uzly do `<span class="lili-word">` (jednou, nevratně)
+- Každý span dostává `data-lili-shape` atribut (round/angular/mixed) pro tvarovou afinitu
+
+**Úrovně DOM interakce (emergují z lokální inteligence chapadel):**
+
+1. **Ohmatání (touch):** Tip chapadla se dotkne elementu → mírný `rotate(±5°) translate(±8px)`, `transition: 0.3s`
+    - `data-lili-touched = Date.now()`
+    - Spouštěč: chapadlo v dosahu + curiosity > threshold
+
+2. **Zájem (interest):** Opakovaný kontakt se stejným elementem → chapadlo zůstává déle
+    - Spouštěč: mood = curious/playful + element není `<a>` nebo `<button>`
+
+3. **Uchopení (grab):** Chapadlo element uchopí → `data-lili-held="tentacle_index"`
+    - Element začne sledovat pozici tipu chapadla (`transform: translate()`)
+    - Max 2 held elementy současně (omezená „síla“)
+    - Nikdy neuchopí interaktivní elementy (`<a>`, `<button>`, `<input>`)
+
+4. **Hra (play):** Element se houpá, rotuje, případně se předává mezi chapadly
+    - Vizuelně: písmenko/slovo putuje po stránce s Lili
+    - Doba držení: 10-60s, pak grip klesá → pustení
+
+5. **Puštění (drop):** Ztráta zájmu / stress (flee drops vše) / midnight cleanup
+    - Element se animovaně vrátí na původní místo (`transition: 0.8s ease-out`)
+    - Remove `data-lili-held`
+
+**Výběr elementů:**
+- Dostupnost: element v dosahu tipu chapadla (ze spatial hashe)
+- Velikost: pouze malé elementy (single character nebo krátké slovo)
+- Tvarová afinita: kulaté tvary (O, 0, o, Q...) mohou mít vyšší atraktivitu
+- Emergentní preference: RL se učí, které interakce generují pozitivní reward
+
+**Midnight Cleanup:**
+- Kontrola každou minutu, porovnání `lili_last_cleanup` vs. aktuální datum
+- Při přechodu dne:
+    - Všechny `[data-lili-touched]` a `[data-lili-held]` elementy → `transition: 1.2s ease-out`, reset transform + color
+    - Po 1.4s: remove transition + data atributy
     - Uložit nový `lili_last_cleanup` timestamp
 - **Reverzibilita:** POUZE `transform` a `color`. NIKDY width, height, display, position, margin, innerHTML.
 
-**Výstup:** Lili "oťukává" slova chapadly, ráno se stránka vrátí do původního stavu.
+**Výstup:** Chapadla autonomně zkoumají, uchopují a hrají si s obsahem stránky. Ráno se vše vrátí.
 
 ## Fáze 10: Click, Tooltip, Debug panel
 
@@ -310,7 +376,8 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 - Hatchling viditelně chaotičtější než Adult
 - Elder téměř nehybná (a nepůsobí jako bug)
 - Kurzor přes Lili vyvolá únik (ne pokaždé — záleží na naučeném)
-- Rozházená slova se o půlnoci vrátí
+- Rozházená slova a odnešené elementy se o půlnoci vrátí
+- Lili si občas uchopí písmenko a nosí ho (viditelně chybí na stránce)
 - Po refresh Lili pokračuje (pozice + Q-tabulka)
 - FPS ≥ 50 na stránce s 500+ DOM elementy
 - Lili nikdy nezablokuje klik na odkaz/tlačítko
@@ -354,32 +421,33 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 3. Existuje korelace mezi uživatelským chováním (scroll patterns, cursor speed) a naučenou Q-tabulkou?
 4. Je biologicky inspirovaný reward shaping efektivnější než náhodný pro dosažení "zdvořilého" chování v DOM?
 5. Jaká je minimální velikost state space pro emergenci netriviálního chování v tomto kontextu?
+6. Jak přispívá lokální autonomie chapadel (distribuovaná inteligence) k celkové emergenci chování?
+7. Liší se preference DOM elementů (co Lili uchopí a s čím si hraje) mezi instancemi?
 
 ---
 
 ## Architektura rozšiřitelnosti (v2.0+)
 
-Návrh v1.0 musí být připravený na budoucí rozšíření. Klíčový princip: **čisté rozhraní mezi mozkem a tělem.**
+Návrh v1.0 musí být připravený na budoucí rozšíření. Klíčový princip: **distribuovaná inteligence s centrální koordinací nálad.**
 
-### Brain Interface (adapter pattern)
+### Brain Interface (koordinátor nálad)
 
-Všechna rozhodování prochází jedním rozhraním:
+Brain není velitel — je koordinátor. Nastavuje nálady/tendence, které chapadla a tělo interpretují lokálně:
 
-- `brain.chooseAction(stateVector)` → vrací akci (string)
-- `brain.learn(state, action, reward, nextState)` → aktualizuje interní model
+- `brain.decideMood(stateVector)` → vrací náladu ({ tendency, intensity })
+- `brain.learn(state, mood, reward, nextState)` → aktualizuje interní model
 - `brain.serialize()` → JSON pro persistence
 - `brain.deserialize(json)` → restore
 - `brain.getMetrics()` → data pro journal/debug
 
-v1.0 implementace: `QLearningBrain` (tabulární Q-Learning)
+v1.0 implementace: `QLearningBrain` (tabulární Q-Learning nad náladami)
 
 Budoucí mozky (v2.0+):
 - `DQNBrain` — Deep Q-Network s malým neural netem
-- `LLMBrain` — Cloud API (GPT/Claude) pro rozhodování s přirozeným jazykem
-- `OpenClawBrain` — AGI/OpenClaw integrace
-- `HiveBrain` — sdílený mozek přes WebSocket — všechny Lili se učí navzájem
+- `LLMBrain` — Cloud API (GPT/Claude) pro rozhodování o náladách
+- `HiveBrain` — sdílené nálady přes WebSocket — všechny Lili sdílí emocionální stavy
 
-Výměna mozku = výměna jednoho objektu. Tělo (steering, FABRIK, rendering) se nemění.
+Výměna mozku = výměna jednoho objektu. Tělo + chapadla (steering, FABRIK, lokální inteligence, rendering) se nemění.
 
 ### Distribuce — Lili pro všechny
 
@@ -410,7 +478,11 @@ Detail: viz `docs/design/README.md`
 
 ### Implementační pravidlo pro v1.0
 
-Všechny rozhodovací funkce prochází přes `brain` objekt. Žádné přímé volání Q-tabulky z jiných modulů. To zajistí, že výměna mozku v budoucnu bude trivial refactor.
+Dvě úrovně rozhodování:
+1. **Globální nálady** prochází přes `brain` objekt. Žádné přímé volání Q-tabulky z jiných modulů.
+2. **Lokální reakce chapadel** (recoil, grab, explore) probíhají autonomně na základě lokálních senzorů + aktuální nálady.
+
+Brain nastavuje kontext. Chapadla jednají.
 
 ---
 

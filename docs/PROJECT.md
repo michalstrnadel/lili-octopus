@@ -55,17 +55,21 @@ Podrobný rozbor předobrazů: viz `docs/research/00a-conceptual-architectural-a
 │  Canvas 2D · Procedurální tělo · FABRIK chapadla │
 │  HSL chromatofory · Oči · Glow                   │
 ├─────────────────────────────────────────────────┤
+│            CHAPADLA (lokální inteligence)          │
+│  Per-tentacle state · Reflexy · Explorace · Grab  │
+│  Hmatové senzory · Autonomní reakce               │
+├─────────────────────────────────────────────────┤
 │                 STEERING (tělo)                   │
 │  Reynolds Behaviors · Wander · Flee · Seek        │
 │  Obstacle Avoidance · Boundary                    │
 ├─────────────────────────────────────────────────┤
-│                 BRAIN (mozek)                      │
-│  brain.chooseAction() · brain.learn()             │
-│  v1.0: QLearningBrain (tabulární Q-Learning)      │
+│            BRAIN (koordinátor nálad)               │
+│  brain.decideMood() · brain.learn()               │
+│  v1.0: QLearningBrain (Q-Learning nad náladami)   │
 ├─────────────────────────────────────────────────┤
-│               SENZORY + PROSTŘEDÍ                 │
+│          SENZORY (globální + per-chapadlo)         │
 │  Cursor · Scroll · DOM density · Whitespace       │
-│  Denní doba · Stress model · Spatial Hash Grid    │
+│  Tip proximity · Touch detection · Stress model   │
 ├─────────────────────────────────────────────────┤
 │               AGE SYSTEM + JOURNAL                │
 │  Genesis timestamp · Life phases · Interpolace    │
@@ -77,20 +81,29 @@ Podrobný rozbor předobrazů: viz `docs/research/00a-conceptual-architectural-a
 └─────────────────────────────────────────────────┘
 ```
 
-### 2.2 Brain Interface (adapter pattern)
+### 2.2 Distribuovaná inteligence
 
-Veškerá rozhodování prochází jedním rozhraním, které odděluje mozek od těla:
+**Biologický princip:** Reálné chobotnice mají 2/3 neuronů v chapadlech. Mozek není oddělený od těla — inteligence je distribuovaná po celém organismu. Lili tento princip respektuje.
 
-- `brain.chooseAction(stateVector)` → akce (string)
-- `brain.learn(state, action, reward, nextState)` → update interního modelu
-- `brain.serialize()` / `brain.deserialize(json)` → persistence
-- `brain.getMetrics()` → data pro journal a debug
+**Dvě úrovně rozhodování:**
 
-Toto oddělení umožňuje v budoucnu záměnu QLearningBrain za DQNBrain, LLMBrain nebo HiveBrain bez změny těla.
+1. **Brain (koordinátor nálad):** Q-Learning nefunguje jako velitel vydávající příkazy, ale jako hormonální systém nastavující nálady/tendence:
+   - `brain.decideMood(stateVector)` → nálada ({ tendency, intensity })
+   - `brain.learn(state, mood, reward, nextState)` → update interního modelu
+   - `brain.serialize()` / `brain.deserialize(json)` → persistence
+   - `brain.getMetrics()` → data pro journal a debug
+
+2. **Chapadla (lokální inteligence):** Každé chapadlo má vlastní stav a autonomně reaguje na lokální podněty:
+   - Reflexní stažení (recoil) — okamžité, bez čekání na mozek
+   - Hmatová explorace — tip narazí na DOM element → lokální zvědavost
+   - Uchopení a hra — grab/carry/play emerguje z nálady + lokální situace
+   - Samovolná relaxace — v klidu se chapadla rozprostřou nezávisle
+
+**Chování emerguje** z kombinace: globální nálada (Q-Learning) + lokální inteligence chapadel + prostředí. Výměna mozku = výměna jednoho objektu, tělo + chapadla se nemění.
 
 ### 2.3 Q-Learning specifikace
 
-**Stavový prostor:** 7 diskretizovaných senzorických vstupů:
+**Stavový prostor:** 7 diskretizovaných globálních senzorických vstupů:
 
 - Cursor proximity (3 stavy: far, medium, near)
 - Cursor velocity (4 stavy: still, slow, fast, aggressive)
@@ -102,13 +115,13 @@ Toto oddělení umožňuje v budoucnu záměnu QLearningBrain za DQNBrain, LLMBr
 
 **Celkem:** 3 × 4 × 3 × 3 × 2 × 4 × 5 = **4 320 stavů**
 
-**Akční prostor:** 7 akcí — wander, seek_whitespace, flee, explore_dom, idle, seek_edge, follow_slow
+**Mood space (místo action space):** Q-Learning vybírá náladu, ne přímou akci — 7 nálad: curious, playful, shy, calm, alert, idle, exploring. Nálada ovlivňuje steering váhy, chapadlové parametry (curiosity, grip) a chromatoforovou reaktivitu.
 
 **Hyperparametry:** α = 0.1 (learning rate), γ = 0.85 (discount factor)
 
 **Epsilon-greedy strategie:** ε je vázáno na biologický věk (0.85 pro Hatchling → 0.05 pro Elder), nikoli na počet iterací — zásadní koncepční obrat oproti standardnímu RL.
 
-**Reward function:** Biologicky inspirovaný reward shaping, kde nejvyšší penalizace (-2.0) je za blokování čtení uživatele a nejvyšší odměna (+1.0) za sdílení prázdného prostoru. Funkce odměn je ekvivalentem DNA organismu.
+**Reward function:** Biologicky inspirovaný reward shaping, kde nejvyšší penalizace (-2.0) je za blokování čtení uživatele a nejvyšší odměna (+1.0) za sdílení prázdného prostoru. Nově: +0.3 za hravou interakci s DOM elementem (pokud uživatel nečte), -1.0 za držený element překážející čtení.
 
 ### 2.4 Vizuální systém
 
@@ -122,9 +135,18 @@ Toto oddělení umožňuje v budoucnu záměnu QLearningBrain za DQNBrain, LLMBr
 - **Spatial Hash Grid:** Virtuální mřížka (120 × 120 px) indexující DOM elementy pro O(1) kolizní detekce.
 - **MutationObserver:** Detekce dynamických změn DOM (SPA, lazy loading), throttlováno na max 1×/500 ms.
 
-### 2.6 DOM interakce
+### 2.6 DOM interakce — hmatová explorace a hra
 
-- Chapadla hapticky interagují s textovými elementy pomocí `transform` (rotate, translate) — nikdy `width`, `margin`, `innerHTML`.
+Interakce s DOM emerguje z lokální inteligence chapadel v 5 fázích:
+
+1. **Ohmatání (touch):** Tip chapadla se dotkne elementu → mírný rotate/translate
+2. **Zájem (interest):** Opakovaný kontakt → chapadlo zůstává déle
+3. **Uchopení (grab):** Nálada curious/playful + zajímavý element → chapadlo uchopí
+4. **Hra (play):** Element putuje s Lili (transform: translate tracking tip), houpání, rotace
+5. **Puštění (drop):** Ztráta zájmu / stress / midnight cleanup → element se vrátí
+
+**Pravidla:** Max 2 held elementy současně. Nikdy interaktivní elementy (`<a>`, `<button>`, `<input>`). Pouze `transform` a `color` — nikdy layout properties (`width`, `margin`, `innerHTML`). Tvarová afinita — kulaté tvary (O, 0, o, Q...) mohou mít vyšší atraktivitu.
+
 - **Midnight Cleanup:** Při přechodu kalendářního dne se veškeré modifikace plynule revertují (transition 1.2s). Poetický efekt: stopy včerejška se mažou, entita žije dál.
 
 ---
@@ -212,6 +234,8 @@ Klávesa `E` → kompletní export jako `lili_export_YYYYMMDD.json`:
 3. **Korelace s uživatelem:** Existuje měřitelná korelace mezi uživatelským chováním (scroll patterns, cursor speed) a naučenou Q-tabulkou?
 4. **Biologický reward shaping:** Je biologicky inspirovaný reward shaping efektivnější než náhodný pro dosažení „zdvořilého" chování v DOM prostředí?
 5. **Minimální komplexita:** Jaká je minimální velikost stavového prostoru pro emergenci netriviálního chování v tomto kontextu?
+6. **Distribuovaná inteligence:** Jak přispívá lokální autonomie chapadel k celkové emergenci chování? Je výsledek kvalitativně odlišný od centrálního řízení?
+7. **Emergentní preference:** Liší se preference DOM elementů (co Lili uchopí a s čím si hraje) mezi instancemi na různých stránkách?
 
 ### Měřené metriky
 

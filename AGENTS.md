@@ -91,10 +91,13 @@ lili-octopus/
 - Komentáře v angličtině, dokumentace v češtině.
 
 ### Architektura
-- **Brain Interface pattern:** Veškerá rozhodování prochází přes `brain.chooseAction()`, `brain.learn()`, `brain.serialize()`, `brain.deserialize()`. Žádné přímé volání Q-tabulky z jiných modulů.
-- **Stavový prostor:** 4320 stavů (7 diskretizovaných senzorů). Nerozdělovat, nezvětšovat bez důvodu.
-- **Akční prostor:** 7 akcí (wander, seek_whitespace, flee, explore_dom, idle, seek_edge, follow_slow).
-- **Reward function** přesně dle PRD (sekce 5.2). Neměnit bez zdůvodnění.
+- **Distribuovaná inteligence:** Mozek (Q-Learning) nastavuje nálady/tendence. Chapadla mají lokální inteligenci a reagují autonomně. Chování emerguje z kombinace obou.
+- **Brain Interface (koordinátor nálad):** `brain.decideMood()`, `brain.learn()`, `brain.serialize()`, `brain.deserialize()`. Žádné přímé volání Q-tabulky z jiných modulů.
+- **Chapadla (semi-autonomní):** Každé chapadlo má lokální stav (stress, curiosity, grip, heldElement) a autonomně reaguje na podněty (recoil, explorace, grab).
+- **Stavový prostor:** 4320 stavů (7 diskretizovaných globálních senzorů). Nerozdělovat, nezvětšovat bez důvodu.
+- **Mood space (místo action space):** 7 nálad (curious, playful, shy, calm, alert, idle, exploring).
+- **DOM interakce:** 5 fází — touch → interest → grab → play → drop. Max 2 held elementy. Nikdy interaktivní elementy.
+- **Reward function** přesně dle IMPLEMENTATION_PLAN.md (Fáze 8). Neměnit bez zdůvodnění.
 
 ### Výkonnostní cíle
 - 60 FPS target, minimum 50 FPS
@@ -122,13 +125,16 @@ lili-octopus/
 
 Pokud implementuješ a potřebuješ rychlý přehled:
 
-- **Q-Learning:** Bellmanova rovnice, α=0.1, γ=0.85, ε vázáno na biologický věk
-- **Steering Behaviors:** Craig Reynolds (1987) — wander, seek, flee, evade, obstacle avoidance
-- **FABRIK IK:** Forward And Backward Reaching (Aristidou & Lasenby 2011) — 8 chapadel × 8 segmentů
+- **Q-Learning (nálady):** Bellmanova rovnice, α=0.1, γ=0.85, ε vázáno na biologický věk. Výstup = nálada (ne akce)
+- **Distribuovaná inteligence:** Brain = hormonální systém (nálady). Chapadla = lokální neurony (reflexy, explorace, grab). Chování = emergence.
+- **Steering Behaviors:** Craig Reynolds (1987) — wander, seek, flee, evade, obstacle avoidance (ovlivněno náladou)
+- **FABRIK IK:** Forward And Backward Reaching (Aristidou & Lasenby 2011) — 8 chapadel × 8 segmentů, každé semi-autonomní
+- **Tentacle Local State:** localStress, touching, curiosity, recoilTimer, heldElement, grip
+- **DOM Manipulation:** touch → interest → grab → play → drop. Max 2 held. Pouze transform + color.
 - **Spatial Hash Grid:** 120×120px buňky, O(1) kolizní detekce místo O(n²)
 - **Simplex Noise:** Procedurální šum pro wander a vizuální deformace (ne Math.random)
 - **Chromatofory:** HSL barevný model, base hue podle věku, stress shift k červené
-- **Midnight Cleanup:** O půlnoci se revertují CSS transformace dotčených DOM elementů
+- **Midnight Cleanup:** O půlnoci se revertují CSS transformace + vrátí se odnešené elementy
 
 ## Autor
 
