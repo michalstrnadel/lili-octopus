@@ -19,7 +19,8 @@ Zápisky jsou chronologické. Pro pochopení evoluce projektu čtěte od nejstar
 
 | Datum | Soubor | Téma |
 |-------|--------|------|
-| 2026-03-07 | `2026-03-07-project-inception.md` | Založení projektu, analýza PRD, vytvoření implementačního plánu |
+|| 2026-03-07 | `2026-03-07-project-inception.md` | Založení projektu, analýza PRD, vytvoření implementačního plánu |
+| 2026-03-07 | `2026-03-07-distributed-intelligence.md` | Distribuovaná inteligence chapadel, hravá DOM manipulace |
 
 ---
 
