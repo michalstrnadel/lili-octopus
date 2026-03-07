@@ -255,6 +255,9 @@ Klávesa `E` → kompletní export jako `lili_export_YYYYMMDD.json`:
 
 ```
 lili-octopus/
+├── AGENTS.md                    ← AI entry point (čti jako první)
+├── CLAUDE.md                    ← Claude Code entry point
+├── .cursorrules                 ← Cursor entry point
 ├── README.md                    ← Přehled projektu
 ├── LILI_PRD_v1.md               ← Product Requirements Document (860 řádků)
 ├── public/
@@ -262,20 +265,10 @@ lili-octopus/
 ├── docs/
 │   ├── PROJECT.md               ← Tento dokument — akademický popis
 │   ├── IMPLEMENTATION_PLAN.md   ← 12-fázový implementační plán
-│   ├── research/
-│   │   ├── README.md            ← Katalog všech deep researches
-│   │   ├── 00a-conceptual-architectural-analysis.md
-│   │   ├── 00b-technical-implementation-analysis.md
-│   │   ├── 01-octopus-locomotion.md
-│   │   ├── 02-qlearning-biological-simulations.md
-│   │   ├── 03-fabrik-tentacle-animation.md (⏳)
-│   │   ├── 04-browser-persistence-longterm.md (⏳)
-│   │   └── 05-academic-methodology.md (⏳)
-│   ├── journal/
-│   │   ├── README.md            ← Jak číst deníček
-│   │   └── 2026-03-07-project-inception.md
-│   └── design/
-│       └── README.md            ← Vizuální filozofie
+│   ├── research/                ← 7 deep researches
+│   ├── journal/                 ← Vývojový deníček
+│   └── design/                  ← Vizuální filozofie
+└── _archive/                    ← Originální zdrojové dokumenty
 ```
 
 ---
