@@ -16,12 +16,12 @@ Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
 - ✅ Akademický popis — `docs/PROJECT.md`
 - ✅ 12-fázový implementační plán — `docs/IMPLEMENTATION_PLAN.md`
-- ✅ Deep research 0a, 0b, 1, 2 — viz `docs/research/README.md`
+- ✅ Všech 7 deep researches (0a, 0b, 1, 2, 3, 4, 5) — viz `docs/research/README.md`
 - ✅ Vizuální filozofie — `docs/design/README.md`
 - ✅ Vývojový deníček — `docs/journal/`
+- ✅ Repository Blueprint — `docs/REPOSITORY_BLUEPRINT.md`
 
 Čeká:
-- ⏳ Deep research #3 (FABRIK IK), #4 (persistence), #5 (akademická metodologie)
 - ⏳ Implementace — začíná Fází 1 (`public/lili.js`)
 
 **Další krok:** Implementace Fáze 1 (IIFE, Canvas bootstrap, Vec2, Simplex Noise, requestAnimationFrame loop).
@@ -142,5 +142,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-03-07*
+*Poslední aktualizace: 2026-03-08*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

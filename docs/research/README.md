@@ -10,9 +10,9 @@ Tato složka obsahuje výsledky deep research prováděného před implementací
 | 0b | `00b-technical-implementation-analysis.md` | Technická implementační analýza | ✅ Hotovo | Steering behaviors, spatial hashing, FABRIK, Q-Learning, chronobiologie |
 | 1 | `01-octopus-locomotion.md` | Biologie pohybu chobotnic | ✅ Hotovo | Parametry pro věrohodný pohyb a vizuál |
 | 2 | `02-qlearning-biological-simulations.md` | Q-Learning v biologických simulacích | ✅ Hotovo | RL engine, reward shaping, akademické reference |
-| 3 | `03-fabrik-tentacle-animation.md` | FABRIK IK pro chapadla | ⏳ Čeká na výsledky | Konkrétní animační kód a parametry |
-| 4 | `04-browser-persistence-longterm.md` | Dlouhodobá perzistence v prohlížeči | ⏳ Čeká na výsledky | Data přežijí 10 let |
-| 5 | `05-academic-methodology.md` | Akademická metodologie | ⏳ Čeká na výsledky | Publikovatelná kvalita, konference, metriky |
+| 3 | `03-fabrik-tentacle-animation.md` | FABRIK IK pro chapadla | ✅ Hotovo | Konkrétní animační kód a parametry |
+| 4 | `04-browser-persistence-longterm.md` | Dlouhodobá perzistence v prohlížeči | ✅ Hotovo | Data přežijí 10 let |
+| 5 | `05-academic-methodology.md` | Akademická metodologie | ✅ Hotovo | Publikovatelná kvalita, konference, metriky |
 
 ## Research #0a: Koncepční a architektonická analýza autonomních digitálních organismů
 
@@ -111,6 +111,16 @@ Tato složka obsahuje výsledky deep research prováděného před implementací
 
 **Účel:** Konkrétní implementační kód a parametry pro FABRIK algoritmus v 2D Canvas kontextu.
 
+**Soubor:** `03-fabrik-tentacle-animation.md`
+
+**Klíčové závěry:**
+- FABRIK konverguje v 1-3 iteracích při 60fps díky časové koherenci (nemá smysl počítat víc)
+- 8 nezávislých řetězců (ne strom) — každé chapadlo izolovaný IK solver, žádné centroidy
+- Float32Array místo objektů — eliminace GC aktivity
+- Catmull-Rom spline konvertovaný na Bézier pro Canvas bezierCurveTo()
+- Asymetrický power-stroke/recovery pro realistický plavání
+- Perlin noise na amplitudu/úhel pro proložení strojové linearity
+
 **Prompt:**
 
 > "FABRIK inverse kinematics for tentacle animation in 2D Canvas JavaScript"
@@ -141,6 +151,16 @@ Tato složka obsahuje výsledky deep research prováděného před implementací
 
 **Účel:** Strategie pro uchování dat po dobu 10 let v prostředí prohlížeče. Kritické pro akademický rozměr projektu.
 
+**Soubor:** `04-browser-persistence-longterm.md`
+
+**Klíčové závěry:**
+- localStorage: 5-10 MiB, synchronní, vhodné jen pro malé flagy
+- IndexedDB: až 60% disku (Chrome/Safari), 10 GiB default (Firefox)
+- Safari ITP mazání skriptově zapsaných dat po 7 dnech nečinnosti — kritické riziko!
+- `navigator.storage.persist()` chrání před LRU evikcí (Chrome auto-grant při bookmarku/PWA)
+- Export jako záloha je nezbytný pro 10letý horizont
+- Compression Streams API pro kompresi bez závislostí
+
 **Prompt:**
 
 > "Long-term browser data persistence strategies for multi-year web applications"
@@ -170,6 +190,16 @@ Tato složka obsahuje výsledky deep research prováděného před implementací
 ## Research #5: Akademická metodologie
 
 **Účel:** Zajistit, že projekt má kvalitu publikovatelnou na konferencích (ALIFE, CHI, NeurIPS workshop).
+
+**Soubor:** `05-academic-methodology.md`
+
+**Klíčové závěry:**
+- 4 kontrolní podmínky: Random Policy, Frozen Policy, Myopic Agent, Hard-coded Baseline
+- Shannonova entropie + Lempel-Ziv komplexita pro měření behaviorální ontogeneze
+- Seed management: oddělit randomness agenta a prostředí
+- Vizualizace: Q-value heatmaps, policy transition matrices, etogramy
+- GDPR: lokální zpracování = Privacy by Design, ale stále nutný informovaný souhlas
+- Konference: ALIFE 2026 (deadline 30.3.), CHI 2026 (deadline 11.9.2025), NeurIPS workshops
 
 **Prompt:**
 
