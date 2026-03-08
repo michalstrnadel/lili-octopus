@@ -10,12 +10,12 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Pre-implementace (research + dokumentace)**
+**Fáze: Research kompletní → připraven k implementaci**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
-- ✅ Akademický popis — `docs/PROJECT.md`
-- ✅ 12-fázový implementační plán — `docs/IMPLEMENTATION_PLAN.md`
+- ✅ Akademický popis (obohacen o všech 7 researches) — `docs/PROJECT.md`
+- ✅ 12-fázový implementační plán (přepsán s integrací všech researches, rozdělen na pracovní celky) — `docs/IMPLEMENTATION_PLAN.md`
 - ✅ Všech 7 deep researches (0a, 0b, 1, 2, 3, 4, 5) — viz `docs/research/README.md`
 - ✅ Vizuální filozofie — `docs/design/README.md`
 - ✅ Vývojový deníček — `docs/journal/`
@@ -67,9 +67,9 @@ lili-octopus/
 │   │   ├── 00b-*.md         ← Technická implementační analýza
 │   │   ├── 01-*.md          ← Biomechanika chobotnic
 │   │   ├── 02-*.md          ← Q-Learning v bio simulacích
-│   │   ├── 03-*.md          ← ⏳ FABRIK IK
-│   │   ├── 04-*.md          ← ⏳ Browser persistence
-│   │   └── 05-*.md          ← ⏳ Akademická metodologie
+│   │   ├── 03-*.md          ← ✅ FABRIK IK (hull rendering, Float32Array, trailing physics)
+│   │   ├── 04-*.md          ← ✅ Browser persistence (Safari ITP riziko, export strategie)
+│   │   └── 05-*.md          ← ✅ Akademická metodologie (baselines, entropy/LZC, GDPR, ALIFE 2026)
 │   ├── journal/
 │   │   ├── README.md        ← Jak číst deníček
 │   │   └── YYYY-MM-DD-*.md  ← Zápisky (chronologicky)
@@ -142,5 +142,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-03-08*
+*Poslední aktualizace: 2026-03-08 (research integrace do IMPLEMENTATION_PLAN.md + PROJECT.md)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

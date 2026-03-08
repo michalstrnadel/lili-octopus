@@ -126,7 +126,10 @@ Podrobný rozbor předobrazů: viz `docs/research/00a-conceptual-architectural-a
 ### 2.4 Vizuální systém
 
 - **Procedurální rendering:** Canvas 2D, žádné textury, žádné sprity. Vše generováno matematicky.
-- **FABRIK IK:** 8 chapadel × 8 segmentů, 3-4 iterace solveru per frame, Bézier curve rendering.
+- **FABRIK IK:** 8 nezávislých kinematických řetězců (ne strom) × 8 segmentů. Pozice uzlů v `Float32Array` pro zero-GC v render loop. Max 1-3 iterace per frame díky temporal coherence při 60fps — drobná nepřesnost u měkkého hydrostatu působí jako přirozená měkkost tkáně.
+- **Hull/envelope rendering chapadel:** Nepoužíváme `ctx.stroke()` s `lineWidth` (Canvas API neumí dynamicky měnit tloušťku podél cesty). Místo toho: v každém FABRIK uzlu tangenta → normála → dva odsazené body (L_i, R_i) s lineárním taperingem. Catmull-Rom spline přes obě strany, `arc()` na špičce, uzavření a `ctx.fill()`. Catmull-Rom → Bézier konverze: `CP1 = P1 + (P2-P0)/tension`, `CP2 = P2 - (P3-P1)/tension` (tension=6).
+- **Trailing physics:** Mass-Spring-Damper model — Hookův zákon + viskózní tlumení. Kalibrované parametry: stiffness 0.10–0.18, damping 0.75–0.85 (kritické tlumení, žádný overshoot). Asymetrický power-stroke/recovery model pro biologicky věrný pohyb chapadel.
+- **State batching:** Jedno `ctx.beginPath()`, všechny chapadlové hull cesty jako sub-paths, jedno `ctx.fill()`. Path2D cache pro idle pózy.
 - **Chromatofory:** HSL barevný model mapující biologický věk (Hue), cirkadiánní rytmus (Lightness) a stress (Saturation + Hue shift k červené).
 - **Psychosomatická individualita:** Vizuál je funkcí života — genesis seed (vrozené proporce), prostředí (adaptace), věk (ontogeneze), naučené chování (osobnost).
 
@@ -198,10 +201,10 @@ Třívrstvý systém záznamu:
 Každé rozhodnutí RL agenta je zaznamenáno s plným kontextem — timestamp, věk, state vector, zvolená akce, zda byla explorativní, reward, Q-hodnoty před a po updatu, stress level, pozice kurzoru a agenta.
 
 **Denní agregáty** (uchovávány navždy, ~500 B/den):
-Action distribution, průměrný reward, skutečná exploration rate, top 20 navštěvovaných stavů, prostorová heatmapa, histogram stresu, hash Q-tabulky.
+Action distribution, průměrný reward, skutečná exploration rate, top 20 navštěvovaných stavů, prostorová heatmapa, histogram stresu, hash Q-tabulky, Shannon entropy akčního rozdělení (`H = -Σ p(a) log₂ p(a)` — míra neurčitosti v rozložení akcí), Lempel-Ziv komplexita denní sekvence akcí (komprimovatelnost sekvence měří strukturální redundanci naučených rutin vs. náhodného šumu).
 
 **Q-table snapshoty** (týdenní, ~15 KB/snapshot):
-Kompletní kopie Q-tabulky umožňující rekonstrukci evoluce „mozku" v čase.
+Kompletní kopie Q-tabulky umožňující rekonstrukci evoluce „mozku" v čase. Každý snapshot obsahuje policy transition matrix — matici pravděpodobností přechodů mezi náladami vizualizující strukturální evoluci politiky.
 
 **Event/milestone log:**
 Phase transitions, first occurrences, convergence events, behavioral shifts.
@@ -222,6 +225,25 @@ Klávesa `E` → kompletní export jako `lili_export_YYYYMMDD.json`:
 - Denní agregáty: ~180 KB/rok
 - Q-table snapshoty: ~780 KB/rok
 - Celkový footprint: ~1-2 MB/rok (v rámci localStorage limitu 5-10 MB)
+
+### 4.4 Kontrolní podmínky — Baselines
+
+Pro akademické prokázání ontogeneze je kritické srovnávat Lili s kontrolními modely:
+
+1. **Random Policy:** Akce voleny rovnoměrně náhodně, Q-tabulka se neaktualizuje. Absolutní spodní hranice výkonu.
+2. **Frozen Policy:** Agent se učí po inicializační dobu, pak α = 0, ε konstantní. Měří dopad nestacionarity prostředí.
+3. **Myopic Policy:** Diskontní faktor γ = 0. Maximalizuje pouze okamžitou odměnu. Prokazuje schopnost dlouhodobého plánování.
+4. **Hard-coded Baseline:** Expertní pravidla (např. „kurzor < 50px → flee do rohu"). Referenční bod pro srovnání lidsky definované strategie s emergentním chováním.
+
+Baselines implementovány jako alternativní `brain` objekty — přepínatelné klávesovou zkratkou nebo konfigurací. Data exportována stejným systémem jako hlavní agent.
+
+### 4.5 Vizualizační standardy pro publikaci
+
+- **Q-value heatmaps:** Poloprůhledná vrstva přes DOM vizualizující hodnotovou funkci. Červená = riziko, zelená = bezpečná zóna.
+- **Policy transition matrices:** Matice přechodů mezi náladami per fáze. Hatchling = stochastická, Elder = deterministické hrany.
+- **Behavioral etograms:** Časová osa kategorizující aktivitu do diskrétních stavů. Hatchling vs. Elder vedle sebe.
+- **Complexity-entropy maps:** Shannon entropy × LZC jako trajektorie v 2D prostoru — balanc explorace vs. exploatace.
+- **Ontogenetické trajektorie:** Makroskopické grafy evoluce metrik přes měsíce/roky.
 
 ---
 
@@ -272,6 +294,21 @@ Klávesa `E` → kompletní export jako `lili_export_YYYYMMDD.json`:
 - **Persistence:** localStorage (< 15 KB jádro, ~1-2 MB/rok journal)
 - **Inicializace:** < 200 ms od DOMContentLoaded
 - **Kompatibilita:** Libovolná stránka s 500+ DOM elementy
+
+### 6.1 Persistence — rizika a strategie pro 10letý horizont
+
+**Kritický problém — Safari ITP:** Safari Intelligent Tracking Prevention automaticky smaže VŠECHNA skriptově zapisovatelná úložiště (localStorage, IndexedDB, SessionStorage, Cache API, OPFS) po 7 dnech uživatelské neaktivity na daném originu. `navigator.storage.persist()` NECHRÁNÍ před ITP — pouze před storage pressure eviction na Chrome/Firefox.
+
+**Dopad na Lili:** Uživatel na Safari nenavštíví stránku 8+ dní → kompletní ztráta Q-tabulky, genesis, journalu.
+
+**Mitigační strategie:**
+1. **JSON export jako primární záchranná síť** — periodické připomínky uživateli, 100% self-contained pro reimport
+2. **`navigator.storage.persist()` volání** při bootu — chrání alespoň proti storage pressure (Chrome/Firefox)
+3. **Detekce data loss** — při bootu porovnat `lili_visits` vs. denní agregáty; informovat o možné ITP evikci
+4. **Import klávesou `I`** — obnoví Q-tabulku a journal z předchozího exportu
+5. **Budoucí v2.0:** Volitelný cloud backup (opt-in), Compression Streams API
+
+**Safari AFP:** Anti-Fingerprinting Protection přidává šum do Canvas API. Pro Lili akceptovatelné — rendering je procedurální, ne pixel-přesný.
 
 ---
 
@@ -325,17 +362,32 @@ lili-octopus/
 
 ## 10. Publikační strategie
 
-### Potenciální venues
+### Cílové konference s deadliny
 
-- **ALIFE** (Conference on Artificial Life) — přímá relevance: digitální ontogeneze, emergentní chování
-- **CHI** (Conference on Human Factors in Computing Systems) — ambientní interakce, calm technology
-- **NeurIPS Workshop** — RL v netradiční doméně
-- **GECCO** (Genetic and Evolutionary Computation Conference) — biologicky inspirované systémy
-- **Creative Coding / Generative Art** venues — procedurální animace, digitální umění
+- **ALIFE 2026** (Waterloo, Kanada, 17.–21. srpna)
+  - **Full Paper deadline: 30. března 2026 (AoE)**
+  - Formát: max 8 stran + reference, double-blind, US Letter, MIT Press Open Access
+  - Notification: 7. června 2026
+  - Late-Breaking Abstracts: 20. července 2026
+  - **Nejpřirozenější venue** pro digitální ontogenezi
+- **ACM C&C 2026** (Londýn, 13.–16. července)
+  - Full Paper deadline: 5. února 2026
+  - Art Exhibition: 19. února 2026
+  - Multidisciplinární platforma (AI + design + generative art)
+- **ACM CHI 2026** (Barcelona, 13.–17. dubna) — Full Paper deadline prošel (11. září 2025), Interactive Demos prošel
+- **NeurIPS 2025 Workshopy** (San Diego, 6.–7. prosince 2025) — Workshop contributions deadline ~22. srpna 2025. Vhodné pro „Embodied AI" tracky.
+- **GECCO** — biologicky inspirované systémy
 
 ### Formát publikace
 
 Primární výstup: longitudinální studie s daty nasbíranými přes měsíce/roky. Sekundární: technický report o architektuře a implementaci.
+
+### Etické aspekty a GDPR
+
+- **GDPR Článek 89 — výzkumná výjimka:** Lili loguje pouze vektorové rysy interakce (relativní vzdálenosti, rychlost kurzoru), nikdy identifikační data. Veškeré zpracování lokální (on-device). Privacy by Design.
+- **Informovaný souhlas:** Při nasazení na web třetí strany — informovat uživatele, opt-in pro logování.
+- **IRB konzultace:** Pro publikaci doporučeno projít formálním IRB procesem. Pravděpodobná klasifikace „IRB exempt" (lokální data, anonymizace).
+- **Minimalizace dat:** Žádná surová telemetrie kurzoru, žádný fingerprinting.
 
 ---
 

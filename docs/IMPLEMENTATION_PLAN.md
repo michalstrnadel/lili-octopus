@@ -16,12 +16,12 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Klíčové vizuální principy:**
 
-- **Jet propulsion pohyb:** chobotnice se nepohybují lineárně — stahují mantle a vystřelují vodu. Wander behavior musí simulovat pulse-glide cyklus (krátký impuls + dlouhý klouzavý drift s decelerace)
+- **Jet propulsion pohyb:** chobotnice se nepohybují lineárně — stahují mantle a vystřelují vodu. Wander behavior musí simulovat pulse-glide cyklus (krátký impuls + dlouhý klouzavý drift s decelerací)
 - **Chapadla trailing:** při pohybu chapadla přirozeně zaostávají za tělem (drag), při zastavení se rozprostřou do stran (relaxace). Nikdy se nepohybují synchronně — fázový posun mezi chapadly je klíčový.
 - **Měkké tělo:** Simplex noise deformace mantlu simuluje svalové kontrakce. Tělo se mírně zmenšuje při impulsu a expanduje při driftu.
 - **Chromatofory jako emoce:** barva není dekorace — je to jediný komunikační kanál organismu. Musí být okamžitě čitelná (stress = zahřátí k červené, klid = hluboká modř).
 - **Oči jako jádro personality:** pupily sledující kurzor jsou primární bod empatie. Velikost pupil reaguje na stress (rozšíření = strach). Mrkání jako idle animation.
-- **Subtilní glow:** radialGradient kolem těla — ne jako "efekt", ale jako bioluminiscence. Intenzita klesá s věkem.
+- **Subtilní glow:** radialGradient kolem těla — ne jako „efekt", ale jako bioluminiscence. Intenzita klesá s věkem.
 
 ---
 
@@ -31,12 +31,24 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Soubor:** `/public/lili.js`
 
-**Úkoly:**
+**Pracovní celky:**
+
+### 1A: IIFE a konfigurační systém
 - IIFE wrapper s `'use strict'`
 - `CFG` objekt se všemi konstantami (rychlosti, velikosti, prahy, hyperparametry RL)
+- Deterministický seed systém pro reprodukovatelnost (Research #5): fixní seed pro Simplex Noise, oddělený seed pro RL rozhodování — umožňuje přesné párové testování
+
+### 1B: Vec2 matematika
 - `Vec2` třída/objekt: `add`, `sub`, `mult`, `div`, `mag`, `normalize`, `limit`, `dist`, `dot`, `copy`, `set`
-- Simplex Noise generátor (self-contained, ~100 řádků) — potřebný pro Wander a vizuální deformace
-- Canvas bootstrap: vytvoření `<canvas id="lili-canvas">`, `position:fixed`, `100vw×100vh`, `pointer-events:none`, `z-index:9999`
+- Všechny operace in-place (mutující) i pure (vracející nový) — preferovat in-place v hot path pro eliminaci GC (Research #3)
+
+### 1C: Simplex Noise generátor
+- Self-contained implementace (~100 řádků)
+- Potřebný pro Wander behavior, vizuální deformace, organický pohyb chapadel
+- Deterministický seed (viz 1A) — klíčové pro reprodukovatelnost experimentu
+
+### 1D: Canvas bootstrap a lifecycle
+- Vytvoření `<canvas id="lili-canvas">`, `position:fixed`, `100vw×100vh`, `pointer-events:none`, `z-index:9999`
 - HiDPI handling: `canvas.width = innerWidth * devicePixelRatio`, context scale
 - Resize handler s debounce (150ms)
 - `document.hidden` check — pause při neviditelném tabu
@@ -49,15 +61,21 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Cíl:** Lili se plynule pohybuje po stránce pomocí Reynoldsových algoritmů.
 
-**Úkoly:**
+**Pracovní celky:**
+
+### 2A: Fyzikální model těla
 - Lili state objekt: `position` (Vec2), `velocity` (Vec2), `acceleration` (Vec2), `bodyR`, `maxSpeed`, `maxForce`, `damping`
 - Physics update per frame: `acceleration → velocity → position`, truncate, damping
+
+### 2B: Steering behaviors
 - **Wander:** projekce kruhu (wanderDistance, wanderRadius), target bod posouvaný Simplex noise (ne `Math.random`). Organické křivky.
 - **Seek / Arrive:** vektor k cíli, deceleration radius pro plynulé zastavení
 - **Flee / Evade:** Flee = opačný vektor od hrozby. Evade = predikce budoucí pozice kurzoru z jeho velocity.
 - **Obstacle Avoidance:** ahead vector (délka ~ `speed/maxSpeed * MAX_SEE_AHEAD`), test kolize bounding circle vs. bounding boxy DOM elementů
 - **Boundary:** měkké odpuzování od okrajů viewportu (ne tvrdé odrazy)
-- Behavior weight system: váhy se mění podle aktuální akce (tabulka z PRD sekce 5.3)
+
+### 2C: Behavior weight system
+- Váhy se mění podle aktuální akce (tabulka z PRD sekce 5.3)
 - Pro testování: fixní akce `wander` s obstacle avoidance a boundary vždy aktivní
 
 **Výstup:** Viditelný kruh (placeholder) plynule pluje po stránce, obchází DOM elementy, neprochází přes okraje.
@@ -66,36 +84,57 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Cíl:** 8 procedurálně animovaných chapadel s inverzní kinematikou a lokální inteligencí.
 
-**Biologický princip:** Reálné chobotnice mají 2/3 neuronů v chapadlech. Každé chapadlo je semi-autonomní — dokáže samostatně reagovat na podměty bez čekání na centrální mozek.
+**Biologický princip:** Reálné chobotnice mají 2/3 neuronů v chapadlech. Každé chapadlo je semi-autonomní — dokáže samostatně reagovat na podněty bez čekání na centrální mozek.
 
-**Úkoly:**
-- Data struktura: 8 chapadel × 8 segmentů. Segment délka modulovaná věkem (zatím fixní default).
+**Pracovní celky:**
+
+### 3A: FABRIK solver — datové struktury a algoritmus
+- **Topologie: 8 nezávislých řetězců** (ne strom). Každé chapadlo je izolovaný kinematický řetězec s vlastním kořenem ukotveným na kružnici těla. Eliminuje centroidy, umožňuje paralelní zpracování. (Research #3)
+- **Float32Array alokace:** Pozice uzlů uloženy v `Float32Array` (index `i*2` = X, `i*2+1` = Y). Zero-allocation v render loop — žádné `new` objekty v hot path. Eliminuje GC stutter. (Research #3)
+- 8 chapadel × 8 segmentů. Segment délka modulovaná věkem (zatím fixní default).
 - Anchor points: rovnoměrně po obvodu těla (45° rozestupy), rotované ve směru pohybu
 - FABRIK solver:
     - Forward Reach: tip → target, přepočet pozic od tipu k base (zachování délky segmentů)
     - Backward Reach: base → anchor, přepočet od base k tipu
-    - 3-4 iterace per frame
-- **Lokální stav per chapadlo:**
-    - `localStress` — roste při kontaktu s kurzorem, klesá v klidu
-    - `touching` — jaký DOM element právě cítí (nebo null)
-    - `curiosity` — jak moc chce zkoumat (ovlivněno globální náladou)
-    - `recoilTimer` — reflexní stažení po kontaktu s hrozbou
-    - `heldElement` — DOM element který nese (nebo null)
-    - `grip` — síla úchopu (klesá s časem, stresem)
+    - **Max 1-3 iterace per frame** (díky temporal coherence při 60fps je to dostatečné — Research #3). Drobná nepřesnost u měkkého hydrostatu působí jako přirozená měkkost tkáně.
+    - Reachability check: pokud `dist(base, target) > totalLength` → natáhnout do přímky
+
+### 3B: Procedurální generování pohybu — biomechanický model
+- **Asymetrický power-stroke/recovery model** (Research #3, #1): Pohyb chapadel se dělí do dvou fází — rychlý silový záběr (power stroke, chapadla se stahují k tělu) + pomalá návratová fáze (recovery, chapadla se rozevírají). Nelineární časová modulace: `asyncTime = t + 0.4 * sin(t)`.
+- **Fázový posun per chapadlo:** Distribuce fází pro 8 chapadel:
+    - G4 (střídavý symetrický): L1,L3,R2,R4 fáze=0; L2,L4,R1,R3 fáze=π — stabilní „kráčivý" pohyb
+    - Radial Wave (vlnivý): postupně od 0 do 7π/4 po krocích π/4 — plynulé vlnění pro klidové stavy
+    - Výběr vzoru řídí aktuální nálada organismu
+- **Simplex noise injection** (Research #3): Šum se přičítá jako offset k amplitudě a úhlu targetu (ne přímo na souřadnice). `noiseFunction(t * 0.5 + index * 10) * 20` — každé chapadlo má unikátní noise offset.
+
+### 3C: Trailing physics — Mass-Spring-Damper model
+- **Fyzikální model vlečného efektu** (Research #3): Každé chapadlo místo přímého následování `TargetIdeal` vlastní `TargetActual` s vlastní velocity.
+- **Hookův zákon + viskózní tlumení:**
+    - Pružná síla: `F_spring = stiffness * (idealPos - actualPos)`
+    - Viskózní tlumení: `F_damp = damping * velocity`
+    - Semi-implicitní Eulerova integrace per frame
+- **Kalibrované parametry pro kritické tlumení** (Research #3):
+    - `stiffness = 0.10–0.18` (realistické podvodní prostředí)
+    - `damping = 0.75–0.85` (žádný overshoot, plynulý dojezd)
+    - Hodnoty mimo tento rozsah → buď robotický pohyb (příliš tuhé) nebo „gumový" efekt (příliš měkké)
+
+### 3D: Lokální stav a inteligence per chapadlo
+- `localStress` — roste při kontaktu s kurzorem, klesá v klidu
+- `touching` — jaký DOM element právě cítí (nebo null)
+- `curiosity` — jak moc chce zkoumat (ovlivněno globální náladou)
+- `recoilTimer` — reflexní stažení po kontaktu s hrozbou
+- `heldElement` — DOM element který nese (nebo null)
+- `grip` — síla úchopu (klesá s časem, stresem)
 - **Lokální chování tipů (bez centrálního mozku):**
     - Reflexní stažení: tip se přiblíží kurzoru → okamžitý recoil
     - Hmatová explorace: tip narazí na DOM element → lokální zvědavost → ohmatání hrany
-    - Uchopení: globální nálada „zvědavá“ + zajímavý element → grab
+    - Uchopení: globální nálada „zvědavá" + zajímavý element → grab
     - Samovolná relaxace: v klidu se chapadla rozprostřou nezávisle
 - Target generování podle kontextu + nálady:
-    - **Plavání (mood: klidná/zvědavá):** sinusoidní vlna se zpožděním per chapadlo, fáze `(index/8)*2π`
-    - **Explorace (mood: zvědavá/hravá):** 1-3 chapadla cílí na nejbližší DOM elementy
-    - **Útok stresu (mood: plachá):** chapadla se stahují dozadu za tělo
-    - **Klid (mood: klidná):** gravitační klap dolů, jemné pulzování
-- Rendering: quadratic Bézier curves přes FABRIK uzly
-- Šířka: zužuje se base→tip (lineární interpolace)
-- Perlin noise na šířce pro organický profil
-- `globalAlpha` fade na tipech
+    - **Plavání:** sinusoidní vlna se zpožděním per chapadlo, fáze `(index/8)*2π`
+    - **Explorace:** 1-3 chapadla cílí na nejbližší DOM elementy
+    - **Útěk:** chapadla se stahují dozadu za tělo
+    - **Klid:** gravitační klap dolů, jemné pulzování
 
 **Výstup:** Chobotnice s 8 semi-autonomními chapadly — každé cítí, reaguje a rozhoduje lokálně.
 
@@ -103,22 +142,42 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Cíl:** Kompletní procedurální rendering organismu.
 
-**Úkoly:**
+**Pracovní celky:**
+
+### 4A: Rendering chapadel — hull/envelope přístup
+- **Zásadní rozhodnutí z Research #3:** Nepoužívat `ctx.stroke()` s `lineWidth` — Canvas API neumí dynamicky měnit tloušťku podél jedné cesty. Segmentované tahy vedou k vizuálním defektům v záhybech.
+- **Hull (obálka) rendering:**
+    1. V každém FABRIK uzlu spočítat tangentní vektor (střední směr sousedních vektorů)
+    2. Z tangenty vygenerovat normálu (kolmý vektor, rotace o 90°)
+    3. Definovat tloušťku `w_i` per uzel: `w_i = baseWidth * (1 - i/numJoints)` (lineární tapering base→tip)
+    4. Pro každý uzel vygenerovat dva odsazené body: `L_i = P_i + n_i * w_i` a `R_i = P_i - n_i * w_i`
+    5. Nakreslit Catmull-Rom spline přes pravou stranu, `arc()` na špičce, zpět přes levou stranu
+    6. Uzavřít cestu a `ctx.fill()` — organický tvar bez artefaktů
+- **Catmull-Rom → Bézier konverze** (Research #3): Canvas API nemá nativní Catmull-Rom. Konverze: z bodů P0,P1,P2,P3 vypočítat Bézierovy kontrolní body `CP1 = P1 + (P2-P0)/tension` a `CP2 = P2 - (P3-P1)/tension` (tension=6). Krajní body extrapolovat zrcadlením.
+- Simplex noise na šířce obálky pro organický profil
+- `globalAlpha` fade na tipech
+
+### 4B: Tělo a glow
 - **Tělo:** Ellipse (`radiusX = bodyR * 0.78`, `radiusY = bodyR * 1.0`), Simplex noise deformace okrajů
 - **Glow:** `radialGradient` kolem těla, alfa modulována denní dobou
-- **Oči:** 2 oči na horní třetině. Pupily sledují kurzor (max offset = `radius_oka * 0.3`). Flee = pupily se rozšíří. Idle/sleep = přivřené (arc).
-- **Chromatofory — HSL barevný systém:**
-    - Base hue: `lerp(200, 240, ageNormalized)` (ocean blue → deep indigo)
-    - Cirkadiánní posun: ráno teplejší, noc chladnější/tmavší
-    - Stress: `hue -= stress * 50` (zahřátí k červené), `saturation += stress * 25`
-    - Flee flash: kontrastní probliknutí, decay 300ms
-- **Rendering pipeline per frame:**
-    1. `clearRect`
-    2. Glow (radialGradient)
-    3. Chapadla (Bézier, back-to-front)
-    4. Tělo (filled ellipse + noise)
-    5. Oči
-    6. (Debug mode): spatial hash grid, velocity vectors, state info
+
+### 4C: Oči
+- 2 oči na horní třetině. Pupily sledují kurzor (max offset = `radius_oka * 0.3`).
+- Flee = pupily se rozšíří. Idle/sleep = přivřené (arc).
+
+### 4D: Chromatofory — HSL barevný systém
+- Base hue: `lerp(200, 240, ageNormalized)` (ocean blue → deep indigo)
+- Cirkadiánní posun: ráno teplejší, noc chladnější/tmavší
+- Stress: `hue -= stress * 50` (zahřátí k červené), `saturation += stress * 25`
+- Flee flash: kontrastní probliknutí, decay 300ms
+
+### 4E: Rendering pipeline per frame
+1. `clearRect`
+2. Glow (radialGradient)
+3. **State batching** (Research #3): Jedno `ctx.beginPath()`, všechny chapadlové hull cesty jako sub-paths (oddělené `moveTo`), jedno `ctx.fill()` na konci. Dramaticky snižuje počet state changes v Canvas API.
+4. Tělo (filled ellipse + noise)
+5. Oči
+6. (Debug mode): spatial hash grid, velocity vectors, state info
 
 **Výstup:** Vizuálně kompletní, organicky vypadající chobotnice měnící barvu podle denní doby.
 
@@ -140,9 +199,9 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Cíl:** Dvouúrovňový senzorický systém — globální vstupy pro Q-Learning + lokální vstupy per chapadlo.
 
-**Úkoly:**
+**Pracovní celky:**
 
-**Globální senzory (vstupy pro Q-Learning nálady):**
+### 6A: Globální senzory (vstupy pro Q-Learning nálady)
 - **Kurzor:** `mousemove` listener → `mouseX, mouseY, mouseVX, mouseVY, mouseSpeed` (exponenciální klouzavý průměr). Klasifikace: still(<2), slow(2-8), fast(8-20), aggressive(>20).
 - **Scroll:** `scroll` listener + timeout 200ms pro detekci idle/active
 - **Denní doba:** `getTimeOfDay()` → morning/afternoon/evening/night z `new Date().getHours()`
@@ -150,12 +209,12 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 - **Whitespace proximity:** test zda je agent v prázdném prostoru
 - **Cursor proximity:** vzdálenost kurzor↔agent → far/medium/near
 
-**Lokální senzory per chapadlo (vstupy pro lokální rozhodování):**
+### 6B: Lokální senzory per chapadlo
 - **Tip proximity to cursor:** vzdálenost špičky chapadla od kurzoru → recoil trigger
 - **Tip touching DOM:** jaký element tip právě dotýká (z spatial hashe)
 - **Held element state:** nese něco? jak dlouho? jak daleko od původní pozice?
 
-**Agregace (tělo):**
+### 6C: Agregace a stress model
 - **Stress model:** float 0-1, exponential smoothing. Agreguje: globální kurzor input + počet chapadel v recoil stavu + počet kolizí.
 - **Tentacle feedback:** kolik chapadel právě exploruje / drží element / je v recoilu → informuje globální stav
 
@@ -194,7 +253,7 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
     - `shy` — chapadla se stahují za tělo, nízká interakce
     - `calm` — chapadla se rozprostřou, pomalé pohyby, whitespace seeking
     - `alert` — zvýšená pozornost, připravena na flee
-    - `idle` — minimální aktivita, „meditace“
+    - `idle` — minimální aktivita, „meditace"
     - `exploring` — seek okrajů, zkoumání neznámých oblastí
 - **Q-tabulka:** `Map` nebo objekt, klíč = serializovaný state string, hodnota = array[7] Q-hodnot pro 7 nálad
 - **Bellmanova rovnice:** `Q(s,m) ← Q(s,m) + α[R + γ·max(Q(s',m')) - Q(s,m)]`, α=0.1, γ=0.85
@@ -212,7 +271,7 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
     - -0.2: opakování stejné nálady > N cyklů
 - **Decision cycle:** každých 30-60 framů (ne každý frame)
 - **Persistence:** Q-tabulka → JSON → `localStorage.lili_qtable`, save každých ~600 framů + `beforeunload`
-- **Napojení:** výstup nálady → ovlivňuje: steering váhy + chapadlové parametry (curiosity, grip) + chromotoforovou reaktivitu
+- **Napojení:** výstup nálady → ovlivňuje: steering váhy + chapadlové parametry (curiosity, grip) + chromatoforovou reaktivitu
 
 ### 8B: Behavioral Journal — akademická datová vrstva
 
@@ -236,6 +295,8 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
     - Stress histogram (distribuce stresu za den)
     - Q-table snapshot hash (pro detekci konvergence)
     - Total decisions, total reward, session duration
+    - **Shannon entropy akčního rozdělení** (Research #5): `H = -Σ p(a) log₂ p(a)` — míra neurčitosti v rozložení akcí. Vysoká = chaotická explorace, nízká = specializované chování.
+    - **Lempel-Ziv komplexita** (Research #5): LZC denní sekvence akcí — počet unikátních podřetězců. Komprimovatelnost sekvence měří strukturální redundanci (naučené rutiny vs. náhodný šum).
 
 - **Milníky (event log):**
     - Phase transitions (hatchling→juvenile atd.) s timestampem
@@ -246,7 +307,8 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 - **Periodické Q-table snapshoty:**
     - Kompletní Q-tabulka uložená každých 7 dní jako `lili_qtable_snapshot_YYYYMMDD`
-    - Umožňuje rekonstrukci "evoluce mozku" v čase
+    - Umožňuje rekonstrukci „evoluce mozku" v čase
+    - **Policy transition matrix** per snapshot (Research #5): matice pravděpodobností přechodů mezi náladami — vizualizuje strukturální evoluci politiky
 
 **Storage management:**
 - Decision log: ring buffer posledních ~5000 rozhodnutí (FIFO, starší se mažou)
@@ -266,6 +328,7 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
     - Decision ring buffer
 - Alternativní CSV export pro denní agregáty (snazší import do Pythonu/R/Excel)
 - Export neovlivňuje běh — pure read operace
+- **Export je KRITICKÝ** (Research #4): Vzhledem k Safari ITP 7-day eviction riziku a obecné křehkosti localStorage pro 10letý horizont je JSON export jediná spolehlivá záchranná síť pro akademická data.
 
 **Výstup:** Lili se autonomně učí. Kompletní akademická data k dispozici pro analýzu kdykoli.
 
@@ -275,13 +338,13 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 **Biologický princip:** Chapadla chobotnic zkoumají prostředí hmatem a chutí. Mohou uchopovat objekty, manipulovat s nimi, předávat si je. Toto není skriptované — je to lokální rozhodnutí chapadla ovlivněné globální náladou.
 
-**Úkoly:**
+**Pracovní celky:**
 
-**Word Indexer:**
+### 9A: Word Indexer
 - Při bootu obalit textové uzly do `<span class="lili-word">` (jednou, nevratně)
 - Každý span dostává `data-lili-shape` atribut (round/angular/mixed) pro tvarovou afinitu
 
-**Úrovně DOM interakce (emergují z lokální inteligence chapadel):**
+### 9B: Úrovně DOM interakce
 
 1. **Ohmatání (touch):** Tip chapadla se dotkne elementu → mírný `rotate(±5°) translate(±8px)`, `transition: 0.3s`
     - `data-lili-touched = Date.now()`
@@ -292,7 +355,7 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 3. **Uchopení (grab):** Chapadlo element uchopí → `data-lili-held="tentacle_index"`
     - Element začne sledovat pozici tipu chapadla (`transform: translate()`)
-    - Max 2 held elementy současně (omezená „síla“)
+    - Max 2 held elementy současně (omezená „síla")
     - Nikdy neuchopí interaktivní elementy (`<a>`, `<button>`, `<input>`)
 
 4. **Hra (play):** Element se houpá, rotuje, případně se předává mezi chapadly
@@ -303,13 +366,13 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
     - Element se animovaně vrátí na původní místo (`transition: 0.8s ease-out`)
     - Remove `data-lili-held`
 
-**Výběr elementů:**
+### 9C: Výběr elementů a afinita
 - Dostupnost: element v dosahu tipu chapadla (ze spatial hashe)
 - Velikost: pouze malé elementy (single character nebo krátké slovo)
 - Tvarová afinita: kulaté tvary (O, 0, o, Q...) mohou mít vyšší atraktivitu
 - Emergentní preference: RL se učí, které interakce generují pozitivní reward
 
-**Midnight Cleanup:**
+### 9D: Midnight Cleanup
 - Kontrola každou minutu, porovnání `lili_last_cleanup` vs. aktuální datum
 - Při přechodu dne:
     - Všechny `[data-lili-touched]` a `[data-lili-held]` elementy → `transition: 1.2s ease-out`, reset transform + color
@@ -326,44 +389,70 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 **Úkoly:**
 - **Click detection:** `document.addEventListener('click')`, Euklidovská vzdálenost `< bodyR * 2.5` = hit
 - **Tooltip:** absolutně pozicovaný DOM element, monospace font, ostrý kontrast.
-    - Obsah: name ("Lili"), age (formátovaný), phase, preference (top Q-action), visits
+    - Obsah: name („Lili"), age (formátovaný), phase, preference (top Q-action), visits
     - Emergentní data z enginu — žádné autorské hlášky
     - Auto-dismiss po 3.5s
 - **Debug panel:**
     - Toggle: klávesa `D` (keydown)
     - Fixed pozice, tmavý BG, monospace, 12px, semi-transparent
     - Obsah: phase, age, state vector, current action, Q-values, stress, velocity, disturbed count, FPS, spatial hash cell count
+    - **Shannonova entropie a LZC** v reálném čase (Research #5)
 
 **Výstup:** Klik na Lili = faktický tooltip. Klávesa D = kompletní debug info.
 
-## Fáze 11: Persistence schema + finální integrace
+## Fáze 11: Persistence — schema, strategie a ochrana dat
 
-**Cíl:** Kompletní localStorage schema a edge cases.
+**Cíl:** Kompletní localStorage schema, edge cases a strategie pro 10letý horizont.
 
-**Úkoly:**
+**Pracovní celky:**
+
+### 11A: localStorage schema
 - localStorage keys: `lili_genesis` (NIKDY přepsat), `lili_qtable` (JSON, ~10s), `lili_position` (JSON, ~5s), `lili_last_cleanup`, `lili_visits`
-- Celkový footprint < 15KB
+- Celkový footprint < 15KB (jádro) + ~1-2MB/rok (journal)
 - Při bootu: restore pozice, Q-tabulka, genesis check
 - `beforeunload`: final save
 - Edge cases: corrupted localStorage → graceful fallback (nová inkarnace)
 - Promazání localStorage = nový Hatchling (by design)
 
-**Výstup:** Lili přežívá refresh, pokračuje kde skončila.
+### 11B: Strategie pro Safari ITP a 10letý horizont (Research #4)
+- **Kritický problém:** Safari ITP automaticky smaže VŠECHNA skriptově zapisovatelná úložiště (localStorage, IndexedDB, SessionStorage, Cache API, OPFS) po 7 dnech uživatelské neaktivity. `navigator.storage.persist()` NECHRÁNÍ před ITP — pouze před storage pressure eviction.
+- **Dopad na Lili:** Uživatel na Safari nenavštíví stránku 8+ dní → kompletní ztráta Q-tabulky, genesis, journalu.
+- **Mitigační strategie:**
+    1. **Export jako primární záchranná síť:** Periodické připomínky exportu (tooltip po N návštěvách). JSON export musí být 100% self-contained pro reimport.
+    2. **`navigator.storage.persist()` volání** při bootu — chrání alespoň proti storage pressure na Chrome/Firefox.
+    3. **Detekce data loss:** Při bootu porovnat `lili_visits` vs. denní agregáty. Pokud chybí data za období > 7 dní, informovat uživatele o možné ITP evikci.
+    4. **Inkrementální reimport:** Klávesa `I` pro import předchozího exportu — obnoví Q-tabulku a journal.
+    5. **Budoucí v2.0:** Volitelný cloud backup (opt-in), IndexedDB jako primární storage (větší kapacita), Compression Streams API pro zmenšení dat.
+- **localStorage limity:** 5-10 MiB per origin, synchronní blokování — veškerá data musí být kompaktní. JSON.stringify/parse musí být obalené v try/catch pro QuotaExceededError.
+
+**Výstup:** Lili přežívá refresh, pokračuje kde skončila. Uživatel je informován o rizicích a má export/import k dispozici.
 
 ## Fáze 12: Optimalizace a polish
 
 **Cíl:** Výkonnostní cíle a robustnost.
 
-**Úkoly:**
+**Pracovní celky:**
+
+### 12A: Canvas rendering optimalizace (Research #3)
+- **State batching:** Minimalizace `ctx.fillStyle`, `beginPath()`, `fill()` volání. Všechna chapadla stejné barvy = jedna cesta, jeden fill.
+- **Path2D cache pro idle pózy:** Když FABRIK konverguje (chapadla se nehýbou), uložit geometrii do `Path2D` objektu. Při dalším frame jen `ctx.fill(cachedPath)` s transformací. Při pohybu dekomprimovat zpět do procedurálních bodů.
+- **Render culling:** Pokud je středové tělo mimo viewport + maximální dosah chapadla → přeskočit rendering.
+- **Logic LOD:** Entity mimo viewport: snížit FABRIK iterace na 1, nebo řešit chapadla ob snímek (sudá/lichá).
+
+### 12B: Paměťová optimalizace
+- **Zero-allocation render loop:** Žádné `new` v hot path. Všechny dočasné vektory pre-alokované.
+- **Float32Array** pro FABRIK data (viz Fáze 3A)
+- Memory: < 5MB JS heap
+
+### 12C: Výkonnostní cíle a monitoring
 - FPS monitoring: target 60fps, warning pod 50fps
 - CPU overhead: < 2% idle, < 5% plný pohyb
-- Memory: < 5MB JS heap
 - Init: < 200ms od DOMContentLoaded
 - Soubor: < 50KB minified, < 80KB unminified
 - `document.hidden` → pauza kalkulací
 - Spatial hash throttling
 - Q-Learning decision cycle throttling (30-60 framů)
-- FABRIK max 3-4 iterace
+- FABRIK max 1-3 iterace (temporal coherence)
 - Testování na stránkách s 500+ DOM elementy
 - MutationObserver pro SPA navigace / lazy loading
 - Edge cases: extrémně malý viewport, extrémně velká stránka, zero DOM elements
@@ -389,13 +478,24 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 ## Akademické metriky a výzkumné otázky
 
+### Kontrolní podmínky — Baselines (Research #5)
+
+Pro akademické prokázání ontogeneze je kritické srovnávat Lili s kontrolními modely:
+
+1. **Random Policy (agent bez učení):** Akce voleny rovnoměrně náhodně, Q-tabulka se neaktualizuje. Absolutní spodní hranice výkonu — pokud Lili nepřekoná random, reward function je chybná.
+2. **Frozen Policy (zmrazená politika):** Agent se učí po inicializační dobu, pak `α = 0`, `ε` konstantní. Měří dopad nestacionarity prostředí — výkon by měl s časem degradovat (DOM se mění, uživatel se mění), zatímco učící se Lili by si měla udržet výkon.
+3. **Myopic Policy (krátkozraký agent):** Diskontní faktor `γ = 0`. Maximalizuje pouze okamžitou odměnu. Prokazuje schopnost plánovat v dlouhodobém horizontu — „dospělá" Lili by měla vykazovat složitější sekvence chování než myopický agent.
+4. **Hard-coded Baseline (pevná heuristika):** Expertní pravidla (např. „kurzor < 50px → flee do rohu"). Referenční bod pro srovnání lidsky definované strategie s emergentním chováním.
+
+**Implementace baselines:** Baselines nemusí běžet live. Stačí implementovat jako alternativní `brain` objekty, které lze přepnout klávesovou zkratkou nebo konfigurací. Data z baselinů se exportují stejným systémem jako hlavní agent.
+
 ### Krátkodobé metriky (dny/týdny)
 
 - **Q-value convergence curve:** průměrná absolutní změna Q-hodnot per decision cycle — klesá s učením?
 - **Exploration/exploitation ratio:** skutečný poměr náhodných vs. naučených rozhodnutí (ne jen ε — ale reálný)
 - **Reward accumulation:** kumulativní odměna per session — roste s učením?
 - **State visitation distribution:** Zipfovo rozdělení? Které stavy dominují?
-- **Action entropy:** Shannon entropy akčního rozdělení — klesá s věkem? (chaos → specializace)
+- **Action entropy** (Research #5): Shannon entropy `H = -Σ p(a) log₂ p(a)` akčního rozdělení — Hatchling = vysoká (chaos), Elder = nízká (specializace)
 - **Response latency:** průměrný počet framů od detekce hrozby po flee akci
 
 ### Střednědobé metriky (měsíce)
@@ -405,6 +505,7 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 - **Circadian behavioral patterns:** liší se chování ráno vs. noc? (měřeno přes action distribution per time_of_day)
 - **Policy stability index:** jak často se mění preferovaná akce v daném stavu? (měřeno z Q-table snapshotů)
 - **Stress habituation:** klesá průměrný stress level s věkem? Učí se Lili zvládat hrozby?
+- **Lempel-Ziv komplexita** (Research #5): Komprimovatelnost behaviorálních sekvencí — nízká u Hatchling (šum), vyšší u Elder (naučené rutiny = komprimovatelnější)
 
 ### Dlouhodobé metriky (roky)
 
@@ -414,15 +515,50 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 - **Cross-site comparison:** pokud Lili žije na různých stránkách různých uživatelů — liší se naučené Q-tabulky?
 - **Behavioral fingerprint:** je Q-tabulka unikátní per uživatel/stránka? Dá se z ní inferovat typ stránky nebo uživatelský vzorec?
 
+### Vizualizační standardy pro publikaci (Research #5)
+
+- **Q-value heatmaps:** Poloprůhledná vrstva přes DOM vizualizující hodnotovou funkci. Červená = vysoké riziko, zelená = bezpečná zóna. Demonstrují prostorovou orientaci agenta.
+- **Policy transition matrices:** Matice pravděpodobností přechodů mezi náladami per fáze. Hatchling = rovnoměrná/stochastická, Elder = silné deterministické hrany.
+- **Behavioral etograms:** Časová osa kategorizující kontinuální aktivitu do diskrétních stavů. Hatchling vs. Elder vedle sebe = markantní ilustrace ontogeneze.
+- **Complexity-entropy maps:** Kombinace Shannon entropy × LZC zobrazená jako trajektorie v 2D prostoru — balanc explorace vs. exploatace.
+- **Ontogenetické trajektorie:** Makroskopické grafy evoluce metrik přes měsíce/roky. Prokazují robustnost a lifelong learning vs. catastrophic forgetting.
+
 ### Výzkumné otázky (pro akademický paper)
 
 1. Dokáže tabulární Q-Learning agent konvergovat k stabilní policy v otevřeném, nestatickém DOM prostředí?
 2. Jak se liší emergentní chování Hatchling vs. Elder kvalitativně? Je rozdíl pozorovatelný lidským okem?
 3. Existuje korelace mezi uživatelským chováním (scroll patterns, cursor speed) a naučenou Q-tabulkou?
-4. Je biologicky inspirovaný reward shaping efektivnější než náhodný pro dosažení "zdvořilého" chování v DOM?
+4. Je biologicky inspirovaný reward shaping efektivnější než náhodný pro dosažení „zdvořilého" chování v DOM?
 5. Jaká je minimální velikost state space pro emergenci netriviálního chování v tomto kontextu?
 6. Jak přispívá lokální autonomie chapadel (distribuovaná inteligence) k celkové emergenci chování?
 7. Liší se preference DOM elementů (co Lili uchopí a s čím si hraje) mezi instancemi?
+
+### Etické aspekty a GDPR (Research #5)
+
+- **GDPR Článek 89 — výzkumná výjimka:** Lili loguje pouze vektorové rysy interakce (relativní vzdálenosti, rychlost kurzoru), nikdy identifikační data. Veškeré zpracování probíhá lokálně (on-device) — žádné síťové požadavky. Toto odpovídá principu Privacy by Design a umožňuje využití výzkumné výjimky.
+- **Informovaný souhlas:** Pokud bude Lili nasazena na web třetí strany, stránka by měla informovat uživatele o přítomnosti experimentu a získat opt-in souhlas pro logování kurzorových dat.
+- **IRB konzultace:** Pro publikaci na ALIFE/CHI/NeurIPS doporučeno projít formálním IRB procesem. S ohledem na lokální povahu dat a anonymizaci je pravděpodobná klasifikace „IRB exempt".
+- **Minimalizace dat:** Agent loguje pouze to, co je nezbytné pro Q-Learning update — žádná surová telemetrie kurzoru, žádné fingerprinting.
+
+### Publikační strategie a deadliny (Research #5)
+
+- **ALIFE 2026** (Waterloo, Kanada, 17.–21. srpna):
+    - **Full Paper deadline: 30. března 2026 (AoE)**
+    - Formát: max 8 stran + reference, double-blind, US Letter, MIT Press Open Access
+    - Notification: 7. června 2026
+    - Late-Breaking Abstracts: 20. července 2026
+    - Nejpřirozenější venue pro digitální ontogenezi
+- **ACM CHI 2026** (Barcelona, 13.–17. dubna):
+    - Full Paper deadline: 11. září 2025 (prošel)
+    - Interactive Demos/Posters: 22. ledna 2026 (prošel)
+    - Alternativa pro HCI zaměření
+- **ACM C&C 2026** (Londýn, 13.–16. července):
+    - Full Paper deadline: 5. února 2026
+    - Art Exhibition: 19. února 2026
+    - Multidisciplinární platforma (AI + design + generative art)
+- **NeurIPS 2025 Workshopy** (San Diego, 6.–7. prosince 2025):
+    - Workshop contributions deadline: ~22. srpna 2025
+    - Vhodné pro „Embodied AI" tracky
 
 ---
 
@@ -460,7 +596,7 @@ Výměna mozku = výměna jednoho objektu. Tělo + chapadla (steering, FABRIK, l
     - Jiná stránka (DOM layout) → jiné prostorové preference
     - Jiný genesis timestamp → jiný vizuál (subtle seed-based variace barvy/tvaru)
 - Volitelná konfigurace přes data atributy: `<script src="lili.js" data-lili-name="Olga" data-lili-hue="280">`
-- Možnost sdílení Q-tabulky (export/import) — "adopce" cizí Lili
+- Možnost sdílení Q-tabulky (export/import) — „adopce" cizí Lili
 
 ### Psychosomatická vizuální individualita (už v1.0)
 
