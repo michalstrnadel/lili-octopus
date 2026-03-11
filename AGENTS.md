@@ -10,21 +10,26 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Research kompletní → připraven k implementaci**
+**Fáze: Implementace — Fáze 1+2+3+4 hotovy, Fáze 5 další**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
 - ✅ Akademický popis (obohacen o všech 7 researches) — `docs/PROJECT.md`
-- ✅ 12-fázový implementační plán (přepsán s integrací všech researches, rozdělen na pracovní celky) — `docs/IMPLEMENTATION_PLAN.md`
-- ✅ Všech 7 deep researches (0a, 0b, 1, 2, 3, 4, 5) — viz `docs/research/README.md`
+- ✅ 12-fázový implementační plán — `docs/IMPLEMENTATION_PLAN.md`
+- ✅ Všech 7 deep researches — viz `docs/research/README.md`
 - ✅ Vizuální filozofie — `docs/design/README.md`
 - ✅ Vývojový deníček — `docs/journal/`
 - ✅ Repository Blueprint — `docs/REPOSITORY_BLUEPRINT.md`
+- ✅ **Fáze 1:** IIFE, CFG, Vec2, Simplex Noise, Canvas bootstrap, rAF loop, PRNG seeds
+- ✅ **Fáze 2:** Steering Behaviors — wander (pulse-glide), seek/arrive, flee/evade, obstacle avoidance, boundary, mouse tracking, age system, physics update
+- ✅ **Fáze 3:** FABRIK IK — 8 chapadel × 8 segmentů, Float32Array, trailing physics, procedurální biomechanický pohyb, lokální stav per chapadlo, recoil reflexy
+- ✅ **Fáze 4:** Vizuální systém — hull/envelope chapadla (Catmull-Rom→Bézier), tělo s noise deformací, oči sledující kurzor, chromatofory (HSL + cirkadiánní rytmus), glow, menší hatchling (1480 řádků)
 
 Čeká:
-- ⏳ Implementace — začíná Fází 1 (`public/lili.js`)
+- ⏳ Fáze 5: Spatial hash grid (O(1) kolizní detekce)
+- ⏳ Fáze 6+: Senzory, age system, Q-Learning...
 
-**Další krok:** Implementace Fáze 1 (IIFE, Canvas bootstrap, Vec2, Simplex Noise, requestAnimationFrame loop).
+**Další krok:** Implementace Fáze 5 (spatial hash grid, `getNearby()`, MutationObserver).
 
 ## Co číst a kdy
 
@@ -142,5 +147,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-03-08 (research integrace do IMPLEMENTATION_PLAN.md + PROJECT.md)*
+*Poslední aktualizace: 2026-03-11 (Fáze 1+2+3+4 implementovány, lili.js 1480 řádků)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lili — Test Page</title>
+  <style>
+    body { font-family: Georgia, serif; max-width: 680px; margin: 2rem auto; padding: 0 1rem; color: #333; }
+    h1 { font-size: 2rem; }
+    p { line-height: 1.7; margin: 1.2rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Lili Test Page</h1>
+  <p>Toto je testovací stránka pro ověření Phase 1. Canvas by měl být přes celou stránku (transparentní, pointer-events: none). Otevři DevTools a ověř:</p>
+  <ul>
+    <li><code>&lt;canvas id="lili-canvas"&gt;</code> existuje v DOM</li>
+    <li><code>position: fixed</code>, <code>z-index: 9999</code></li>
+    <li>Canvas rozměry odpovídají viewportu × devicePixelRatio</li>
+    <li><code>localStorage.lili_genesis</code> obsahuje timestamp</li>
+    <li><code>localStorage.lili_visits</code> se inkrementuje při refreshi</li>
+  </ul>
+  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Sed euismod, nunc sit amet aliquam lacinia, nisl nisl aliquam nisl, eget aliquam nisl nisl sit amet nisl.</p>
+  <p><button onclick="localStorage.removeItem('lili_genesis');location.reload()">Reset Genesis (hatchling)</button></p>
+  <script src="lili.js" defer></script>
+</body>
+</html>
