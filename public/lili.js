@@ -452,28 +452,116 @@
   }
 
   // =========================================================================
-  // 2B — DOM obstacle cache (simple pre-spatial-hash, rebuilt on resize)
-  // Spatial hash optimization comes in Phase 5
+  // 5 — Spatial Hash Grid (Phase 5: O(1) collision detection)
   // =========================================================================
 
-  let domObstacles = [];  // array of { x, y, w, h, cx, cy } bounding rects
+  const spatialHash = {
+    cellSize: CFG.spatialHashCellSize,  // 120px cells
+    grid: new Map(),                     // key "col,row" → Set of obstacle refs
+    all: [],                             // flat array of all obstacles (for debug)
+    lastBuildMs: 0,                      // throttle timestamp
+  };
 
-  function rebuildDomObstacles() {
-    domObstacles = [];
+  // Obstacle entry: { el, x, y, w, h, cx, cy, minCol, minRow, maxCol, maxRow }
+  function buildSpatialHash() {
+    const now = Date.now();
+    if (now - spatialHash.lastBuildMs < CFG.spatialHashRebuildMs) return;
+    spatialHash.lastBuildMs = now;
+
+    const cell = spatialHash.cellSize;
+    const grid = spatialHash.grid;
+    grid.clear();
+    spatialHash.all.length = 0;
+
     const els = document.querySelectorAll(CFG.indexedSelectors);
     for (let i = 0; i < els.length; i++) {
       const el = els[i];
-      // Skip invisible, our own canvas, and tiny elements
+      // Skip our canvas, invisible, tiny
       if (el === canvas) continue;
       if (el.offsetWidth === 0 && el.offsetHeight === 0) continue;
       const r = el.getBoundingClientRect();
       if (r.width < 5 || r.height < 5) continue;
-      domObstacles.push({
+
+      const ob = {
+        el: el,
         x: r.left, y: r.top, w: r.width, h: r.height,
         cx: r.left + r.width * 0.5,
         cy: r.top + r.height * 0.5,
-      });
+      };
+
+      // Insert into all cells this rect overlaps
+      const minCol = Math.floor(r.left / cell);
+      const minRow = Math.floor(r.top / cell);
+      const maxCol = Math.floor((r.left + r.width) / cell);
+      const maxRow = Math.floor((r.top + r.height) / cell);
+
+      for (let c = minCol; c <= maxCol; c++) {
+        for (let rr = minRow; rr <= maxRow; rr++) {
+          const key = c + ',' + rr;
+          let bucket = grid.get(key);
+          if (!bucket) { bucket = []; grid.set(key, bucket); }
+          bucket.push(ob);
+        }
+      }
+
+      spatialHash.all.push(ob);
     }
+  }
+
+  // Query: return obstacles near (x, y) — own cell + 8 neighbors, deduplicated
+  function getNearby(x, y) {
+    const cell = spatialHash.cellSize;
+    const col = Math.floor(x / cell);
+    const row = Math.floor(y / cell);
+    const grid = spatialHash.grid;
+    const result = [];
+    const seen = new Set();
+
+    for (let dc = -1; dc <= 1; dc++) {
+      for (let dr = -1; dr <= 1; dr++) {
+        const bucket = grid.get((col + dc) + ',' + (row + dr));
+        if (!bucket) continue;
+        for (let i = 0; i < bucket.length; i++) {
+          const ob = bucket[i];
+          if (!seen.has(ob)) {
+            seen.add(ob);
+            result.push(ob);
+          }
+        }
+      }
+    }
+    return result;
+  }
+
+  // Count nearby DOM density (for future sensor use)
+  function getNearbyCount(x, y) {
+    const cell = spatialHash.cellSize;
+    const col = Math.floor(x / cell);
+    const row = Math.floor(y / cell);
+    const grid = spatialHash.grid;
+    const seen = new Set();
+    let count = 0;
+
+    for (let dc = -1; dc <= 1; dc++) {
+      for (let dr = -1; dr <= 1; dr++) {
+        const bucket = grid.get((col + dc) + ',' + (row + dr));
+        if (!bucket) continue;
+        for (let i = 0; i < bucket.length; i++) {
+          if (!seen.has(bucket[i])) {
+            seen.add(bucket[i]);
+            count++;
+          }
+        }
+      }
+    }
+    return count;
+  }
+
+  // MutationObserver: rebuild hash when DOM changes
+  let mutationRebuildTimer = 0;
+  function onDomMutation() {
+    clearTimeout(mutationRebuildTimer);
+    mutationRebuildTimer = setTimeout(buildSpatialHash, CFG.spatialHashRebuildMs);
   }
 
   // =========================================================================
@@ -618,8 +706,9 @@
     let closestDist = Infinity;
     let pushX = 0, pushY = 0;
 
-    for (let i = 0; i < domObstacles.length; i++) {
-      const ob = domObstacles[i];
+    const nearby = getNearby(ax, ay);
+    for (let i = 0; i < nearby.length; i++) {
+      const ob = nearby[i];
       // Expand obstacle by body radius for bounding-circle test
       const ox1 = ob.x - r, oy1 = ob.y - r;
       const ox2 = ob.x + ob.w + r, oy2 = ob.y + ob.h + r;
@@ -1458,12 +1547,23 @@
     // Initialize tentacles (8 FABRIK chains)
     initTentacles();
 
-    // Build initial DOM obstacle map
-    rebuildDomObstacles();
-    // Rebuild on resize too
+    // Build initial spatial hash grid (Phase 5)
+    buildSpatialHash();
+
+    // Rebuild on resize (debounced)
     window.addEventListener('resize', function () {
-      setTimeout(rebuildDomObstacles, CFG.resizeDebounceMs + 50);
+      setTimeout(buildSpatialHash, CFG.resizeDebounceMs + 50);
     });
+
+    // Rebuild on scroll (DOM rects shift)
+    window.addEventListener('scroll', function () {
+      spatialHash.lastBuildMs = 0; // force rebuild on next call
+      setTimeout(buildSpatialHash, 100);
+    }, { passive: true });
+
+    // MutationObserver: rebuild when DOM structure changes
+    const observer = new MutationObserver(onDomMutation);
+    observer.observe(document.body, { childList: true, subtree: true });
 
     // Start loop
     lastTime = 0;

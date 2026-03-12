@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1+2+3+4 hotovy, Fáze 5 další**
+**Fáze: Implementace — Fáze 1-5 hotovy, Fáze 6 další**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -23,13 +23,14 @@ Hotovo:
 - ✅ **Fáze 1:** IIFE, CFG, Vec2, Simplex Noise, Canvas bootstrap, rAF loop, PRNG seeds
 - ✅ **Fáze 2:** Steering Behaviors — wander (pulse-glide), seek/arrive, flee/evade, obstacle avoidance, boundary, mouse tracking, age system, physics update
 - ✅ **Fáze 3:** FABRIK IK — 8 chapadel × 8 segmentů, Float32Array, trailing physics, procedurální biomechanický pohyb, lokální stav per chapadlo, recoil reflexy
-- ✅ **Fáze 4:** Vizuální systém — hull/envelope chapadla (Catmull-Rom→Bézier), tělo s noise deformací, oči sledující kurzor, chromatofory (HSL + cirkadiánní rytmus), glow, menší hatchling (1480 řádků)
+- ✅ **Fáze 4:** Vizuální systém — hull/envelope chapadla (Catmull-Rom→Bézier), tělo s noise deformací, oči sledující kurzor, chromatofory (HSL + cirkadiánní rytmus), glow, menší hatchling
+- ✅ **Fáze 5:** Spatial Hash Grid — Map s 120px buňkami, `getNearby()`, `getNearbyCount()`, MutationObserver, scroll rebuild, obstacle avoidance napojený na hash
 
 Čeká:
-- ⏳ Fáze 5: Spatial hash grid (O(1) kolizní detekce)
-- ⏳ Fáze 6+: Senzory, age system, Q-Learning...
+- ⏳ Fáze 6: Senzorický systém (globální + per-chapadlo)
+- ⏳ Fáze 7+: Age system, Q-Learning, DOM interakce...
 
-**Další krok:** Implementace Fáze 5 (spatial hash grid, `getNearby()`, MutationObserver).
+**Další krok:** Implementace Fáze 6 (senzory — kurzor klasifikace, DOM density, whitespace proximity, per-chapadlo tip proximity).
 
 ## Co číst a kdy
 
@@ -147,5 +148,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-03-11 (Fáze 1+2+3+4 implementovány, lili.js 1480 řádků)*
+*Poslední aktualizace: 2026-03-12 (Fáze 1-5 implementovány, lili.js ~1570 řádků)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*
