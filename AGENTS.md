@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-5 hotovy, Fáze 6 další**
+**Fáze: Implementace — Fáze 1-6 hotovy, Fáze 7 další**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -25,12 +25,15 @@ Hotovo:
 - ✅ **Fáze 3:** FABRIK IK — 8 chapadel × 8 segmentů, Float32Array, trailing physics, procedurální biomechanický pohyb, lokální stav per chapadlo, recoil reflexy
 - ✅ **Fáze 4:** Vizuální systém — hull/envelope chapadla (Catmull-Rom→Bézier), tělo s noise deformací, oči sledující kurzor, chromatofory (HSL + cirkadiánní rytmus), glow, menší hatchling
 - ✅ **Fáze 5:** Spatial Hash Grid — Map s 120px buňkami, `getNearby()`, `getNearbyCount()`, MutationObserver, scroll rebuild, obstacle avoidance napojený na hash
+- ✅ **Fáze 6:** Senzorický systém — 7 globálních senzorů (4320 state index), per-tentacle tip touching DOM, stress model (0..1) napojený na chromatofory
 
 Čeká:
-- ⏳ Fáze 6: Senzorický systém (globální + per-chapadlo)
-- ⏳ Fáze 7+: Age system, Q-Learning, DOM interakce...
+- ⏳ Fáze 7: Age system (lifecycle transitions, growth curves)
+- ⏳ Fáze 8: Q-Learning (mood coordinator, reward function)
+- ⏳ Fáze 9: DOM interakce (touch → interest → grab → play → drop)
+- ⏳ Fáze 10-12: Persistence, polish, launch
 
-**Další krok:** Implementace Fáze 6 (senzory — kurzor klasifikace, DOM density, whitespace proximity, per-chapadlo tip proximity).
+**Další krok:** Implementace Fáze 7 (age system — lifecycle přechody, growth curves, event emitter).
 
 ## Co číst a kdy
 
@@ -148,5 +151,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-03-12 (Fáze 1-5 implementovány, lili.js ~1570 řádků)*
+*Poslední aktualizace: 2026-03-12 (Fáze 1-6 implementovány, lili.js ~1760 řádků)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

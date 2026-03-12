@@ -565,6 +565,174 @@
   }
 
   // =========================================================================
+  // 6 — Sensory System (Phase 6: global + per-tentacle)
+  // =========================================================================
+
+  // 6A — Global sensors (discrete values for Q-Learning state vector)
+
+  // Scroll state
+  let scrollActive = false;
+  let scrollTimer = 0;
+  function onScroll() {
+    scrollActive = true;
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(function () { scrollActive = false; }, CFG.scrollTimeoutMs);
+  }
+
+  // Time of day classification
+  function getTimeOfDay() {
+    const h = new Date().getHours();
+    if (h >= 6 && h < 12) return 'morning';
+    if (h >= 12 && h < 18) return 'afternoon';
+    if (h >= 18 && h < 22) return 'evening';
+    return 'night';
+  }
+
+  // Cursor proximity to Lili (discrete)
+  function getCursorProximity() {
+    if (!mouse.active) return 'far';
+    const dx = lili.pos.x - mouse.pos.x;
+    const dy = lili.pos.y - mouse.pos.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < CFG.fleeDistance * 0.5) return 'near';
+    if (d < CFG.fleeDistance * 1.5) return 'medium';
+    return 'far';
+  }
+
+  // DOM density around Lili (from spatial hash)
+  function getDomDensity() {
+    const count = getNearbyCount(lili.pos.x, lili.pos.y);
+    if (count <= 2) return 'sparse';
+    if (count <= 8) return 'medium';
+    return 'dense';
+  }
+
+  // Whitespace proximity — is Lili in empty space or overlapping elements?
+  function getWhitespaceProximity() {
+    const nearby = getNearby(lili.pos.x, lili.pos.y);
+    const px = lili.pos.x, py = lili.pos.y;
+    const r = lili.bodyR;
+    let touching = false;
+    let nearElement = false;
+
+    for (let i = 0; i < nearby.length; i++) {
+      const ob = nearby[i];
+      // Check if body overlaps this element
+      const closestX = Math.max(ob.x, Math.min(px, ob.x + ob.w));
+      const closestY = Math.max(ob.y, Math.min(py, ob.y + ob.h));
+      const dx = px - closestX;
+      const dy = py - closestY;
+      const distSq = dx * dx + dy * dy;
+
+      if (distSq < r * r) { touching = true; break; }
+      if (distSq < (r * 4) * (r * 4)) nearElement = true;
+    }
+
+    if (touching) return 'on_element';
+    if (nearElement) return 'near_element';
+    return 'in_whitespace';
+  }
+
+  // 6A — Full sensor snapshot (updated per decision cycle, not per frame)
+  const sensors = {
+    cursorProximity: 'far',       // far / medium / near
+    cursorVelocity: 'still',      // still / slow / fast / aggressive
+    domDensity: 'sparse',         // sparse / medium / dense
+    whitespace: 'in_whitespace',  // in_whitespace / near_element / on_element
+    scrollState: 'idle',          // idle / active
+    timeOfDay: 'morning',         // morning / afternoon / evening / night
+    agePhase: 'hatchling',        // hatchling / juvenile / adult / mature / elder
+
+    // Numeric state index for Q-Learning (4320 states)
+    stateIndex: 0,
+  };
+
+  // Discrete → index lookup tables
+  const _sensorIndices = {
+    cursorProximity: { far: 0, medium: 1, near: 2 },           // 3
+    cursorVelocity:  { still: 0, slow: 1, fast: 2, aggressive: 3 }, // 4
+    domDensity:      { sparse: 0, medium: 1, dense: 2 },       // 3
+    whitespace:      { in_whitespace: 0, near_element: 1, on_element: 2 }, // 3
+    scrollState:     { idle: 0, active: 1 },                   // 2
+    timeOfDay:       { morning: 0, afternoon: 1, evening: 2, night: 3 }, // 4
+    agePhase:        { hatchling: 0, juvenile: 1, adult: 2, mature: 3, elder: 4 }, // 5
+  };
+  // Dimension sizes: 3 × 4 × 3 × 3 × 2 × 4 × 5 = 4320
+  const _sensorDims = [3, 4, 3, 3, 2, 4, 5];
+
+  function updateSensors() {
+    sensors.cursorProximity = getCursorProximity();
+    sensors.cursorVelocity = mouse.classification;
+    sensors.domDensity = getDomDensity();
+    sensors.whitespace = getWhitespaceProximity();
+    sensors.scrollState = scrollActive ? 'active' : 'idle';
+    sensors.timeOfDay = getTimeOfDay();
+    sensors.agePhase = age.phase;
+
+    // Compute flat state index (mixed-radix encoding)
+    sensors.stateIndex =
+      _sensorIndices.cursorProximity[sensors.cursorProximity]
+      * _sensorDims[1] * _sensorDims[2] * _sensorDims[3] * _sensorDims[4] * _sensorDims[5] * _sensorDims[6]
+      + _sensorIndices.cursorVelocity[sensors.cursorVelocity]
+      * _sensorDims[2] * _sensorDims[3] * _sensorDims[4] * _sensorDims[5] * _sensorDims[6]
+      + _sensorIndices.domDensity[sensors.domDensity]
+      * _sensorDims[3] * _sensorDims[4] * _sensorDims[5] * _sensorDims[6]
+      + _sensorIndices.whitespace[sensors.whitespace]
+      * _sensorDims[4] * _sensorDims[5] * _sensorDims[6]
+      + _sensorIndices.scrollState[sensors.scrollState]
+      * _sensorDims[5] * _sensorDims[6]
+      + _sensorIndices.timeOfDay[sensors.timeOfDay]
+      * _sensorDims[6]
+      + _sensorIndices.agePhase[sensors.agePhase];
+  }
+
+  // 6B — Per-tentacle local sensors (tip touching DOM element)
+  function tentacleTipTouchingDom(arm) {
+    const tipX = arm.x[JOINTS - 1];
+    const tipY = arm.y[JOINTS - 1];
+    const nearby = getNearby(tipX, tipY);
+    for (let i = 0; i < nearby.length; i++) {
+      const ob = nearby[i];
+      if (tipX >= ob.x && tipX <= ob.x + ob.w && tipY >= ob.y && tipY <= ob.y + ob.h) {
+        return ob; // returns the obstacle entry (has .el reference)
+      }
+    }
+    return null;
+  }
+
+  // 6C — Stress model (0..1, exponential smoothing)
+  let stress = 0;
+
+  function updateStress() {
+    // Inputs: cursor proximity, recoil count, speed
+    let raw = 0;
+
+    // Cursor proximity contribution
+    if (sensors.cursorProximity === 'near') raw += 0.5;
+    else if (sensors.cursorProximity === 'medium') raw += 0.15;
+
+    // Cursor velocity contribution
+    if (sensors.cursorVelocity === 'aggressive') raw += 0.4;
+    else if (sensors.cursorVelocity === 'fast') raw += 0.2;
+
+    // Tentacle recoil count
+    let recoilCount = 0;
+    for (let t = 0; t < TENT_N; t++) {
+      if (tentacles[t].recoilTimer > 0) recoilCount++;
+    }
+    raw += recoilCount * 0.08;
+
+    // On element stress
+    if (sensors.whitespace === 'on_element') raw += 0.1;
+
+    // Clamp raw input
+    raw = Math.min(raw, 1);
+
+    // Exponential smoothing
+    stress += (raw - stress) * CFG.stressSmoothing;
+  }
+
+  // =========================================================================
   // 2B — Steering behaviors
   // All return a force Vec2 (or mutate a passed scratch vector)
   // =========================================================================
@@ -1104,6 +1272,9 @@
       arm.localStress *= 0.97; // decay
     }
 
+    // 6B: Tip touching DOM element (from spatial hash)
+    arm.touching = tentacleTipTouchingDom(arm);
+
     // Recoil timer countdown
     if (arm.recoilTimer > 0) {
       arm.recoilTimer -= frameDt;
@@ -1174,8 +1345,12 @@
     let circadianLit = 0;
     if (hour >= 22 || hour < 6) circadianLit = -8;        // darker at night
 
-    const h = baseHue + circadianHue;
-    const s = baseSat;
+    // Stress: shift hue toward red, boost saturation (CFG values)
+    const stressHue = stress * CFG.stressHueShift;     // negative = warmer
+    const stressSat = stress * CFG.stressSaturationBoost;
+
+    const h = baseHue + circadianHue + stressHue;
+    const s = Math.min(baseSat + stressSat, 100);
     const l = baseLit + circadianLit;
 
     return {
@@ -1401,8 +1576,8 @@
       ctx.fill();
 
       // Pupil direction toward mouse
-      let dx = mouse.x - ex;
-      let dy = mouse.y - ey;
+      let dx = mouse.pos.x - ex;
+      let dy = mouse.pos.y - ey;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       const off = Math.min(dist * 0.01, maxOff);
       const px = ex + (dx / dist) * off;
@@ -1497,9 +1672,11 @@
     updateAge();
     lili.bodyR = ageVal(CFG.bodyRadius); // grow with age
     updateMouse();
+    updateSensors();
+    updateStress();
     updatePhysics(frameDt);
     updateTentacles(frameDt);
-    // Phase 7+ : RL decision, Phase 9+ : DOM interaction
+    // Phase 8+ : RL decision, Phase 9+ : DOM interaction
   }
 
   function render() {
@@ -1528,6 +1705,7 @@
     window.addEventListener('resize', onResize);
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('scroll', onScroll, { passive: true });
 
     // Genesis timestamp (never overwrite — PRD rule)
     if (!localStorage.getItem(CFG.storageKeys.genesis)) {
