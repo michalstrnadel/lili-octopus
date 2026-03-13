@@ -1587,7 +1587,7 @@
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist > lili.bodyR * CFG.clickHitboxScale) return;
 
-    e.preventDefault();
+    // Note: no preventDefault() — passive listener, must not block mobile scroll
     showTooltip(t.clientX, t.clientY);
   }
 
@@ -3972,7 +3972,7 @@
 
     // Phase 10: Click/tap on Lili → tooltip
     document.addEventListener('click', onLiliClick);
-    document.addEventListener('touchstart', onLiliTouch, { passive: false });
+    document.addEventListener('touchstart', onLiliTouch, { passive: true });
 
     // Console API: window.lili.export(), .import(), .debug(), .status(), .data()
     exposeConsoleAPI();
