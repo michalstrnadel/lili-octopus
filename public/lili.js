@@ -3867,8 +3867,9 @@
     console.info('[Lili] Brain loaded: ' + _qtable.size + ' Q-states, ' +
       _decision.totalDecisions + ' lifetime decisions, mood=' + lili.mood);
 
-    // Phase 9A: Wrap text nodes into <span class="lili-word"> (once, irreversible)
-    wrapWords();
+    // Phase 9A: Word wrapping disabled — breaks React/framework hydration.
+    // Lili interacts with existing DOM elements via spatial hash instead.
+    // wrapWords();
 
     // Phase 11A: Restore position from localStorage (or center of viewport)
     lili.bodyR = ageVal(CFG.bodyRadius);
