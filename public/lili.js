@@ -843,7 +843,7 @@
     scrollActive = true;
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(function () { scrollActive = false; }, CFG.scrollTimeoutMs);
-    // Update scroll offset (used for coordinate conversions, not rendering)
+    // Update scroll offset for document→viewport coordinate transform
     scrollOx = window.scrollX || window.pageXOffset || 0;
     scrollOy = window.scrollY || window.pageYOffset || 0;
     updateDocDimensions();
@@ -1596,7 +1596,7 @@
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist > lili.bodyR * CFG.clickHitboxScale) return;
 
-    // Note: no preventDefault() — passive listener, must not block mobile scroll
+    // No preventDefault() — passive listener, must not block mobile scroll
     showTooltip(t.clientX, t.clientY);
   }
 
@@ -3776,47 +3776,29 @@
 
   // Document-space coordinate system:
   // lili.pos is in document (page) coordinates — stays fixed on the page when scrolling.
-  // Canvas is position:absolute, viewport-sized, positioned around Lili.
-  // Browser scrolls it natively — no JS needed during iOS momentum scroll.
-  let scrollOx = 0, scrollOy = 0;   // current scroll offset (for coordinate conversions)
+  // Canvas is position:fixed (viewport-sized for perf), rendering applies scroll offset.
+  let scrollOx = 0, scrollOy = 0;   // current scroll offset (document→viewport transform)
   let docW = 0, docH = 0;           // full document dimensions (Lili's world bounds)
-  let canvasOffX = 0, canvasOffY = 0; // canvas top-left position in document coords
 
   function initCanvas() {
     canvas = document.createElement('canvas');
     canvas.id = CFG.canvasId;
     canvas.style.cssText =
-      'position:absolute;top:0;left:0;' +
+      'position:fixed;top:0;left:0;width:100vw;height:100vh;' +
       'pointer-events:none;z-index:' + CFG.canvasZIndex + ';';
     document.body.appendChild(canvas);
     ctx = canvas.getContext('2d');
     resizeCanvas();
   }
 
-  // Position the canvas (viewport-sized) centered on Lili in document space
-  function repositionCanvas() {
-    var cw = W, ch = H;
-    // Center on Lili with generous margin for tentacles
-    var reach = JOINTS * ageVal(CFG.tentacleSegmentLength) + lili.bodyR;
-    var hw = Math.max(cw, reach * 2) * 0.5;
-    var hh = Math.max(ch, reach * 2) * 0.5;
-    canvasOffX = Math.max(0, Math.round(lili.pos.x - hw));
-    canvasOffY = Math.max(0, Math.round(lili.pos.y - hh));
-    canvas.style.left = canvasOffX + 'px';
-    canvas.style.top = canvasOffY + 'px';
-  }
-
   function resizeCanvas() {
     dpr = window.devicePixelRatio || 1;
     W = window.innerWidth;
     H = window.innerHeight;
-    updateDocDimensions();
-    // Viewport-sized canvas (memory-efficient, works on long pages)
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    updateDocDimensions();
   }
 
   function updateDocDimensions() {
@@ -3864,9 +3846,6 @@
     scrollOx = window.scrollX || window.pageXOffset || 0;
     scrollOy = window.scrollY || window.pageYOffset || 0;
 
-    // Update document dimensions (Lili's world bounds)
-    updateDocDimensions();
-
     updateAge();
     lili.bodyR = ageVal(CFG.bodyRadius); // grow with age
     updateMouse();
@@ -3880,19 +3859,15 @@
   }
 
   function render() {
-    // Reposition canvas around Lili (absolute in document space)
-    repositionCanvas();
-
-    // Clear entire canvas (viewport-sized, cheap)
     ctx.clearRect(0, 0, W, H);
 
     // 12A: Render culling — skip Canvas rendering if Lili is fully offscreen
     if (isOnScreen()) {
       const colors = computeColors();
 
-      // Translate so document coords map to canvas-local coords
+      // Apply scroll offset: lili.pos is in document coords, canvas is viewport
       ctx.save();
-      ctx.translate(-canvasOffX, -canvasOffY);
+      ctx.translate(-scrollOx, -scrollOy);
 
       // 4E — Rendering pipeline (correct z-order)
       // 1. Tentacles behind body (hull envelope rendering)
