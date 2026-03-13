@@ -687,7 +687,8 @@
 
   function onMouseMove(e) {
     mouse.prev.setFrom(mouse.pos);
-    mouse.pos.set(e.clientX, e.clientY);
+    // Convert viewport coords to document coords (Lili lives in document space)
+    mouse.pos.set(e.clientX + scrollOx, e.clientY + scrollOy);
     mouse.active = true;
   }
 
@@ -735,18 +736,21 @@
       const r = el.getBoundingClientRect();
       if (r.width < 5 || r.height < 5) continue;
 
+      // Convert viewport-relative rect to document coordinates
+      const dx = r.left + scrollOx;
+      const dy = r.top + scrollOy;
       const ob = {
         el: el,
-        x: r.left, y: r.top, w: r.width, h: r.height,
-        cx: r.left + r.width * 0.5,
-        cy: r.top + r.height * 0.5,
+        x: dx, y: dy, w: r.width, h: r.height,
+        cx: dx + r.width * 0.5,
+        cy: dy + r.height * 0.5,
       };
 
       // Insert into all cells this rect overlaps
-      const minCol = Math.floor(r.left / cell);
-      const minRow = Math.floor(r.top / cell);
-      const maxCol = Math.floor((r.left + r.width) / cell);
-      const maxRow = Math.floor((r.top + r.height) / cell);
+      const minCol = Math.floor(dx / cell);
+      const minRow = Math.floor(dy / cell);
+      const maxCol = Math.floor((dx + r.width) / cell);
+      const maxRow = Math.floor((dy + r.height) / cell);
 
       for (let c = minCol; c <= maxCol; c++) {
         for (let rr = minRow; rr <= maxRow; rr++) {
@@ -830,6 +834,10 @@
     scrollActive = true;
     clearTimeout(scrollTimer);
     scrollTimer = setTimeout(function () { scrollActive = false; }, CFG.scrollTimeoutMs);
+    // Update scroll offset for document→viewport coordinate transform
+    scrollOx = window.scrollX || window.pageXOffset || 0;
+    scrollOy = window.scrollY || window.pageYOffset || 0;
+    updateDocDimensions();
   }
 
   // Time of day classification
@@ -1095,10 +1103,10 @@
       if (touchCount > 0) reward += R.playfulInteraction;
     }
 
-    // +0.3: near viewport edge, user active in center
+    // +0.3: near document edge, user active in center
     if (mouse.active && sensors.cursorProximity === 'far') {
-      const dL = lili.pos.x, dR = W - lili.pos.x;
-      const dT = lili.pos.y, dB = H - lili.pos.y;
+      const dL = lili.pos.x, dR = docW - lili.pos.x;
+      const dT = lili.pos.y, dB = docH - lili.pos.y;
       if (Math.min(dL, dR, dT, dB) < CFG.boundaryMargin * 1.5) {
         reward += R.edgeRespect;
       }
@@ -1556,22 +1564,26 @@
   let _tooltipTimer = 0;
 
   function onLiliClick(e) {
-    const cx = e.clientX;
-    const cy = e.clientY;
-    const dx = cx - lili.pos.x;
-    const dy = cy - lili.pos.y;
+    // Convert viewport click to document coords for hit test
+    const docX = e.clientX + scrollOx;
+    const docY = e.clientY + scrollOy;
+    const dx = docX - lili.pos.x;
+    const dy = docY - lili.pos.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist > lili.bodyR * CFG.clickHitboxScale) return;
 
-    showTooltip(cx, cy);
+    showTooltip(e.clientX, e.clientY);
   }
 
   // Mobile: touchstart on canvas area (click may not fire through pointer-events:none)
   function onLiliTouch(e) {
     if (!e.touches || !e.touches[0]) return;
     const t = e.touches[0];
-    const dx = t.clientX - lili.pos.x;
-    const dy = t.clientY - lili.pos.y;
+    // Convert viewport touch to document coords for hit test
+    const docX = t.clientX + scrollOx;
+    const docY = t.clientY + scrollOy;
+    const dx = docX - lili.pos.x;
+    const dy = docY - lili.pos.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist > lili.bodyR * CFG.clickHitboxScale) return;
 
@@ -1822,7 +1834,7 @@
         x: Math.round(lili.pos.x),
         y: Math.round(lili.pos.y),
         mood: lili.moodIndex,
-        w: W, h: H,  // viewport at save time (for clamping on restore)
+        dw: docW, dh: docH,  // document size at save time (for clamping on restore)
       }));
     } catch (e) { /* storage full */ }
   }
@@ -1834,10 +1846,10 @@
       const data = JSON.parse(json);
       if (typeof data.x !== 'number' || typeof data.y !== 'number') return false;
 
-      // Clamp to current viewport (viewport may have changed since save)
+      // Clamp to current document bounds (page layout may have changed since save)
       const margin = lili.bodyR * 2;
-      lili.pos.x = Math.max(margin, Math.min(data.x, W - margin));
-      lili.pos.y = Math.max(margin, Math.min(data.y, H - margin));
+      lili.pos.x = Math.max(margin, Math.min(data.x, docW - margin));
+      lili.pos.y = Math.max(margin, Math.min(data.y, docH - margin));
 
       // Restore mood if valid
       if (typeof data.mood === 'number' && data.mood >= 0 && data.mood < MOOD_COUNT) {
@@ -2117,8 +2129,11 @@
     // Max tentacle reach = JOINTS * max segment length
     const reach = JOINTS * ageVal(CFG.tentacleSegmentLength);
     const margin = lili.bodyR + reach;
-    return lili.pos.x > -margin && lili.pos.x < W + margin &&
-           lili.pos.y > -margin && lili.pos.y < H + margin;
+    // Convert document coords to viewport coords and check visibility
+    const vx = lili.pos.x - scrollOx;
+    const vy = lili.pos.y - scrollOy;
+    return vx > -margin && vx < W + margin &&
+           vy > -margin && vy < H + margin;
   }
 
   // 12C — FPS monitoring (rolling average, console warning)
@@ -2366,7 +2381,7 @@
     return out;
   }
 
-  // --- Boundary (soft repulsion from viewport edges) ---
+  // --- Boundary (soft repulsion from document edges) ---
   function steerBoundary(out) {
     out.set(0, 0);
     const margin = CFG.boundaryMargin;
@@ -2375,11 +2390,11 @@
     // Left
     if (px < margin) out.x += force * (1 - px / margin);
     // Right
-    if (px > W - margin) out.x -= force * (1 - (W - px) / margin);
+    if (px > docW - margin) out.x -= force * (1 - (docW - px) / margin);
     // Top
     if (py < margin) out.y += force * (1 - py / margin);
     // Bottom
-    if (py > H - margin) out.y -= force * (1 - (H - py) / margin);
+    if (py > docH - margin) out.y -= force * (1 - (docH - py) / margin);
     return out;
   }
 
@@ -2399,8 +2414,8 @@
       const a = i * Math.PI * 0.25;
       const px = lili.pos.x + Math.cos(a) * lookR;
       const py = lili.pos.y + Math.sin(a) * lookR;
-      // Stay in viewport
-      if (px < 0 || px > W || py < 0 || py > H) continue;
+      // Stay in document bounds
+      if (px < 0 || px > docW || py < 0 || py > docH) continue;
       const cnt = getNearbyCount(px, py);
       if (cnt < minCount) { minCount = cnt; bestAngle = a; }
     }
@@ -2441,17 +2456,17 @@
     return out;
   }
 
-  // --- Seek edge (move toward nearest viewport edge) ---
+  // --- Seek edge (move toward nearest document edge) ---
   function steerSeekEdge(out) {
-    const dL = lili.pos.x, dR = W - lili.pos.x;
-    const dT = lili.pos.y, dB = H - lili.pos.y;
+    const dL = lili.pos.x, dR = docW - lili.pos.x;
+    const dT = lili.pos.y, dB = docH - lili.pos.y;
     const min = Math.min(dL, dR, dT, dB);
     const r = lili.bodyR + 5;
     let tx = lili.pos.x, ty = lili.pos.y;
     if (min === dL) tx = r;
-    else if (min === dR) tx = W - r;
+    else if (min === dR) tx = docW - r;
     else if (min === dT) ty = r;
-    else ty = H - r;
+    else ty = docH - r;
     steerSeek(out, tx, ty, true);
     return out;
   }
@@ -2604,12 +2619,12 @@
       lili.heading += diff * headingLerp;
     }
 
-    // Hard clamp to viewport (safety net)
+    // Hard clamp to document bounds (safety net)
     const r = lili.bodyR;
     if (lili.pos.x < r) lili.pos.x = r;
-    if (lili.pos.x > W - r) lili.pos.x = W - r;
+    if (lili.pos.x > docW - r) lili.pos.x = docW - r;
     if (lili.pos.y < r) lili.pos.y = r;
-    if (lili.pos.y > H - r) lili.pos.y = H - r;
+    if (lili.pos.y > docH - r) lili.pos.y = docH - r;
   }
 
   // =========================================================================
@@ -3039,7 +3054,7 @@
     _domState.disturbed.set(el, {
       originalTransform: el.style.transform || '',
       originalColor: el.style.color || '',
-      originalRect: { x: rect.left, y: rect.top, w: rect.width, h: rect.height },
+      originalRect: { x: rect.left + scrollOx, y: rect.top + scrollOy, w: rect.width, h: rect.height },
       touchTime: Date.now(),
       returnAt: 0, // set below
       tentacleIdx: arm.index,
@@ -3094,7 +3109,7 @@
       _domState.disturbed.set(el, {
         originalTransform: el.style.transform || '',
         originalColor: el.style.color || '',
-        originalRect: { x: rect.left, y: rect.top, w: rect.width, h: rect.height },
+        originalRect: { x: rect.left + scrollOx, y: rect.top + scrollOy, w: rect.width, h: rect.height },
         touchTime: Date.now(),
         returnAt: 0,
         tentacleIdx: arm.index,
@@ -3743,12 +3758,18 @@
   // =========================================================================
 
   let canvas, ctx;
-  let W = 0, H = 0;          // logical (CSS) dimensions
+  let W = 0, H = 0;          // viewport dimensions (CSS px)
   let dpr = 1;                // device pixel ratio
   let paused = false;         // tab hidden
   let lastTime = 0;           // rAF timestamp
   let dt = 0;                 // delta time in seconds (capped)
   let frameCount = 0;
+
+  // Document-space coordinate system:
+  // lili.pos is in document (page) coordinates — stays fixed on the page when scrolling.
+  // Canvas is position:fixed (viewport-sized for perf), rendering applies scroll offset.
+  let scrollOx = 0, scrollOy = 0;   // current scroll offset (document→viewport transform)
+  let docW = 0, docH = 0;           // full document dimensions (Lili's world bounds)
 
   function initCanvas() {
     canvas = document.createElement('canvas');
@@ -3768,6 +3789,14 @@
     canvas.width = W * dpr;
     canvas.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    updateDocDimensions();
+  }
+
+  function updateDocDimensions() {
+    const de = document.documentElement;
+    const b = document.body;
+    docW = Math.max(de.scrollWidth, b.scrollWidth, W);
+    docH = Math.max(de.scrollHeight, b.scrollHeight, H);
   }
 
   // Debounced resize handler
@@ -3804,6 +3833,10 @@
   }
 
   function update(frameDt) {
+    // Update scroll offset every frame (smooth scrolling may change between events)
+    scrollOx = window.scrollX || window.pageXOffset || 0;
+    scrollOy = window.scrollY || window.pageYOffset || 0;
+
     updateAge();
     lili.bodyR = ageVal(CFG.bodyRadius); // grow with age
     updateMouse();
@@ -3823,6 +3856,10 @@
     if (isOnScreen()) {
       const colors = computeColors();
 
+      // Apply scroll offset: lili.pos is in document coords, canvas is viewport
+      ctx.save();
+      ctx.translate(-scrollOx, -scrollOy);
+
       // 4E — Rendering pipeline (correct z-order)
       // 1. Tentacles behind body (hull envelope rendering)
       renderTentaclesHull(colors);
@@ -3832,6 +3869,8 @@
 
       // 3. Eyes (on top of body)
       renderEyes(colors);
+
+      ctx.restore();
     }
 
     // 12C: FPS monitoring (always runs, even when offscreen)
@@ -3884,10 +3923,15 @@
     // Lili interacts with existing DOM elements via spatial hash instead.
     // wrapWords();
 
-    // Phase 11A: Restore position from localStorage (or center of viewport)
+    // Initialize document-space coordinate system
+    scrollOx = window.scrollX || window.pageXOffset || 0;
+    scrollOy = window.scrollY || window.pageYOffset || 0;
+    updateDocDimensions();
+
+    // Phase 11A: Restore position from localStorage (or center of current viewport in document coords)
     lili.bodyR = ageVal(CFG.bodyRadius);
     if (!restorePosition()) {
-      lili.pos.set(W * 0.5, H * 0.5);
+      lili.pos.set(scrollOx + W * 0.5, scrollOy + H * 0.5);
     }
 
     // Initialize tentacles (8 FABRIK chains)
