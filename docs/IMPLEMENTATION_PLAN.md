@@ -459,6 +459,66 @@ Klíčové technologie: Q-Learning, Craig Reynolds Steering Behaviors, FABRIK IK
 
 ---
 
+## Fáze 13: Emoční exprese — vizuální manifestace nálad
+
+**Cíl:** Nálady (moods), které Q-Learning už vybírá, se musí vizuálně projevit na těle Lili — autonomně, emergentně, bez skriptovaných animací.
+
+**Biologický princip:** Chobotnice komunikují emoce chromatofory (barva), texturou kůže (papily), pozicí chapadel, tvarem těla a očí. Nejde o „obličejové výrazy" — jde o celotělové somatické stavy. Lili by měla dělat totéž: nálada = fyziologický stav celého organismu, ne nalepená emoji.
+
+**Klíčový constraint:** Žádné skriptované animace typu „když curious, přehraj animaci X". Mood ovlivňuje parametry (rychlosti, amplitudy, prahy), vizuální projev emerguje z těchto parametrů.
+
+**Pracovní celky:**
+
+### 13A: Chromatoforová exprese nálad
+- Každá nálada moduluje HSL jinak (ne jen stress → červená):
+  - `curious` — hue posun k teplejší tyrkysové, zvýšený jas, jemné pulzování saturace
+  - `playful` — rychlejší hue oscilace (±8°), vyšší saturace, „živá" barva
+  - `shy` — bledší (vyšší lightness, nižší saturace), zmenšení těla o ~5%
+  - `calm` — hluboká stabilní barva, minimální variace, nejnižší glow
+  - `alert` — kontrastnější (vyšší saturace), flash při přechodu do alert
+  - `idle` — postupné ztmavnutí, „usínací" efekt (lightness klesá)
+  - `exploring` — hue drift (pomalé barevné putování), zvýšený glow
+- Přechody mezi náladami plynulé (lerp přes ~2s), ne skokové
+
+### 13B: Oční exprese
+- Mrkání: idle/calm = častější pomalé mrkání (přivření víček arc clipping)
+- Rozšíření pupil: alert/shy = větší pupily (strach), calm/idle = menší (relaxace)
+- Pohled: curious = pupily aktivněji sledují DOM elementy (ne jen kurzor), idle = pohled „do prázdna" (pupily se centreují)
+- Squint: playful = mírné přivření (arc od ~-0.8π do 0.8π místo plného kruhu)
+
+### 13C: Tělesná exprese
+- Dýchání: calm/idle = pomalejší a hlubší (větší amplituda), alert = rychlejší a mělčí
+- Mantle kontrakce: shy = stažené tělo (bodyR × 0.92), playful = rozevřené (bodyR × 1.05)
+- Glow pulsace: curious/exploring = glow pulzuje v rytmu „zvědavosti" (~0.5 Hz), idle = steady
+- Pulse-glide: playful = vyšší frekvence pulzů, calm = minimální pohyb
+
+### 13D: Chapadlová exprese (rozšíření lokální inteligence)
+- Poloha/rozprostření:
+  - `curious` — 1-3 chapadla se natahují dopředu (explorační póza)
+  - `shy` — chapadla stažená za tělo, menší amplituda, tighter cluster
+  - `playful` — širší rozprostření, vyšší swim amplituda, živější vlnění
+  - `calm` — gravitační klap dolů, pomalé sinusoidní vlnění
+  - `alert` — chapadla napjatá, připravená na pohyb, minimální vlnění
+  - `idle` — relaxovaně visí, random jemné pohyby
+  - `exploring` — asymetrické — některá explorují dopředu, jiná trailing
+- Implementace: mood ovlivňuje parametry `swimAmplitude`, `phasePattern`, `relaxGravity`, `noiseScale` per mood (ne per-frame override, ale smooth blend target)
+
+### 13E: Tooltip a debug integrace
+- Tooltip: zobrazit aktuální náladu s vizuálním indikátorem (barevný dot vedle textu odpovídající chromatoforové barvě nálady)
+- Debug panel: přidat mood history (posledních 10 přechodů s timestampy)
+- Console log při mood přechodu (volitelně, jen v debug mode)
+
+### 13F: Mood transition events
+- `onMoodChange(prevMood, newMood)` callback systém (analogie k `onPhaseTransition`)
+- Transition smoothing: `moodBlend` float 0..1 interpolující mezi předchozí a novou náladou po dobu ~2s
+- Milestone logging: „first time mood X lasted > 5 minutes continuously"
+
+**Výstup:** Lili vizuálně „cítí" — pozorovatel rozpozná náladu bez debug panelu. Každá instance Lili má unikátní emoční profil emergující z Q-Learningu a prostředí.
+
+**Poznámka:** Tato fáze NEROZŠIŘUJE mood space (zůstává 7 nálad). Pouze přidává vizuální kanály pro existující nálady. Q-Learning se nemění.
+
+---
+
 ## Testovací kritéria (z PRD)
 
 - Po 10 minutách pozorování není zřejmé cyklické opakování

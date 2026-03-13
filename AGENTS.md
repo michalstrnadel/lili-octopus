@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-6 hotovy, Fáze 7 další**
+**Fáze: Implementace — Fáze 1-12 hotovy, v1.0 ready**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -26,14 +26,15 @@ Hotovo:
 - ✅ **Fáze 4:** Vizuální systém — hull/envelope chapadla (Catmull-Rom→Bézier), tělo s noise deformací, oči sledující kurzor, chromatofory (HSL + cirkadiánní rytmus), glow, menší hatchling
 - ✅ **Fáze 5:** Spatial Hash Grid — Map s 120px buňkami, `getNearby()`, `getNearbyCount()`, MutationObserver, scroll rebuild, obstacle avoidance napojený na hash
 - ✅ **Fáze 6:** Senzorický systém — 7 globálních senzorů (4320 state index), per-tentacle tip touching DOM, stress model (0..1) napojený na chromatofory
+- ✅ **Fáze 7:** Age system — smoothstep interpolace mezi fázemi, phaseProgress tracking, onPhaseTransition event system, growth curves
+- ✅ **Fáze 8:** Q-Learning brain — sparse Q-table (4320 stavů × 7 nálad), Bellman update (α=0.1, γ=0.85), ε-greedy z age systému, mood→steering weight mapping, 4 nové steering behaviors (seekWhitespace, seekDom, seekEdge, followSlow), reward function (9 situací), behavioral journal (ring buffer 5000 + daily aggregates + milestones + LZ complexity + Shannon entropy), Q-table snapshots, export systém (klávesa E)
+- ✅ **Fáze 9:** DOM interakce — word indexer (text→`<span class="lili-word">`), 5-fázový pipeline (touch→interest→grab→play→drop), per-tentacle state machine, max 2 held + 4 disturbed, tvarová afinita (round/angular/mixed), shape-aware selection, CSS only (transform+color), midnight cleanup s denním resetem
+- ✅ **Fáze 10:** Click detection + Tooltip + Debug panel — klik na Lili = faktický tooltip (jméno, věk, fáze, preference, visits, auto-dismiss 3.5s), klávesa D = debug panel (phase, mood, stress, sensors, Q-values, entropy, LZC, DOM state, FPS, hash stats), klávesa E = export (unified keydown handler)
+- ✅ **Fáze 11:** Persistence — position save/restore (localStorage, periodic + beforeunload), viewport clamping, mood restore, `navigator.storage.persist()`, data loss detection (Safari ITP), import systém (klávesa I, merge duplicates), graceful fallback pro corrupted data
+- ✅ **Fáze 12:** Optimalizace — render culling (offscreen skip), pre-allocated hull arrays (zero-alloc render), drawHullSide reverse traversal (no array mutation), FPS monitoring (rolling avg + console warning <50), init timing (performance.now)
+- ✅ **Fáze 13:** Emoční exprese — chromatoforová exprese nálad (HSL mood modulation), oční exprese (mrkání, pupil dilation, squint, DOM gaze), tělesná exprese (breathing rate/depth, body scale, glow pulsation), chapadlová exprese (amplitude, spread, gravity, noise, forward bias per mood), tooltip mood dot, debug mood history, onMoodChange callbacks, moodBlend smooth transitions, sustained_mood milestones
 
-Čeká:
-- ⏳ Fáze 7: Age system (lifecycle transitions, growth curves)
-- ⏳ Fáze 8: Q-Learning (mood coordinator, reward function)
-- ⏳ Fáze 9: DOM interakce (touch → interest → grab → play → drop)
-- ⏳ Fáze 10-12: Persistence, polish, launch
-
-**Další krok:** Implementace Fáze 7 (age system — lifecycle přechody, growth curves, event emitter).
+**Další krok:** Testování, launch, akademické baselines.
 
 ## Co číst a kdy
 
@@ -151,5 +152,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-03-12 (Fáze 1-6 implementovány, lili.js ~1760 řádků)*
+*Poslední aktualizace: 2026-03-13 (Fáze 1-13 implementovány, lili.js ~3715 řádků)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

@@ -87,17 +87,18 @@
     stressFlashDecayMs: 300,
 
     // --- Color / chromatophores (HSL) ---
-    baseHue:        { hatchling: 200, elder: 240 },
-    baseSaturation:  { hatchling: 60,  elder: 80 },
-    baseLightness:   { hatchling: 62,  elder: 35 },
-    glowIntensity:   { hatchling: 0.7, juvenile: 0.6, adult: 0.55, mature: 0.45, elder: 0.3 },
+    // Teal→deep ocean: visible on both black and white backgrounds
+    baseHue:        { hatchling: 175, elder: 220 },
+    baseSaturation:  { hatchling: 70,  elder: 75 },
+    baseLightness:   { hatchling: 58,  elder: 42 },
+    glowIntensity:   { hatchling: 0.85, juvenile: 0.7, adult: 0.6, mature: 0.5, elder: 0.35 },
 
     // --- Eyes ---
     eyePupilMaxOffset: 0.3,
-    eyeRadiusFactor: { hatchling: 0.32, juvenile: 0.28, adult: 0.22, mature: 0.20, elder: 0.18 },
-    pupilRadiusFactor: 0.55,       // pupil radius relative to eye radius
-    eyeSpacing: 0.35,             // eye horizontal spread relative to bodyR
-    eyeYOffset: -0.25,            // eye vertical offset (negative = upward)
+    eyeRadiusFactor: { hatchling: 0.38, juvenile: 0.32, adult: 0.25, mature: 0.22, elder: 0.19 },
+    pupilRadiusFactor: 0.50,       // pupil radius relative to eye radius (smaller pupil = cuter)
+    eyeSpacing: 0.32,             // eye horizontal spread relative to bodyR (slightly closer = cuter)
+    eyeYOffset: -0.22,            // eye vertical offset (negative = upward)
 
     // --- Hull rendering ---
     hullBaseWidth: { hatchling: 0.8, juvenile: 2.2, adult: 4.0, mature: 4.5, elder: 5.0 },
@@ -122,28 +123,120 @@
       elder:     10 * 365 * 24 * 60 * 60 * 1000,        // 6 years – 10 years
     },
 
-    // --- Reward values ---
-    rewards: {
-      inWhitespaceIdle:  +1.0,
-      successfulFlee:    +0.8,
-      domExploration:    +0.5,
-      edgeRespect:       +0.3,
-      blockingText:      -2.0,
-      idleTooLong:       -0.5,
-      fleeWhenSafe:      -0.3,
-      actionRepetition:  -0.2,
-      domCollision:      -1.0,
+    // --- Mood → steering weight profiles (Phase 8: mood replaces action) ---
+    // Moods set tendencies; obstacle avoidance + boundary always have minimums
+    moodWeights: {
+      curious:   { wander: 0.3, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.6, boundary: 0.5, seekDom: 0.8, followSlow: 0.2, seekEdge: 0 },
+      playful:   { wander: 0.7, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.5, boundary: 0.5, seekDom: 0.4, followSlow: 0.3, seekEdge: 0 },
+      shy:       { wander: 0.1, seekWhitespace: 0.3, flee: 1.2, obstacleAvoid: 0.3, boundary: 0.8, seekDom: 0,   followSlow: 0,   seekEdge: 0.4 },
+      calm:      { wander: 0.2, seekWhitespace: 0.8, flee: 0,   obstacleAvoid: 0.6, boundary: 0.5, seekDom: 0,   followSlow: 0,   seekEdge: 0 },
+      alert:     { wander: 0.3, seekWhitespace: 0,   flee: 0.8, obstacleAvoid: 0.9, boundary: 0.6, seekDom: 0,   followSlow: 0,   seekEdge: 0 },
+      idle:      { wander: 0.05,seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.3, boundary: 0.3, seekDom: 0,   followSlow: 0,   seekEdge: 0 },
+      exploring: { wander: 0.5, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.6, boundary: 0,   seekDom: 0.3, followSlow: 0,   seekEdge: 0.6 },
     },
 
-    // --- Behavior weights per action ---
-    behaviorWeights: {
-      wander:         { wander: 1.0, seekWhitespace: 0.2, flee: 0,   obstacleAvoid: 0.8, boundary: 0.5, seekDom: 0,   followSlow: 0 },
-      seek_whitespace: { wander: 0.1, seekWhitespace: 1.0, flee: 0,   obstacleAvoid: 0.8, boundary: 0.5, seekDom: 0,   followSlow: 0 },
-      flee:           { wander: 0,   seekWhitespace: 0,   flee: 1.5, obstacleAvoid: 0.3, boundary: 0.8, seekDom: 0,   followSlow: 0 },
-      explore_dom:    { wander: 0.2, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.5, boundary: 0.5, seekDom: 1.0, followSlow: 0 },
-      idle:           { wander: 0,   seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0,   boundary: 0.3, seekDom: 0,   followSlow: 0 },
-      seek_edge:      { wander: 0.1, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.6, boundary: 0,   seekDom: 0,   followSlow: 0 },
-      follow_slow:    { wander: 0.1, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.8, boundary: 0.5, seekDom: 0,   followSlow: 0.6 },
+    // --- Mood → tentacle parameter influence ---
+    moodTentacleInfluence: {
+      curious:   { curiosity: 0.8, gripTendency: 0.3 },
+      playful:   { curiosity: 0.6, gripTendency: 0.6 },
+      shy:       { curiosity: 0.1, gripTendency: 0.0 },
+      calm:      { curiosity: 0.2, gripTendency: 0.0 },
+      alert:     { curiosity: 0.3, gripTendency: 0.0 },
+      idle:      { curiosity: 0.0, gripTendency: 0.0 },
+      exploring: { curiosity: 0.7, gripTendency: 0.2 },
+    },
+
+    // --- Phase 13A: Mood → chromatophore expression ---
+    // Each mood modulates HSL differently (emergent, not scripted)
+    moodChroma: {
+      curious:   { hueShift:  8,  satShift:  5, litShift:  4, hueDrift: 0,    satPulse: 0.03, glowMod: 1.0 },
+      playful:   { hueShift:  0,  satShift: 12, litShift:  2, hueDrift: 0,    satPulse: 0,    glowMod: 1.0 },
+      shy:       { hueShift:  0,  satShift:-15, litShift: 10, hueDrift: 0,    satPulse: 0,    glowMod: 0.7 },
+      calm:      { hueShift:  0,  satShift:  0, litShift:  0, hueDrift: 0,    satPulse: 0,    glowMod: 0.6 },
+      alert:     { hueShift:-10,  satShift: 15, litShift:  0, hueDrift: 0,    satPulse: 0,    glowMod: 1.2 },
+      idle:      { hueShift:  0,  satShift: -5, litShift: -6, hueDrift: 0,    satPulse: 0,    glowMod: 0.5 },
+      exploring: { hueShift:  0,  satShift:  3, litShift:  2, hueDrift: 0.02, satPulse: 0,    glowMod: 1.3 },
+    },
+    moodChromaBlendSpeed: 0.04, // lerp rate per frame (~2s to full transition)
+
+    // --- Phase 13B: Mood → eye expression ---
+    moodEye: {
+      curious:   { pupilScale: 1.0,  blinkRate: 0.6, squint: 0,    gazeDOM: true  },
+      playful:   { pupilScale: 0.95, blinkRate: 0.5, squint: 0.15, gazeDOM: false },
+      shy:       { pupilScale: 1.2,  blinkRate: 0.8, squint: 0,    gazeDOM: false },
+      calm:      { pupilScale: 0.8,  blinkRate: 1.2, squint: 0,    gazeDOM: false },
+      alert:     { pupilScale: 1.3,  blinkRate: 0.3, squint: 0,    gazeDOM: false },
+      idle:      { pupilScale: 0.75, blinkRate: 1.5, squint: 0.05, gazeDOM: false },
+      exploring: { pupilScale: 1.05, blinkRate: 0.5, squint: 0,    gazeDOM: true  },
+    },
+    blinkDurationFrames: 12,   // ~200ms blink
+    blinkIntervalBase: 180,    // ~3s base interval between blinks
+
+    // --- Phase 13C: Mood → body expression ---
+    moodBody: {
+      curious:   { breathMod: 1.1, bodyScale: 1.0,  glowPulseHz: 0.5 },
+      playful:   { breathMod: 1.3, bodyScale: 1.05, glowPulseHz: 0   },
+      shy:       { breathMod: 0.8, bodyScale: 0.92, glowPulseHz: 0   },
+      calm:      { breathMod: 0.7, bodyScale: 1.0,  glowPulseHz: 0   },
+      alert:     { breathMod: 1.5, bodyScale: 1.0,  glowPulseHz: 0   },
+      idle:      { breathMod: 0.6, bodyScale: 0.98, glowPulseHz: 0   },
+      exploring: { breathMod: 1.0, bodyScale: 1.0,  glowPulseHz: 0.4 },
+    },
+
+    // --- Phase 13D: Mood → tentacle expression ---
+    moodTentacle: {
+      curious:   { ampMod: 1.0, spreadMod: 1.1, gravMod: 0.5, noiseMod: 1.2, forwardBias: 0.35 },
+      playful:   { ampMod: 1.4, spreadMod: 1.3, gravMod: 0.3, noiseMod: 1.4, forwardBias: 0    },
+      shy:       { ampMod: 0.5, spreadMod: 0.6, gravMod: 0.8, noiseMod: 0.6, forwardBias:-0.2  },
+      calm:      { ampMod: 0.7, spreadMod: 0.9, gravMod: 1.2, noiseMod: 0.5, forwardBias: 0    },
+      alert:     { ampMod: 0.6, spreadMod: 1.0, gravMod: 0.2, noiseMod: 0.3, forwardBias: 0    },
+      idle:      { ampMod: 0.4, spreadMod: 0.8, gravMod: 1.5, noiseMod: 0.8, forwardBias: 0    },
+      exploring: { ampMod: 1.1, spreadMod: 1.1, gravMod: 0.4, noiseMod: 1.3, forwardBias: 0.2  },
+    },
+
+    // --- Reward values (Phase 8: PRD-specified) ---
+    rewards: {
+      whitespaceCalm:     +1.0,  // in whitespace, user reading, calm/idle mood
+      fleeSuccess:        +0.8,  // escaped fast cursor
+      exploreLowStress:   +0.5,  // near DOM, low stress, curious
+      playfulInteraction: +0.3,  // tentacles touching DOM, user not reading
+      edgeRespect:        +0.3,  // near edge, user active in center
+      blockingRead:       -2.0,  // over text, cursor still (worst sin)
+      heldBlocksRead:     -1.0,  // held element blocks reading
+      idleTooLong:        -0.5,  // idle > threshold (modulated by age)
+      unnecessaryFlee:    -0.3,  // shy/alert when cursor slow+far
+      moodRepetition:     -0.2,  // same mood > N cycles
+    },
+
+    // --- DOM interaction config (Phase 9) ---
+    dom: {
+      maxHeld: 2,                 // max simultaneously held elements
+      maxDisturbed: 4,            // max simultaneously affected elements
+      touchRotateMax: 5,          // degrees
+      touchTranslateMax: 8,       // pixels
+      touchDuration: [4, 18],     // seconds [min, max] before auto-return
+      holdDuration: [10, 60],     // seconds [min, max] for grab→drop
+      touchTransition: 0.3,       // seconds for touch CSS transition
+      returnTransition: 0.8,      // seconds for drop return transition
+      cleanupTransition: 1.2,     // seconds for midnight cleanup
+      interestBuildRate: 0.3,     // per second (multiplied by curiosity)
+      interestDecayRate: 0.5,     // per second when not touching
+      interestGrabThreshold: 0.7, // interest level to attempt grab
+      curiosityTouchThreshold: 0.3,
+      curiosityGrabThreshold: 0.5,
+      stressDropThreshold: 0.7,   // stress above this → drop everything
+      cleanupCheckFrames: 3600,   // frames between midnight checks (~60s)
+      maxGrabbableWidth: 200,     // px — only small elements
+      maxGrabbableHeight: 50,     // px
+    },
+
+    // --- Journal config (Phase 8B) ---
+    journal: {
+      ringBufferSize:    5000,   // max decision records (FIFO)
+      dailyAggHour:      0,      // midnight snapshot
+      qtableSnapshotDays: 7,     // snapshot Q-table every 7 days
+      moodRepeatThreshold: 5,    // penalize after N consecutive same-mood cycles
+      idlePenaltyThreshold: 3,   // penalize idle after N consecutive cycles
     },
 
     // --- Scroll ---
@@ -160,14 +253,14 @@
       position:    'lili_position',
       lastCleanup: 'lili_last_cleanup',
       visits:      'lili_visits',
+      journal:     'lili_journal',
+      dailyAgg:    'lili_daily',
+      milestones:  'lili_milestones',
     },
 
     // --- Performance targets ---
     targetFps: 60,
     maxInitMs: 200,
-
-    // --- Debug ---
-    debugToggleKey: 'D',
 
     // --- Indexed DOM elements ---
     indexedSelectors: 'p,h1,h2,h3,h4,h5,h6,span,a,img,div',
@@ -370,36 +463,88 @@
   const noise = SimplexNoise.create(noiseRng);
 
   // =========================================================================
-  // 2A — Age / life phase system
+  // 2A — Age / life phase system (Phase 7: smooth lifecycle transitions)
   // =========================================================================
+
+  // Ordered phase list and boundary timestamps for interpolation
+  const LIFE_PHASES = ['hatchling', 'juvenile', 'adult', 'mature', 'elder'];
+  const PHASE_BOUNDARIES = [
+    0,
+    CFG.lifePhases.hatchling,
+    CFG.lifePhases.juvenile,
+    CFG.lifePhases.adult,
+    CFG.lifePhases.mature,
+    CFG.lifePhases.elder,
+  ];
 
   const age = {
     genesisMs: 0,        // set at boot from localStorage
     elapsedMs: 0,        // updated every frame
     phase: 'hatchling',  // current life phase string
+    phaseIndex: 0,       // index in LIFE_PHASES (0–4)
+    phaseProgress: 0,    // 0..1 within current phase (for smooth transitions)
     t: 0,                // normalized age 0..1 over full lifespan
   };
 
-  // Resolve age-dependent config value: { hatchling: x, ..., elder: y }
+  // Phase transition callbacks — called once when phase changes
+  const _phaseListeners = [];
+  function onPhaseTransition(fn) { _phaseListeners.push(fn); }
+
+  // Smoothstep easing for biological growth curves (S-curve, not linear)
+  function smoothstep(t) {
+    return t * t * (3 - 2 * t);
+  }
+
+  // Resolve age-dependent config value with smooth interpolation.
+  // Maps with all 5 phases: lerp between current and next phase values.
+  // Maps with only hatchling+elder: global lerp (unchanged behavior).
   function ageVal(map) {
     if (typeof map === 'number') return map;
-    if (map[age.phase] !== undefined) return map[age.phase];
-    // Lerp between hatchling and elder if only those two are defined
-    if (map.hatchling !== undefined && map.elder !== undefined) {
-      return map.hatchling + (map.elder - map.hatchling) * age.t;
+
+    // Full phase map — smooth interpolation between adjacent phases
+    const cur = LIFE_PHASES[age.phaseIndex];
+    const nxt = LIFE_PHASES[Math.min(age.phaseIndex + 1, 4)];
+    if (map[cur] !== undefined && map[nxt] !== undefined) {
+      const t = smoothstep(age.phaseProgress);
+      return map[cur] + (map[nxt] - map[cur]) * t;
     }
+
+    // Two-point map (hatchling + elder only) — global lerp
+    if (map.hatchling !== undefined && map.elder !== undefined) {
+      return map.hatchling + (map.elder - map.hatchling) * smoothstep(age.t);
+    }
+
     return 0;
   }
 
   function updateAge() {
     age.elapsedMs = Date.now() - age.genesisMs;
     age.t = Math.min(age.elapsedMs / CFG.lifePhases.elder, 1);
+
+    // Determine phase index and progress within current phase
     const ms = age.elapsedMs;
-    if (ms < CFG.lifePhases.hatchling) age.phase = 'hatchling';
-    else if (ms < CFG.lifePhases.juvenile) age.phase = 'juvenile';
-    else if (ms < CFG.lifePhases.adult) age.phase = 'adult';
-    else if (ms < CFG.lifePhases.mature) age.phase = 'mature';
-    else age.phase = 'elder';
+    let idx = 0;
+    for (let i = 0; i < 5; i++) {
+      if (ms >= PHASE_BOUNDARIES[i + 1]) idx = Math.min(i + 1, 4);
+    }
+
+    // Progress within current phase (0..1)
+    const phaseStart = PHASE_BOUNDARIES[idx];
+    const phaseEnd = PHASE_BOUNDARIES[idx + 1];
+    age.phaseProgress = (phaseEnd > phaseStart)
+      ? Math.min((ms - phaseStart) / (phaseEnd - phaseStart), 1)
+      : 1;
+
+    // Phase transition detection
+    const prevPhase = age.phase;
+    age.phaseIndex = idx;
+    age.phase = LIFE_PHASES[idx];
+
+    if (prevPhase !== age.phase) {
+      for (let i = 0; i < _phaseListeners.length; i++) {
+        _phaseListeners[i](prevPhase, age.phase, age.elapsedMs);
+      }
+    }
   }
 
   // =========================================================================
@@ -414,9 +559,109 @@
     heading: 0,             // radians, direction of travel
     wanderAngle: 0,         // current wander target angle (noise-driven)
     pulsePhase: 0,          // 0..1 within current pulse-glide cycle
-    currentAction: 'wander', // active RL action (Phase 2: fixed to wander)
+    mood: 'idle',           // active RL mood (Phase 8: Q-Learning output)
+    moodIndex: 5,           // index into CFG.moods (idle=5)
+    prevMood: 'idle',       // Phase 13F: previous mood for blending
+    moodBlend: 1.0,         // Phase 13F: 0=prev mood, 1=current mood (lerp progress)
     stress: 0,
   };
+
+  // =========================================================================
+  // Phase 13F — Mood transition system (blend, events, history)
+  // =========================================================================
+
+  const _moodListeners = [];
+  const _moodHistory = [];      // last 10 transitions: { from, to, time }
+  const MAX_MOOD_HISTORY = 10;
+
+  // Phase 13B: Blink state
+  const _blink = {
+    timer: 0,         // frames until next blink
+    phase: 0,         // 0=open, >0 = frames into blink
+    interval: CFG.blinkIntervalBase,
+  };
+
+  // Phase 13A: Smoothly blended chromatophore state (emergent from mood)
+  const _chromaBlend = {
+    hueShift: 0, satShift: 0, litShift: 0,
+    hueDrift: 0, satPulse: 0, glowMod: 1.0,
+  };
+
+  // Phase 13C: Smoothly blended body expression
+  const _bodyBlend = {
+    breathMod: 1.0, bodyScale: 1.0, glowPulseHz: 0,
+  };
+
+  // Phase 13D: Smoothly blended tentacle expression
+  const _tentBlend = {
+    ampMod: 1.0, spreadMod: 1.0, gravMod: 1.0, noiseMod: 1.0, forwardBias: 0,
+  };
+
+  // Phase 13B: Smoothly blended eye expression
+  const _eyeBlend = {
+    pupilScale: 1.0, blinkRate: 1.0, squint: 0, gazeDOM: false,
+  };
+
+  function onMoodChange(fn) { _moodListeners.push(fn); }
+
+  // Blend all mood expression parameters toward current mood target
+  function updateMoodBlend() {
+    const rate = CFG.moodChromaBlendSpeed;
+    const mood = lili.mood;
+
+    // Advance blend timer
+    if (lili.moodBlend < 1.0) {
+      lili.moodBlend = Math.min(lili.moodBlend + rate, 1.0);
+    }
+
+    // 13A: Chromatophore blend
+    const ct = CFG.moodChroma[mood];
+    if (ct) {
+      _chromaBlend.hueShift += (ct.hueShift - _chromaBlend.hueShift) * rate;
+      _chromaBlend.satShift += (ct.satShift - _chromaBlend.satShift) * rate;
+      _chromaBlend.litShift += (ct.litShift - _chromaBlend.litShift) * rate;
+      _chromaBlend.hueDrift += (ct.hueDrift - _chromaBlend.hueDrift) * rate;
+      _chromaBlend.satPulse += (ct.satPulse - _chromaBlend.satPulse) * rate;
+      _chromaBlend.glowMod  += (ct.glowMod  - _chromaBlend.glowMod)  * rate;
+    }
+
+    // 13C: Body expression blend
+    const bt = CFG.moodBody[mood];
+    if (bt) {
+      _bodyBlend.breathMod  += (bt.breathMod  - _bodyBlend.breathMod)  * rate;
+      _bodyBlend.bodyScale  += (bt.bodyScale  - _bodyBlend.bodyScale)  * rate;
+      _bodyBlend.glowPulseHz += (bt.glowPulseHz - _bodyBlend.glowPulseHz) * rate;
+    }
+
+    // 13D: Tentacle expression blend
+    const tt = CFG.moodTentacle[mood];
+    if (tt) {
+      _tentBlend.ampMod     += (tt.ampMod     - _tentBlend.ampMod)     * rate;
+      _tentBlend.spreadMod  += (tt.spreadMod  - _tentBlend.spreadMod)  * rate;
+      _tentBlend.gravMod    += (tt.gravMod    - _tentBlend.gravMod)    * rate;
+      _tentBlend.noiseMod   += (tt.noiseMod   - _tentBlend.noiseMod)   * rate;
+      _tentBlend.forwardBias += (tt.forwardBias - _tentBlend.forwardBias) * rate;
+    }
+
+    // 13B: Eye expression blend
+    const et = CFG.moodEye[mood];
+    if (et) {
+      _eyeBlend.pupilScale += (et.pupilScale - _eyeBlend.pupilScale) * rate;
+      _eyeBlend.blinkRate  += (et.blinkRate  - _eyeBlend.blinkRate)  * rate;
+      _eyeBlend.squint     += (et.squint     - _eyeBlend.squint)     * rate;
+      _eyeBlend.gazeDOM     = et.gazeDOM;
+    }
+
+    // 13B: Blink timer
+    _blink.timer--;
+    if (_blink.timer <= 0 && _blink.phase === 0) {
+      _blink.phase = CFG.blinkDurationFrames;
+      // Next blink interval modulated by mood blink rate
+      _blink.interval = CFG.blinkIntervalBase / Math.max(_eyeBlend.blinkRate, 0.1);
+      _blink.timer = _blink.interval + (noise.noise2D(frameCount * 0.01, 500) * 0.3 * _blink.interval);
+    }
+    if (_blink.phase > 0) _blink.phase--;
+  }
 
   // =========================================================================
   // 2A — Mouse tracking
@@ -730,6 +975,1012 @@
 
     // Exponential smoothing
     stress += (raw - stress) * CFG.stressSmoothing;
+    lili.stress = stress; // sync with lili object
+  }
+
+  // =========================================================================
+  // 8A — Q-Learning Brain (mood coordinator)
+  // Q-Learning selects MOODS, not actions. Moods → steering weights + tentacle params.
+  // Biological analogy: hormonal system setting tendencies, not motor commands.
+  // =========================================================================
+
+  const MOOD_COUNT = CFG.moods.length; // 7
+
+  // --- Q-table: sparse Map<stateIndex, Float64Array[7]> ---
+  const _qtable = new Map();
+
+  function _getQ(stateIndex) {
+    let row = _qtable.get(stateIndex);
+    if (!row) {
+      row = new Float64Array(MOOD_COUNT); // initialized to 0
+      _qtable.set(stateIndex, row);
+    }
+    return row;
+  }
+
+  // --- Decision state tracking ---
+  const _decision = {
+    frameCounter: 0,        // frames since last decision
+    prevState: -1,           // state index at start of previous cycle
+    prevMoodIndex: 5,        // mood chosen last cycle (idle=5)
+    prevCursorProximity: 'far', // for flee success detection
+    moodRepeatCount: 0,      // consecutive cycles with same mood
+    totalDecisions: 0,       // lifetime decision counter
+    totalReward: 0,          // lifetime reward accumulator
+    lastSaveFrame: 0,        // frame of last Q-table save
+    wasExploratory: false,   // last decision was ε-random
+  };
+
+  // --- Epsilon-greedy mood selection ---
+  function brainDecideMood(stateIndex) {
+    const eps = ageVal(CFG.rl.epsilon);
+    const q = _getQ(stateIndex);
+    let moodIdx;
+    let exploratory = false;
+
+    if (rlRng() < eps) {
+      // Explore: random mood
+      moodIdx = Math.floor(rlRng() * MOOD_COUNT);
+      exploratory = true;
+    } else {
+      // Exploit: argmax Q
+      moodIdx = 0;
+      let maxQ = q[0];
+      for (let i = 1; i < MOOD_COUNT; i++) {
+        if (q[i] > maxQ) { maxQ = q[i]; moodIdx = i; }
+      }
+    }
+
+    _decision.wasExploratory = exploratory;
+    return moodIdx;
+  }
+
+  // --- Bellman update ---
+  function brainLearn(prevState, moodIdx, reward, newState) {
+    const alpha = CFG.rl.alpha;
+    const gamma = CFG.rl.gamma;
+    const qPrev = _getQ(prevState);
+    const qNew = _getQ(newState);
+
+    // max Q(s', m') for all moods
+    let maxNext = qNew[0];
+    for (let i = 1; i < MOOD_COUNT; i++) {
+      if (qNew[i] > maxNext) maxNext = qNew[i];
+    }
+
+    // Q(s,m) ← Q(s,m) + α[R + γ·max(Q(s',m')) - Q(s,m)]
+    qPrev[moodIdx] += alpha * (reward + gamma * maxNext - qPrev[moodIdx]);
+  }
+
+  // --- Reward computation (PRD-specified values) ---
+  function computeReward() {
+    let reward = 0;
+    const mood = lili.mood;
+    const R = CFG.rewards;
+    const JC = CFG.journal;
+
+    // +1.0: in whitespace, user reading (cursor still/slow), calm/idle mood
+    if (sensors.whitespace === 'in_whitespace' &&
+        (sensors.cursorVelocity === 'still' || sensors.cursorVelocity === 'slow') &&
+        (mood === 'calm' || mood === 'idle')) {
+      reward += R.whitespaceCalm;
+    }
+
+    // +0.8: successful flee (was near, now far, was shy/alert)
+    if (_decision.prevCursorProximity === 'near' &&
+        sensors.cursorProximity === 'far' &&
+        (mood === 'shy' || mood === 'alert')) {
+      reward += R.fleeSuccess;
+    }
+
+    // +0.5: near DOM, low stress, curious mood
+    if (sensors.domDensity !== 'sparse' && stress < 0.3 && mood === 'curious') {
+      reward += R.exploreLowStress;
+    }
+
+    // +0.3: tentacles touching DOM, user not stationary, playful
+    if (mood === 'playful' && sensors.cursorVelocity !== 'still') {
+      let touchCount = 0;
+      for (let t = 0; t < TENT_N; t++) {
+        if (tentacles[t].touching) touchCount++;
+      }
+      if (touchCount > 0) reward += R.playfulInteraction;
+    }
+
+    // +0.3: near viewport edge, user active in center
+    if (mouse.active && sensors.cursorProximity === 'far') {
+      const dL = lili.pos.x, dR = W - lili.pos.x;
+      const dT = lili.pos.y, dB = H - lili.pos.y;
+      if (Math.min(dL, dR, dT, dB) < CFG.boundaryMargin * 1.5) {
+        reward += R.edgeRespect;
+      }
+    }
+
+    // -2.0: over text/element, cursor still (blocking reading)
+    if (sensors.whitespace === 'on_element' && sensors.cursorVelocity === 'still') {
+      reward += R.blockingRead;
+    }
+
+    // -1.0: held element blocks reading (user cursor still, element displaced)
+    if (sensors.cursorVelocity === 'still' && _domState.heldCount > 0) {
+      reward += R.heldBlocksRead;
+    }
+
+    // -0.5: idle too long (modulated by age — elders less penalized)
+    if (mood === 'idle' && _decision.moodRepeatCount > JC.idlePenaltyThreshold) {
+      const ageMod = ageVal({ hatchling: 1.0, juvenile: 0.8, adult: 0.6, mature: 0.4, elder: 0.2 });
+      reward += R.idleTooLong * ageMod;
+    }
+
+    // -0.3: shy/alert when cursor is slow and far (unnecessary fear)
+    if ((mood === 'shy' || mood === 'alert') &&
+        sensors.cursorProximity === 'far' &&
+        (sensors.cursorVelocity === 'still' || sensors.cursorVelocity === 'slow')) {
+      reward += R.unnecessaryFlee;
+    }
+
+    // -0.2: repeating same mood > threshold cycles
+    if (_decision.moodRepeatCount > JC.moodRepeatThreshold) {
+      reward += R.moodRepetition;
+    }
+
+    return reward;
+  }
+
+  // --- Decision cycle orchestrator (called every frame, acts every N frames) ---
+  function brainDecisionCycle() {
+    _decision.frameCounter++;
+
+    if (_decision.frameCounter < CFG.rl.decisionCycleFrames) return;
+    _decision.frameCounter = 0;
+
+    const currentState = sensors.stateIndex;
+
+    // Compute reward for previous mood (outcome of last cycle)
+    if (_decision.prevState >= 0) {
+      const reward = computeReward();
+
+      // Bellman update
+      brainLearn(_decision.prevState, _decision.prevMoodIndex, reward, currentState);
+
+      // Journal logging
+      journalLogDecision(currentState, reward);
+
+      _decision.totalReward += reward;
+    }
+
+    // Choose new mood
+    const newMoodIdx = brainDecideMood(currentState);
+    const newMood = CFG.moods[newMoodIdx];
+
+    // Track mood repetition
+    if (newMoodIdx === _decision.prevMoodIndex) {
+      _decision.moodRepeatCount++;
+    } else {
+      _decision.moodRepeatCount = 0;
+    }
+
+    // Save cursor proximity for next cycle's flee-success detection
+    _decision.prevCursorProximity = sensors.cursorProximity;
+
+    // Apply mood (Phase 13F: track previous for blending)
+    const prevMood = lili.mood;
+    lili.mood = newMood;
+    lili.moodIndex = newMoodIdx;
+
+    if (prevMood !== newMood) {
+      lili.prevMood = prevMood;
+      lili.moodBlend = 0; // reset blend — will lerp to 1.0 over ~2s
+
+      // Mood history ring (13E debug)
+      _moodHistory.push({ from: prevMood, to: newMood, time: Date.now() });
+      if (_moodHistory.length > MAX_MOOD_HISTORY) _moodHistory.shift();
+
+      // Fire listeners (13F)
+      for (let i = 0; i < _moodListeners.length; i++) {
+        _moodListeners[i](prevMood, newMood);
+      }
+
+      // Milestone: first time mood lasted > 5 minutes continuously
+      if (_decision.moodRepeatCount * CFG.rl.decisionCycleFrames > 5 * 60 * 60) {
+        const mkey = 'sustained_' + prevMood;
+        if (!_journal.firstMoods[mkey]) {
+          _journal.firstMoods[mkey] = Date.now();
+          _journal.milestones.push({
+            type: 'sustained_mood',
+            mood: prevMood,
+            cycles: _decision.moodRepeatCount,
+            timestamp: Date.now(),
+          });
+        }
+      }
+    }
+
+    // Mood → tentacle influence
+    const tentInf = CFG.moodTentacleInfluence[newMood];
+    if (tentInf) {
+      for (let t = 0; t < TENT_N; t++) {
+        // Smoothly blend tentacle curiosity toward mood target
+        tentacles[t].curiosity += (tentInf.curiosity - tentacles[t].curiosity) * 0.3;
+      }
+    }
+
+    // Update tracking
+    _decision.prevState = currentState;
+    _decision.prevMoodIndex = newMoodIdx;
+    _decision.totalDecisions++;
+
+    // Periodic Q-table + position + journal save
+    if (frameCount - _decision.lastSaveFrame >= CFG.rl.saveIntervalFrames) {
+      _decision.lastSaveFrame = frameCount;
+      brainSave();
+      savePosition();
+      journalSaveRingBuffer();
+    }
+  }
+
+  // --- Q-table persistence ---
+  function brainSerialize() {
+    const entries = [];
+    _qtable.forEach(function (q, key) {
+      entries.push([key, Array.from(q)]);
+    });
+    return JSON.stringify({
+      v: 1,
+      mood: lili.moodIndex,
+      decisions: _decision.totalDecisions,
+      reward: _decision.totalReward,
+      entries: entries,
+    });
+  }
+
+  function brainDeserialize(json) {
+    try {
+      const data = JSON.parse(json);
+      if (!data || !data.entries) return false;
+      _qtable.clear();
+      for (let i = 0; i < data.entries.length; i++) {
+        const e = data.entries[i];
+        _qtable.set(e[0], new Float64Array(e[1]));
+      }
+      if (typeof data.mood === 'number') {
+        lili.moodIndex = data.mood;
+        lili.mood = CFG.moods[data.mood] || 'idle';
+      }
+      if (typeof data.decisions === 'number') {
+        _decision.totalDecisions = data.decisions;
+      }
+      if (typeof data.reward === 'number') {
+        _decision.totalReward = data.reward;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function brainSave() {
+    try {
+      localStorage.setItem(CFG.storageKeys.qtable, brainSerialize());
+    } catch (e) { /* storage full — graceful degradation */ }
+  }
+
+  function brainLoad() {
+    const json = localStorage.getItem(CFG.storageKeys.qtable);
+    if (json) return brainDeserialize(json);
+    return false;
+  }
+
+  // =========================================================================
+  // 8B — Behavioral Journal (academic data layer)
+  // Ring buffer of decisions + daily aggregates + milestones
+  // =========================================================================
+
+  const _journal = {
+    ringBuffer: [],         // decision records (max ringBufferSize)
+    dailyAggregates: [],    // one entry per day
+    milestones: [],         // event log
+    dayActionCounts: new Float64Array(MOOD_COUNT),  // today's mood counts
+    dayRewardSum: 0,
+    dayExploratoryCount: 0,
+    dayDecisionCount: 0,
+    lastDayKey: '',         // 'YYYY-MM-DD' of current tracking day
+    firstMoods: {},         // first occurrence of each mood (for milestones)
+  };
+
+  function _dayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function journalLogDecision(currentState, reward) {
+    const now = Date.now();
+    const record = {
+      ts: now,
+      ageMs: age.elapsedMs,
+      phase: age.phase,
+      state: _decision.prevState,
+      mood: _decision.prevMoodIndex,
+      exp: _decision.wasExploratory ? 1 : 0,
+      reward: Math.round(reward * 1000) / 1000,
+      stress: Math.round(stress * 100) / 100,
+      x: Math.round(lili.pos.x),
+      y: Math.round(lili.pos.y),
+    };
+
+    // Ring buffer (FIFO)
+    _journal.ringBuffer.push(record);
+    if (_journal.ringBuffer.length > CFG.journal.ringBufferSize) {
+      _journal.ringBuffer.shift();
+    }
+
+    // Daily tracking
+    const dk = _dayKey();
+    if (dk !== _journal.lastDayKey) {
+      // New day — flush previous day's aggregate
+      if (_journal.lastDayKey) {
+        _flushDailyAggregate();
+      }
+      _journal.lastDayKey = dk;
+      _journal.dayActionCounts.fill(0);
+      _journal.dayRewardSum = 0;
+      _journal.dayExploratoryCount = 0;
+      _journal.dayDecisionCount = 0;
+    }
+
+    _journal.dayActionCounts[_decision.prevMoodIndex]++;
+    _journal.dayRewardSum += reward;
+    if (_decision.wasExploratory) _journal.dayExploratoryCount++;
+    _journal.dayDecisionCount++;
+
+    // Milestone: first occurrence of each mood
+    const moodName = CFG.moods[_decision.prevMoodIndex];
+    if (!_journal.firstMoods[moodName]) {
+      _journal.firstMoods[moodName] = now;
+      _journal.milestones.push({
+        type: 'first_mood',
+        mood: moodName,
+        ts: now,
+        ageMs: age.elapsedMs,
+      });
+    }
+  }
+
+  function _flushDailyAggregate() {
+    const total = _journal.dayDecisionCount || 1;
+
+    // Shannon entropy of mood distribution: H = -Σ p(a) log₂ p(a)
+    let entropy = 0;
+    for (let i = 0; i < MOOD_COUNT; i++) {
+      const p = _journal.dayActionCounts[i] / total;
+      if (p > 0) entropy -= p * Math.log2(p);
+    }
+
+    // Lempel-Ziv complexity (count unique substrings in mood sequence)
+    // Approximate from ring buffer entries for this day
+    const lzc = _computeLZC();
+
+    // Q-table hash (simple checksum for convergence detection)
+    let qhash = 0;
+    _qtable.forEach(function (q) {
+      for (let i = 0; i < MOOD_COUNT; i++) qhash += q[i] * (i + 1);
+    });
+
+    const agg = {
+      day: _journal.lastDayKey,
+      ageMs: age.elapsedMs,
+      phase: age.phase,
+      moodDist: Array.from(_journal.dayActionCounts),
+      avgReward: Math.round((_journal.dayRewardSum / total) * 1000) / 1000,
+      explorationRate: Math.round((_journal.dayExploratoryCount / total) * 1000) / 1000,
+      entropy: Math.round(entropy * 1000) / 1000,
+      lzc: lzc,
+      qhash: Math.round(qhash * 100) / 100,
+      decisions: _journal.dayDecisionCount,
+      totalReward: Math.round(_journal.dayRewardSum * 100) / 100,
+    };
+
+    _journal.dailyAggregates.push(agg);
+
+    // Persist daily aggregates
+    try {
+      localStorage.setItem(CFG.storageKeys.dailyAgg,
+        JSON.stringify(_journal.dailyAggregates));
+    } catch (e) { /* storage full */ }
+
+    // Check if Q-table snapshot is due (every 7 days)
+    if (_journal.dailyAggregates.length % CFG.journal.qtableSnapshotDays === 0) {
+      _snapshotQTable();
+    }
+  }
+
+  // Lempel-Ziv complexity: count unique substrings in recent mood sequence
+  function _computeLZC() {
+    const buf = _journal.ringBuffer;
+    if (buf.length < 10) return 0;
+    // Build mood sequence from today's entries
+    const dk = _journal.lastDayKey;
+    let seq = '';
+    for (let i = buf.length - 1; i >= 0 && seq.length < 500; i--) {
+      seq = String(buf[i].mood) + seq;
+    }
+    if (seq.length < 2) return 0;
+    // Exhaustive LZ76 complexity
+    let complexity = 1;
+    let i = 0, k = 1, kmax = 1, l = 1;
+    while (l + k <= seq.length) {
+      if (seq[i + k - 1] === seq[l + k - 1]) {
+        k++;
+      } else {
+        if (k > kmax) kmax = k;
+        i++;
+        if (i === l) {
+          complexity++;
+          l += kmax;
+          k = 1; kmax = 1; i = 0;
+        } else {
+          k = 1;
+        }
+      }
+    }
+    if (k !== 1) complexity++;
+    return complexity;
+  }
+
+  function _snapshotQTable() {
+    const key = 'lili_qtable_snapshot_' + _journal.lastDayKey.replace(/-/g, '');
+    try {
+      localStorage.setItem(key, brainSerialize());
+    } catch (e) { /* storage full */ }
+  }
+
+  // Save journal ring buffer to localStorage
+  function journalSaveRingBuffer() {
+    try {
+      localStorage.setItem(CFG.storageKeys.journal,
+        JSON.stringify(_journal.ringBuffer));
+    } catch (e) { /* storage full — ring buffer is least critical */ }
+  }
+
+  // Load journal data from localStorage
+  function journalLoad() {
+    try {
+      const rb = localStorage.getItem(CFG.storageKeys.journal);
+      if (rb) _journal.ringBuffer = JSON.parse(rb);
+    } catch (e) { /* ignore corrupt data */ }
+    try {
+      const daily = localStorage.getItem(CFG.storageKeys.dailyAgg);
+      if (daily) _journal.dailyAggregates = JSON.parse(daily);
+    } catch (e) { /* ignore corrupt data */ }
+    try {
+      const ms = localStorage.getItem(CFG.storageKeys.milestones);
+      if (ms) _journal.milestones = JSON.parse(ms);
+    } catch (e) { /* ignore */ }
+    _journal.lastDayKey = _dayKey();
+  }
+
+  // Save milestones
+  function journalSaveMilestones() {
+    try {
+      localStorage.setItem(CFG.storageKeys.milestones,
+        JSON.stringify(_journal.milestones));
+    } catch (e) { /* storage full */ }
+  }
+
+  // =========================================================================
+  // 8C — Export system (academic data retention)
+  // Key 'E' → download full JSON export
+  // =========================================================================
+
+  function exportData(returnOnly) {
+    // Flush current day aggregate
+    if (_journal.dayDecisionCount > 0) {
+      _flushDailyAggregate();
+    }
+
+    const genesisMs = parseInt(localStorage.getItem(CFG.storageKeys.genesis) || '0', 10);
+    const d = new Date();
+    const dateStr = d.getFullYear() +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      String(d.getDate()).padStart(2, '0');
+
+    const exportObj = {
+      format: 'lili_export_v1',
+      exportDate: d.toISOString(),
+      metadata: {
+        genesis: genesisMs,
+        ageMs: age.elapsedMs,
+        phase: age.phase,
+        phaseProgress: age.phaseProgress,
+        urlHash: _hashString(location.hostname + location.pathname),
+        totalDecisions: _decision.totalDecisions,
+        totalReward: _decision.totalReward,
+        qtableSize: _qtable.size,
+      },
+      qtable: [],
+      dailyAggregates: _journal.dailyAggregates,
+      milestones: _journal.milestones,
+      recentDecisions: _journal.ringBuffer.slice(-1000), // last 1000
+    };
+
+    // Serialize Q-table
+    _qtable.forEach(function (q, key) {
+      exportObj.qtable.push({ s: key, q: Array.from(q) });
+    });
+
+    console.info('[Lili] Export: ' + exportObj.qtable.length + ' Q-states, ' +
+      exportObj.dailyAggregates.length + ' daily aggregates, ' +
+      exportObj.milestones.length + ' milestones');
+
+    // lili.data() returns the object; lili.export() downloads the file
+    if (returnOnly) return exportObj;
+
+    // Download as JSON
+    const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'lili_export_' + dateStr + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return exportObj;
+  }
+
+  // Simple string hash (for URL identification without storing full URL)
+  function _hashString(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+      h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    }
+    return h;
+  }
+
+  // =========================================================================
+  // 10A — Click detection + Tooltip
+  // Click on Lili = factual tooltip (name, age, phase, preference, visits)
+  // =========================================================================
+
+  let _tooltipEl = null;
+  let _tooltipTimer = 0;
+
+  function onLiliClick(e) {
+    const dx = e.clientX - lili.pos.x;
+    const dy = e.clientY - lili.pos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > lili.bodyR * CFG.clickHitboxScale) return;
+
+    showTooltip(e.clientX, e.clientY);
+  }
+
+  function showTooltip(x, y) {
+    // Remove any existing tooltip
+    hideTooltip();
+
+    // Format age as human-readable string
+    const ms = age.elapsedMs;
+    const days = Math.floor(ms / 86400000);
+    const hours = Math.floor((ms % 86400000) / 3600000);
+    let ageStr;
+    if (days >= 365) {
+      const yrs = (days / 365).toFixed(1);
+      ageStr = yrs + ' years';
+    } else if (days > 0) {
+      ageStr = days + 'd ' + hours + 'h';
+    } else {
+      ageStr = hours + 'h ' + Math.floor((ms % 3600000) / 60000) + 'm';
+    }
+
+    // Find top Q-action (preference) from Q-table
+    const q = _qtable.get(sensors.stateIndex);
+    let topMood = lili.mood;
+    if (q) {
+      let maxQ = -Infinity;
+      for (let i = 0; i < MOOD_COUNT; i++) {
+        if (q[i] > maxQ) { maxQ = q[i]; topMood = CFG.moods[i]; }
+      }
+    }
+
+    const visits = parseInt(localStorage.getItem(CFG.storageKeys.visits) || '1', 10);
+
+    // Create tooltip DOM element
+    const el = document.createElement('div');
+    el.className = 'lili-tooltip';
+    el.style.cssText =
+      'position:fixed;z-index:' + (CFG.canvasZIndex + 1) + ';' +
+      'font-family:monospace;font-size:12px;line-height:1.5;' +
+      'background:rgba(10,12,18,0.88);color:#e0e4ec;' +
+      'padding:8px 12px;border-radius:6px;pointer-events:none;' +
+      'white-space:nowrap;backdrop-filter:blur(4px);' +
+      'border:1px solid rgba(255,255,255,0.08);' +
+      'box-shadow:0 4px 12px rgba(0,0,0,0.3);' +
+      'opacity:0;transition:opacity 0.2s ease;';
+
+    // Phase 13E: mood-colored dot
+    const moodDotColors = {
+      curious:   '#5dd9c4', playful: '#e8a84c', shy:    '#9baec0',
+      calm:      '#4a7fb5', alert:   '#e06050', idle:   '#6c7a8a',
+      exploring: '#6dd480',
+    };
+    const dotColor = moodDotColors[lili.mood] || '#888';
+
+    el.innerHTML =
+      '<b style="color:#8cf">Lili</b>  <span style="color:#6a8">' + age.phase + '</span><br>' +
+      'age: ' + ageStr + '<br>' +
+      'mood: <span style="display:inline-block;width:7px;height:7px;border-radius:50%;' +
+      'background:' + dotColor + ';margin-right:4px;vertical-align:middle"></span>' +
+      lili.mood + '<br>' +
+      'preference: ' + topMood + '<br>' +
+      'visits: ' + visits;
+
+    // Position: prefer above the click point, shift to stay in viewport
+    document.body.appendChild(el);
+    const rect = el.getBoundingClientRect();
+    let tx = x - rect.width * 0.5;
+    let ty = y - rect.height - 16;
+    if (ty < 4) ty = y + 20;
+    if (tx < 4) tx = 4;
+    if (tx + rect.width > W - 4) tx = W - rect.width - 4;
+    el.style.left = tx + 'px';
+    el.style.top = ty + 'px';
+
+    // Fade in
+    requestAnimationFrame(function () { el.style.opacity = '1'; });
+
+    _tooltipEl = el;
+    _tooltipTimer = setTimeout(hideTooltip, CFG.tooltipDurationMs);
+  }
+
+  function hideTooltip() {
+    clearTimeout(_tooltipTimer);
+    if (_tooltipEl) {
+      _tooltipEl.style.opacity = '0';
+      const el = _tooltipEl;
+      _tooltipEl = null;
+      setTimeout(function () {
+        if (el.parentNode) el.parentNode.removeChild(el);
+      }, 250);
+    }
+  }
+
+  // =========================================================================
+  // 10B — Debug panel (key 'D')
+  // Fixed-position overlay with real-time runtime data.
+  // =========================================================================
+
+  let _debugPanel = null;
+  let _debugVisible = false;
+  let _fpsBuffer = new Float32Array(60);
+  let _fpsIndex = 0;
+  let _fpsAvg = 60;
+
+  function toggleDebug() {
+    _debugVisible = !_debugVisible;
+    if (_debugVisible) {
+      if (!_debugPanel) createDebugPanel();
+      _debugPanel.style.display = 'block';
+    } else if (_debugPanel) {
+      _debugPanel.style.display = 'none';
+    }
+  }
+
+  function createDebugPanel() {
+    const el = document.createElement('div');
+    el.className = 'lili-debug';
+    el.style.cssText =
+      'position:fixed;top:8px;right:8px;z-index:' + (CFG.canvasZIndex + 2) + ';' +
+      'font-family:monospace;font-size:11px;line-height:1.6;' +
+      'background:rgba(8,10,16,0.82);color:#c8ccd4;' +
+      'padding:10px 14px;border-radius:6px;pointer-events:none;' +
+      'white-space:pre;backdrop-filter:blur(6px);' +
+      'border:1px solid rgba(255,255,255,0.06);' +
+      'min-width:220px;display:none;';
+    document.body.appendChild(el);
+    _debugPanel = el;
+  }
+
+  // FPS tracking (always runs, independent of debug panel)
+  function updateFps() {
+    const fps = dt > 0 ? (1 / dt) : 60;
+    _fpsBuffer[_fpsIndex % 60] = fps;
+    _fpsIndex++;
+    let fpsSum = 0;
+    const fpsN = Math.min(_fpsIndex, 60);
+    for (let i = 0; i < fpsN; i++) fpsSum += _fpsBuffer[i];
+    _fpsAvg = fpsSum / fpsN;
+  }
+
+  function updateDebugPanel() {
+    if (!_debugVisible || !_debugPanel) return;
+
+    // Shannon entropy (real-time from daily counters)
+    let entropy = 0;
+    const total = _journal.dayDecisionCount || 1;
+    for (let i = 0; i < MOOD_COUNT; i++) {
+      const p = _journal.dayActionCounts[i] / total;
+      if (p > 0) entropy -= p * Math.log2(p);
+    }
+
+    // Q-values for current state
+    const q = _qtable.get(sensors.stateIndex);
+    let qStr = '—';
+    if (q) {
+      const parts = [];
+      for (let i = 0; i < MOOD_COUNT; i++) {
+        parts.push(CFG.moods[i].charAt(0).toUpperCase() + ':' + q[i].toFixed(2));
+      }
+      qStr = parts.join(' ');
+    }
+
+    // Tentacle stats
+    let recoilCount = 0, touchingCount = 0, grabbingCount = 0;
+    for (let t = 0; t < TENT_N; t++) {
+      if (tentacles[t].recoilTimer > 0) recoilCount++;
+      if (tentacles[t].touching) touchingCount++;
+      if (tentacles[t].heldElement) grabbingCount++;
+    }
+
+    // Phase 13E: mood history string
+    let moodHistStr = '';
+    for (let i = _moodHistory.length - 1; i >= 0 && i >= _moodHistory.length - 5; i--) {
+      const mh = _moodHistory[i];
+      const ago = Math.round((Date.now() - mh.time) / 1000);
+      moodHistStr += '\n  ' + mh.from + '→' + mh.to + ' ' + ago + 's ago';
+    }
+
+    _debugPanel.textContent =
+      '── Lili Debug ──────────\n' +
+      'phase:    ' + age.phase + ' (' + (age.phaseProgress * 100).toFixed(1) + '%)\n' +
+      'age:      ' + (age.elapsedMs / 86400000).toFixed(2) + ' days\n' +
+      'mood:     ' + lili.mood + (_decision.wasExploratory ? ' (ε)' : '') +
+        ' [blend:' + lili.moodBlend.toFixed(2) + ']\n' +
+      'stress:   ' + stress.toFixed(3) + '\n' +
+      'vel:      ' + lili.vel.mag().toFixed(2) + ' px/f\n' +
+      '── Mood History ────────' + (moodHistStr || '\n  (none)') + '\n' +
+      '── Sensors ─────────────\n' +
+      'cursor:   ' + sensors.cursorProximity + '/' + sensors.cursorVelocity + '\n' +
+      'dom:      ' + sensors.domDensity + '  ws:' + sensors.whitespace + '\n' +
+      'scroll:   ' + sensors.scrollState + '  time:' + sensors.timeOfDay + '\n' +
+      'state#:   ' + sensors.stateIndex + '/' + CFG.stateSpace.totalStates + '\n' +
+      '── RL ──────────────────\n' +
+      'Q:        ' + qStr + '\n' +
+      'decisions:' + _decision.totalDecisions + '\n' +
+      'reward Σ: ' + _decision.totalReward.toFixed(1) + '\n' +
+      'Q-states: ' + _qtable.size + '\n' +
+      'entropy:  ' + entropy.toFixed(3) + '\n' +
+      'LZC:      ' + _computeLZC() + '\n' +
+      '── DOM ─────────────────\n' +
+      'disturbed:' + _domState.disturbedCount + '/' + CFG.dom.maxDisturbed + '\n' +
+      'held:     ' + _domState.heldCount + '/' + CFG.dom.maxHeld + '\n' +
+      'tentRecoil:' + recoilCount + ' touch:' + touchingCount + ' grab:' + grabbingCount + '\n' +
+      'hash cells:' + spatialHash.grid.size + '  objs:' + spatialHash.all.length + '\n' +
+      '── Perf ────────────────\n' +
+      'FPS:      ' + _fpsAvg.toFixed(1) + (_fpsAvg < 50 ? ' ⚠' : '') + '\n' +
+      'frame#:   ' + frameCount;
+  }
+
+  // Console API — exposed as window.lili after boot
+  function exposeConsoleAPI() {
+    window.lili = Object.freeze({
+      export: function () { exportData(); },
+      import: function () { importData(); },
+      debug:  function () { toggleDebug(); },
+      status: function () {
+        var ageDays = (Date.now() - age.genesisMs) / 86400000;
+        var visits = parseInt(localStorage.getItem(CFG.storageKeys.visits) || '0', 10);
+        console.info(
+          '[Lili] Status\n' +
+          '  Phase: ' + age.phase + ' (' + (age.phaseProgress * 100).toFixed(1) + '%)\n' +
+          '  Age: ' + ageDays.toFixed(1) + ' days\n' +
+          '  Mood: ' + MOODS[lili.moodIndex] + '\n' +
+          '  Visits: ' + visits + '\n' +
+          '  Q-states: ' + _qtable.size + '\n' +
+          '  Decisions: ' + _decision.totalDecisions + '\n' +
+          '  Milestones: ' + _journal.milestones.length + '\n' +
+          '  Daily aggregates: ' + _journal.dailyAggregates.length
+        );
+      },
+      data: function () { return exportData(true); },
+    });
+    console.info('[Lili] Console API ready — try: lili.status(), lili.export(), lili.debug()');
+  }
+
+  // =========================================================================
+  // 11A — Persistence: position save/restore, session continuity
+  // =========================================================================
+
+  function savePosition() {
+    try {
+      localStorage.setItem(CFG.storageKeys.position, JSON.stringify({
+        x: Math.round(lili.pos.x),
+        y: Math.round(lili.pos.y),
+        mood: lili.moodIndex,
+        w: W, h: H,  // viewport at save time (for clamping on restore)
+      }));
+    } catch (e) { /* storage full */ }
+  }
+
+  function restorePosition() {
+    try {
+      const json = localStorage.getItem(CFG.storageKeys.position);
+      if (!json) return false;
+      const data = JSON.parse(json);
+      if (typeof data.x !== 'number' || typeof data.y !== 'number') return false;
+
+      // Clamp to current viewport (viewport may have changed since save)
+      const margin = lili.bodyR * 2;
+      lili.pos.x = Math.max(margin, Math.min(data.x, W - margin));
+      lili.pos.y = Math.max(margin, Math.min(data.y, H - margin));
+
+      // Restore mood if valid
+      if (typeof data.mood === 'number' && data.mood >= 0 && data.mood < MOOD_COUNT) {
+        lili.moodIndex = data.mood;
+        lili.mood = CFG.moods[data.mood];
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // =========================================================================
+  // 11B — Safari ITP mitigation, data loss detection, import
+  // =========================================================================
+
+  // Request persistent storage (protects against storage pressure on Chrome/Firefox)
+  // Does NOT protect against Safari ITP 7-day eviction.
+  function requestPersistentStorage() {
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().then(function (granted) {
+        if (granted) console.info('[Lili] Persistent storage granted');
+      });
+    }
+  }
+
+  // Detect potential data loss (Safari ITP or manual clear)
+  function detectDataLoss() {
+    const visits = parseInt(localStorage.getItem(CFG.storageKeys.visits) || '0', 10);
+    const genesis = parseInt(localStorage.getItem(CFG.storageKeys.genesis) || '0', 10);
+    if (!genesis || visits <= 1) return; // first visit or new incarnation
+
+    const ageDays = (Date.now() - genesis) / 86400000;
+    const dailyAggs = _journal.dailyAggregates.length;
+
+    // If Lili is > 7 days old but has very few daily aggregates, data may have been lost
+    if (ageDays > 7 && dailyAggs < Math.floor(ageDays * 0.3)) {
+      console.warn('[Lili] Possible data loss detected: ' +
+        ageDays.toFixed(0) + ' days old but only ' + dailyAggs + ' daily aggregates. ' +
+        'Safari ITP may have evicted data. Use lili.import() to restore a backup.');
+    }
+  }
+
+  // Import previously exported JSON (key 'I')
+  function importData() {
+    // Create invisible file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.addEventListener('change', function () {
+      if (!input.files || !input.files[0]) {
+        document.body.removeChild(input);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function () {
+        try {
+          const data = JSON.parse(reader.result);
+          if (!data || data.format !== 'lili_export_v1') {
+            console.error('[Lili] Import failed: invalid format');
+            return;
+          }
+          _importExportData(data);
+          console.info('[Lili] Import successful');
+        } catch (e) {
+          console.error('[Lili] Import failed: ' + e.message);
+        }
+        document.body.removeChild(input);
+      };
+      reader.readAsText(input.files[0]);
+    });
+
+    input.click();
+  }
+
+  // =========================================================================
+  // 12A — Render culling + Logic LOD
+  // Skip rendering when Lili is fully outside viewport.
+  // Reduce FABRIK iterations for tentacles when body is near edges.
+  // =========================================================================
+
+  function isOnScreen() {
+    // Max tentacle reach = JOINTS * max segment length
+    const reach = JOINTS * ageVal(CFG.tentacleSegmentLength);
+    const margin = lili.bodyR + reach;
+    return lili.pos.x > -margin && lili.pos.x < W + margin &&
+           lili.pos.y > -margin && lili.pos.y < H + margin;
+  }
+
+  // 12C — FPS monitoring (rolling average, console warning)
+  let _fpsWarnCooldown = 0; // frames until next warning
+
+  function checkFpsWarning() {
+    if (_fpsAvg < 50 && _fpsWarnCooldown <= 0) {
+      console.warn('[Lili] FPS dropped to ' + _fpsAvg.toFixed(1) + ' (target: 60)');
+      _fpsWarnCooldown = 3600; // ~60s at 60fps before next warning
+    }
+    if (_fpsWarnCooldown > 0) _fpsWarnCooldown--;
+  }
+
+  function _importExportData(data) {
+    // Restore Q-table
+    if (data.qtable && Array.isArray(data.qtable)) {
+      _qtable.clear();
+      for (let i = 0; i < data.qtable.length; i++) {
+        const entry = data.qtable[i];
+        if (entry.s !== undefined && Array.isArray(entry.q)) {
+          _qtable.set(entry.s, new Float64Array(entry.q));
+        }
+      }
+      brainSave();
+    }
+
+    // Restore daily aggregates (merge: keep unique days)
+    if (data.dailyAggregates && Array.isArray(data.dailyAggregates)) {
+      const existing = new Set(_journal.dailyAggregates.map(function (a) { return a.day; }));
+      for (let i = 0; i < data.dailyAggregates.length; i++) {
+        if (!existing.has(data.dailyAggregates[i].day)) {
+          _journal.dailyAggregates.push(data.dailyAggregates[i]);
+        }
+      }
+      // Sort by day
+      _journal.dailyAggregates.sort(function (a, b) { return a.day < b.day ? -1 : 1; });
+      try {
+        localStorage.setItem(CFG.storageKeys.dailyAgg,
+          JSON.stringify(_journal.dailyAggregates));
+      } catch (e) { /* storage full */ }
+    }
+
+    // Restore milestones (merge by type+ts)
+    if (data.milestones && Array.isArray(data.milestones)) {
+      const existingKeys = new Set(_journal.milestones.map(function (m) {
+        return m.type + ':' + m.ts;
+      }));
+      for (let i = 0; i < data.milestones.length; i++) {
+        const key = data.milestones[i].type + ':' + data.milestones[i].ts;
+        if (!existingKeys.has(key)) {
+          _journal.milestones.push(data.milestones[i]);
+        }
+      }
+      _journal.milestones.sort(function (a, b) { return a.ts - b.ts; });
+      journalSaveMilestones();
+    }
+
+    // Restore decision counters
+    if (data.metadata) {
+      if (data.metadata.totalDecisions > _decision.totalDecisions) {
+        _decision.totalDecisions = data.metadata.totalDecisions;
+        _decision.totalReward = data.metadata.totalReward || 0;
+      }
+    }
+  }
+
+  // Phase transition milestone logging (wired in boot)
+  function _onPhaseTransitionJournal(from, to, atMs) {
+    _journal.milestones.push({
+      type: 'phase_transition',
+      from: from,
+      to: to,
+      ts: Date.now(),
+      ageMs: atMs,
+      decisions: _decision.totalDecisions,
+    });
+    journalSaveMilestones();
   }
 
   // =========================================================================
@@ -882,7 +2133,8 @@
       const ox2 = ob.x + ob.w + r, oy2 = ob.y + ob.h + r;
       // Check if ahead point is inside expanded rect
       if (ax >= ox1 && ax <= ox2 && ay >= oy1 && ay <= oy2) {
-        const d = lili.pos.distSq(new Vec2(ob.cx, ob.cy));
+        _v0.set(ob.cx, ob.cy);
+        const d = lili.pos.distSq(_v0);
         if (d < closestDist) {
           closestDist = d;
           // Push away from obstacle center, perpendicular preference
@@ -917,7 +2169,97 @@
   }
 
   // =========================================================================
-  // 2C — Behavior weight combiner
+  // 2C — Additional steering behaviors (Phase 8: mood-driven targets)
+  // =========================================================================
+
+  // --- Seek whitespace (find direction with fewest obstacles) ---
+  function steerSeekWhitespace(out) {
+    out.set(0, 0);
+    const lookR = lili.bodyR * 5;
+    let bestAngle = -1;
+    let minCount = Infinity;
+    const curCount = getNearbyCount(lili.pos.x, lili.pos.y);
+    // Sample 8 directions
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI * 0.25;
+      const px = lili.pos.x + Math.cos(a) * lookR;
+      const py = lili.pos.y + Math.sin(a) * lookR;
+      // Stay in viewport
+      if (px < 0 || px > W || py < 0 || py > H) continue;
+      const cnt = getNearbyCount(px, py);
+      if (cnt < minCount) { minCount = cnt; bestAngle = a; }
+    }
+    if (bestAngle >= 0 && minCount < curCount) {
+      const tx = lili.pos.x + Math.cos(bestAngle) * lookR * 2;
+      const ty = lili.pos.y + Math.sin(bestAngle) * lookR * 2;
+      steerSeek(out, tx, ty, true);
+    }
+    return out;
+  }
+
+  // --- Seek DOM element (approach nearest obstacle for exploration) ---
+  function steerSeekDom(out) {
+    out.set(0, 0);
+    const nearby = getNearby(lili.pos.x, lili.pos.y);
+    if (nearby.length === 0) return out;
+    let closest = null;
+    let closestD = Infinity;
+    for (let i = 0; i < nearby.length; i++) {
+      const ob = nearby[i];
+      const cx = ob.x + ob.w * 0.5;
+      const cy = ob.y + ob.h * 0.5;
+      const dx = cx - lili.pos.x, dy = cy - lili.pos.y;
+      const dSq = dx * dx + dy * dy;
+      if (dSq < closestD) { closestD = dSq; closest = ob; }
+    }
+    if (closest) {
+      // Approach edge of element, not center (avoid overlapping)
+      const cx = closest.x + closest.w * 0.5;
+      const cy = closest.y + closest.h * 0.5;
+      const dx = lili.pos.x - cx, dy = lili.pos.y - cy;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      const margin = lili.bodyR * 1.5;
+      const tx = cx + (dx / d) * margin;
+      const ty = cy + (dy / d) * margin;
+      steerSeek(out, tx, ty, true);
+    }
+    return out;
+  }
+
+  // --- Seek edge (move toward nearest viewport edge) ---
+  function steerSeekEdge(out) {
+    const dL = lili.pos.x, dR = W - lili.pos.x;
+    const dT = lili.pos.y, dB = H - lili.pos.y;
+    const min = Math.min(dL, dR, dT, dB);
+    const r = lili.bodyR + 5;
+    let tx = lili.pos.x, ty = lili.pos.y;
+    if (min === dL) tx = r;
+    else if (min === dR) tx = W - r;
+    else if (min === dT) ty = r;
+    else ty = H - r;
+    steerSeek(out, tx, ty, true);
+    return out;
+  }
+
+  // --- Follow slow (cautious following from safe distance) ---
+  function steerFollowSlow(out) {
+    out.set(0, 0);
+    if (!mouse.active) return out;
+    const dx = mouse.pos.x - lili.pos.x;
+    const dy = mouse.pos.y - lili.pos.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    const safeDist = CFG.fleeDistance * 0.8;
+    if (d > safeDist) {
+      const tx = mouse.pos.x - (dx / d) * safeDist;
+      const ty = mouse.pos.y - (dy / d) * safeDist;
+      steerSeek(out, tx, ty, true);
+      out.multIn(0.3); // cautious — slow approach
+    }
+    return out;
+  }
+
+  // =========================================================================
+  // 2D — Behavior weight combiner (mood-driven, Phase 8)
   // =========================================================================
 
   // Scratch vectors for steering combination (avoid allocation)
@@ -925,9 +2267,14 @@
   const _steerFlee   = new Vec2();
   const _steerObs    = new Vec2();
   const _steerBound  = new Vec2();
+  const _steerWS     = new Vec2();
+  const _steerDom    = new Vec2();
+  const _steerEdge   = new Vec2();
+  const _steerFollow = new Vec2();
 
   function computeSteering() {
-    const weights = CFG.behaviorWeights[lili.currentAction] || CFG.behaviorWeights.wander;
+    // Phase 8: mood-based weight selection (replaces action-based)
+    const weights = CFG.moodWeights[lili.mood] || CFG.moodWeights.idle;
 
     // Reset acceleration
     lili.acc.set(0, 0);
@@ -948,6 +2295,34 @@
       }
       lili.acc.x += _steerFlee.x * weights.flee;
       lili.acc.y += _steerFlee.y * weights.flee;
+    }
+
+    // Seek whitespace
+    if (weights.seekWhitespace > 0) {
+      steerSeekWhitespace(_steerWS);
+      lili.acc.x += _steerWS.x * weights.seekWhitespace;
+      lili.acc.y += _steerWS.y * weights.seekWhitespace;
+    }
+
+    // Seek DOM (exploration)
+    if (weights.seekDom > 0) {
+      steerSeekDom(_steerDom);
+      lili.acc.x += _steerDom.x * weights.seekDom;
+      lili.acc.y += _steerDom.y * weights.seekDom;
+    }
+
+    // Seek edge
+    if (weights.seekEdge > 0) {
+      steerSeekEdge(_steerEdge);
+      lili.acc.x += _steerEdge.x * weights.seekEdge;
+      lili.acc.y += _steerEdge.y * weights.seekEdge;
+    }
+
+    // Follow slow (cautious cursor following)
+    if (weights.followSlow > 0 && mouse.active) {
+      steerFollowSlow(_steerFollow);
+      lili.acc.x += _steerFollow.x * weights.followSlow;
+      lili.acc.y += _steerFollow.y * weights.followSlow;
     }
 
     // Obstacle avoidance — ALWAYS active (safety layer per PRD)
@@ -1070,6 +2445,14 @@
       recoilTimer: 0,        // >0 means retracting (seconds remaining)
       heldElement: null,     // grabbed DOM element (or null)
       grip: 0,               // grip strength 0..1
+
+      // Phase 9: DOM interaction state machine
+      interactionState: 'none', // none | touching | interested | grabbing | dropping
+      interactionTarget: null,  // obstacle entry being interacted with
+      interestLevel: 0,         // 0..1, builds with repeated contact
+      holdTimer: 0,             // seconds elapsed in current state
+      holdDuration: 0,          // random target hold duration (grab)
+      touchDuration: 0,         // random touch auto-return duration
     };
   }
 
@@ -1161,6 +2544,7 @@
   // Asymmetric power-stroke/recovery, phase shifts, Simplex noise
   // =========================================================================
 
+  // Phase 13D: Tentacle target computation with mood expression
   function computeTentacleTarget(arm, time) {
     const idx = arm.index;
     const bodyX = lili.pos.x;
@@ -1170,7 +2554,8 @@
     const maxSpd = ageVal(CFG.maxSpeed);
     const speedRatio = maxSpd > 0 ? Math.min(speed / maxSpd, 1) : 0;
 
-    const amplitude = ageVal(CFG.tentacleSwimAmplitude);
+    // 13D: Mood modulates amplitude, spread, noise
+    const amplitude = ageVal(CFG.tentacleSwimAmplitude) * _tentBlend.ampMod;
     const swimSpeed = ageVal(CFG.tentacleSwimSpeed);
     const asyncFactor = CFG.tentacleAsyncFactor;
 
@@ -1186,39 +2571,44 @@
     // Anchor angle in world space (rotated with heading)
     const worldAngle = arm.anchorAngle + heading;
 
-    // Base reach — tentacles extend outward from body along their anchor direction
-    // Modulated by swimming wave
+    // Base reach — modulated by mood spread (13D: shy=tighter, playful=wider)
     const waveVal = Math.sin(asyncTime + phaseShift);
-    const baseReach = arm.totalLen * (0.55 + 0.3 * waveVal);
+    const baseReach = arm.totalLen * (0.55 + 0.3 * waveVal) * _tentBlend.spreadMod;
 
     // Lateral sway perpendicular to tentacle direction
     const swayVal = Math.cos(asyncTime * 0.7 + phaseShift);
     const perpAngle = worldAngle + Math.PI * 0.5;
 
-    // Simplex noise injection (Research #3: break mechanical linearity)
-    // Noise on amplitude and angle, not directly on coordinates
-    const noiseAmp = noise.noise2D(t * 0.5 + idx * 10, 0) * CFG.tentacleNoiseScale;
-    const noiseAngle = noise.noise2D(t * 0.5 + idx * 10, 1000) * 0.15;
+    // Simplex noise injection — 13D: mood modulates noise scale
+    const noiseScale = CFG.tentacleNoiseScale * _tentBlend.noiseMod;
+    const noiseAmp = noise.noise2D(t * 0.5 + idx * 10, 0) * noiseScale;
+    const noiseAngle = noise.noise2D(t * 0.5 + idx * 10, 1000) * 0.15 * _tentBlend.noiseMod;
 
     const reachAngle = worldAngle + noiseAngle;
 
     // Swimming: tentacles trail behind body when moving
-    // Trailing bias proportional to speed (chapadla zaostávají za tělem)
     const trailBias = speedRatio * arm.totalLen * 0.4;
     const trailX = -Math.cos(heading) * trailBias;
     const trailY = -Math.sin(heading) * trailBias;
 
+    // 13D: Forward bias — curious/exploring tentacles reach forward
+    const fwdBias = _tentBlend.forwardBias * arm.totalLen * 0.3;
+    // Only front tentacles (indices 0,1,6,7) get forward bias
+    const isFront = (idx <= 1 || idx >= 6);
+    const fwdX = isFront ? Math.cos(heading) * fwdBias : 0;
+    const fwdY = isFront ? Math.sin(heading) * fwdBias : 0;
+
     arm.idealX = bodyX + Math.cos(reachAngle) * (baseReach + noiseAmp)
                 + Math.cos(perpAngle) * swayVal * amplitude * 0.4
-                + trailX;
+                + trailX + fwdX;
     arm.idealY = bodyY + Math.sin(reachAngle) * (baseReach + noiseAmp)
                 + Math.sin(perpAngle) * swayVal * amplitude * 0.4
-                + trailY;
+                + trailY + fwdY;
 
-    // Idle relaxation: gentle gravity pull downward (Research #3)
+    // Idle/calm relaxation: gravity pull — 13D: mood modulates gravity
     if (speedRatio < 0.15) {
       const idleFactor = 1 - speedRatio / 0.15;
-      arm.idealY += CFG.tentacleRelaxGravity * arm.totalLen * 0.3 * idleFactor;
+      arm.idealY += CFG.tentacleRelaxGravity * _tentBlend.gravMod * arm.totalLen * 0.3 * idleFactor;
     }
   }
 
@@ -1284,6 +2674,21 @@
       arm.idealX += (lili.pos.x - arm.idealX) * retractStrength;
       arm.idealY += (lili.pos.y - arm.idealY) * retractStrength;
     }
+
+    // Phase 9: DOM interaction state machine
+    updateDomInteraction(arm, frameDt);
+
+    // If grabbing, bias tip target toward held element
+    if (arm.interactionState === 'grabbing' && arm.heldElement) {
+      const info = _domState.disturbed.get(arm.heldElement);
+      if (info && info.originalRect) {
+        const ecx = info.originalRect.x + info.originalRect.w * 0.5;
+        const ecy = info.originalRect.y + info.originalRect.h * 0.5;
+        // Blend ideal target toward element (tentacle reaches for held object)
+        arm.idealX += (ecx - arm.idealX) * 0.15;
+        arm.idealY += (ecy - arm.idealY) * 0.15;
+      }
+    }
   }
 
   // =========================================================================
@@ -1325,10 +2730,389 @@
   }
 
   // =========================================================================
+  // 9A — Word Indexer (wrap text nodes into <span class="lili-word">)
+  // Run once at boot — irreversible. Enables per-word DOM interaction.
+  // =========================================================================
+
+  const _wordSkipTags = new Set([
+    'SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'CANVAS', 'SVG', 'CODE', 'PRE',
+    'KBD', 'SAMP', 'NOSCRIPT', 'IFRAME', 'OBJECT', 'EMBED',
+  ]);
+  const _interactiveTags = new Set(['A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'LABEL']);
+
+  function wrapWords() {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    let n;
+    while ((n = walker.nextNode())) {
+      const p = n.parentElement;
+      if (!p) continue;
+      if (_wordSkipTags.has(p.tagName)) continue;
+      if (_interactiveTags.has(p.tagName)) continue;
+      if (p.classList && p.classList.contains('lili-word')) continue;
+      if (p.isContentEditable) continue;
+      if (!n.textContent || n.textContent.trim().length === 0) continue;
+      textNodes.push(n);
+    }
+
+    // Process in reverse to avoid invalidating references
+    for (let i = textNodes.length - 1; i >= 0; i--) {
+      const node = textNodes[i];
+      const parent = node.parentElement;
+      if (!parent) continue;
+      const words = node.textContent.split(/(\s+)/);
+      if (words.length <= 1 && (!words[0] || words[0].trim().length === 0)) continue;
+
+      const frag = document.createDocumentFragment();
+      for (let w = 0; w < words.length; w++) {
+        const word = words[w];
+        if (!word || word.length === 0) continue;
+        if (/^\s+$/.test(word)) {
+          frag.appendChild(document.createTextNode(word));
+        } else {
+          const span = document.createElement('span');
+          span.className = 'lili-word';
+          span.textContent = word;
+          // Shape affinity: round chars attract more
+          if (/^[OoQ0@CGceDdPpBb]+$/.test(word)) span.dataset.liliShape = 'round';
+          else if (/^[AKVWMNvwkm1]+$/.test(word)) span.dataset.liliShape = 'angular';
+          else span.dataset.liliShape = 'mixed';
+          frag.appendChild(span);
+        }
+      }
+      parent.replaceChild(frag, node);
+    }
+  }
+
+  // =========================================================================
+  // 9B — DOM Interaction Pipeline (touch → interest → grab → play → drop)
+  // Per-tentacle state machine + global element tracking.
+  // Golden rule: ONLY transform + color, NEVER layout properties.
+  // =========================================================================
+
+  const _domState = {
+    heldCount: 0,            // currently held elements (max 2)
+    disturbedCount: 0,       // currently CSS-affected elements (max 4)
+    disturbed: new Map(),    // element → { originalTransform, originalColor, originalRect, touchTime, returnAt }
+    lastCleanupCheck: 0,     // frame of last midnight check
+  };
+
+  function _isInteractive(el) {
+    return _interactiveTags.has(el.tagName) ||
+      el.getAttribute('role') === 'button' ||
+      el.hasAttribute('tabindex') ||
+      el.hasAttribute('onclick');
+  }
+
+  function _isGrabbable(el) {
+    if (_isInteractive(el)) return false;
+    const r = el.getBoundingClientRect();
+    return r.width < CFG.dom.maxGrabbableWidth && r.height < CFG.dom.maxGrabbableHeight;
+  }
+
+  // --- Touch: subtle CSS rotate + translate ---
+  function _domTouch(arm) {
+    const el = arm.interactionTarget.el;
+    if (_domState.disturbed.has(el)) return; // already touched by another tentacle
+    if (_domState.disturbedCount >= CFG.dom.maxDisturbed) return;
+
+    const angle = (rlRng() - 0.5) * CFG.dom.touchRotateMax * 2;
+    const dx = (rlRng() - 0.5) * CFG.dom.touchTranslateMax * 2;
+    const dy = (rlRng() - 0.5) * CFG.dom.touchTranslateMax * 2;
+    const rect = el.getBoundingClientRect();
+
+    _domState.disturbed.set(el, {
+      originalTransform: el.style.transform || '',
+      originalColor: el.style.color || '',
+      originalRect: { x: rect.left, y: rect.top, w: rect.width, h: rect.height },
+      touchTime: Date.now(),
+      returnAt: 0, // set below
+      tentacleIdx: arm.index,
+    });
+    _domState.disturbedCount++;
+
+    // Random auto-return duration
+    const dur = CFG.dom.touchDuration;
+    arm.touchDuration = dur[0] + rlRng() * (dur[1] - dur[0]);
+    arm.holdTimer = 0;
+
+    el.style.transition = 'transform ' + CFG.dom.touchTransition + 's ease';
+    el.style.transform = 'rotate(' + angle.toFixed(1) + 'deg) translate(' +
+      dx.toFixed(1) + 'px, ' + dy.toFixed(1) + 'px)';
+    el.dataset.liliTouched = String(Date.now());
+  }
+
+  // --- Untouch: smooth return when losing interest without grabbing ---
+  function _domUntouch(arm) {
+    if (!arm.interactionTarget) return;
+    const el = arm.interactionTarget.el;
+    const info = _domState.disturbed.get(el);
+    if (!info) { arm.interactionTarget = null; arm.interestLevel = 0; return; }
+
+    el.style.transition = 'transform ' + CFG.dom.returnTransition + 's ease-out';
+    el.style.transform = info.originalTransform;
+
+    // Delayed cleanup of data attributes
+    const elRef = el;
+    setTimeout(function () {
+      elRef.style.transition = '';
+      delete elRef.dataset.liliTouched;
+      _domState.disturbed.delete(elRef);
+      _domState.disturbedCount = Math.max(0, _domState.disturbedCount - 1);
+    }, CFG.dom.returnTransition * 1000 + 100);
+
+    arm.interactionTarget = null;
+    arm.interestLevel = 0;
+    arm.holdTimer = 0;
+  }
+
+  // --- Grab: element begins following tentacle tip ---
+  function _domGrab(arm) {
+    const el = arm.interactionTarget.el;
+    arm.heldElement = el;
+    el.dataset.liliHeld = String(arm.index);
+    _domState.heldCount++;
+
+    // Ensure it's in disturbed map with original rect
+    if (!_domState.disturbed.has(el)) {
+      const rect = el.getBoundingClientRect();
+      _domState.disturbed.set(el, {
+        originalTransform: el.style.transform || '',
+        originalColor: el.style.color || '',
+        originalRect: { x: rect.left, y: rect.top, w: rect.width, h: rect.height },
+        touchTime: Date.now(),
+        returnAt: 0,
+        tentacleIdx: arm.index,
+      });
+      _domState.disturbedCount++;
+    }
+
+    // Random hold duration
+    const dur = CFG.dom.holdDuration;
+    arm.holdDuration = dur[0] + rlRng() * (dur[1] - dur[0]);
+    arm.holdTimer = 0;
+    arm.grip = 1;
+  }
+
+  // --- Play: element follows tentacle tip with rotation ---
+  function _domPlay(arm) {
+    if (!arm.heldElement) return;
+    const el = arm.heldElement;
+    const info = _domState.disturbed.get(el);
+    if (!info || !info.originalRect) return;
+
+    const tipX = arm.x[JOINTS - 1];
+    const tipY = arm.y[JOINTS - 1];
+    const ocx = info.originalRect.x + info.originalRect.w * 0.5;
+    const ocy = info.originalRect.y + info.originalRect.h * 0.5;
+    const dx = tipX - ocx;
+    const dy = tipY - ocy;
+
+    // Gentle sway rotation while held
+    const angle = Math.sin(frameCount * 0.05 + arm.index * 1.7) * 5;
+
+    el.style.transition = 'none';
+    el.style.transform = 'translate(' + dx.toFixed(1) + 'px, ' + dy.toFixed(1) +
+      'px) rotate(' + angle.toFixed(1) + 'deg)';
+  }
+
+  // --- Drop: release element, smooth return to original position ---
+  function _domDrop(arm) {
+    if (!arm.heldElement) return;
+    const el = arm.heldElement;
+    const info = _domState.disturbed.get(el);
+
+    el.style.transition = 'transform ' + CFG.dom.returnTransition + 's ease-out';
+    el.style.transform = info ? info.originalTransform : '';
+
+    delete el.dataset.liliHeld;
+    arm.heldElement = null;
+    arm.grip = 0;
+    arm.interactionState = 'dropping';
+    arm.holdTimer = 0;
+    _domState.heldCount = Math.max(0, _domState.heldCount - 1);
+  }
+
+  // --- Cleanup after drop transition completes ---
+  function _domCleanupArm(arm) {
+    if (arm.interactionTarget) {
+      const el = arm.interactionTarget.el;
+      const elRef = el;
+      setTimeout(function () {
+        elRef.style.transition = '';
+        delete elRef.dataset.liliTouched;
+        _domState.disturbed.delete(elRef);
+        _domState.disturbedCount = Math.max(0, _domState.disturbedCount - 1);
+      }, 100);
+    }
+    arm.interactionTarget = null;
+    arm.interactionState = 'none';
+    arm.interestLevel = 0;
+    arm.holdTimer = 0;
+  }
+
+  // --- Per-tentacle interaction state machine (called each frame) ---
+  function updateDomInteraction(arm, frameDt) {
+    const mood = lili.mood;
+    const DC = CFG.dom;
+
+    switch (arm.interactionState) {
+
+      case 'none':
+        // Check if tip touches a grabbable element
+        if (arm.touching && arm.curiosity > DC.curiosityTouchThreshold &&
+            _domState.disturbedCount < DC.maxDisturbed) {
+          const el = arm.touching.el;
+          if (!_isInteractive(el) && _isGrabbable(el) && !_domState.disturbed.has(el)) {
+            arm.interactionState = 'touching';
+            arm.interactionTarget = arm.touching;
+            _domTouch(arm);
+          }
+        }
+        break;
+
+      case 'touching':
+        arm.holdTimer += frameDt;
+        // Interest builds with sustained contact
+        if (arm.touching && arm.interactionTarget &&
+            arm.touching.el === arm.interactionTarget.el) {
+          arm.interestLevel += frameDt * DC.interestBuildRate * arm.curiosity;
+        } else {
+          arm.interestLevel -= frameDt * DC.interestDecayRate;
+        }
+        // Auto-return after touch duration
+        if (arm.holdTimer > arm.touchDuration) {
+          _domUntouch(arm);
+          arm.interactionState = 'none';
+          break;
+        }
+        // Escalate to interested
+        if (arm.interestLevel >= DC.interestGrabThreshold &&
+            (mood === 'curious' || mood === 'playful')) {
+          arm.interactionState = 'interested';
+        }
+        // Lost interest
+        if (arm.interestLevel <= 0) {
+          _domUntouch(arm);
+          arm.interactionState = 'none';
+        }
+        break;
+
+      case 'interested':
+        // Attempt grab
+        if (_domState.heldCount < DC.maxHeld &&
+            arm.curiosity > DC.curiosityGrabThreshold &&
+            (mood === 'curious' || mood === 'playful') &&
+            arm.interactionTarget) {
+          _domGrab(arm);
+          arm.interactionState = 'grabbing';
+          break;
+        }
+        // Lose interest if mood shifts
+        arm.interestLevel -= frameDt * 0.15;
+        if (mood !== 'curious' && mood !== 'playful') {
+          arm.interestLevel -= frameDt * 0.6;
+        }
+        if (arm.interestLevel <= 0.3) {
+          _domUntouch(arm);
+          arm.interactionState = 'none';
+        }
+        break;
+
+      case 'grabbing':
+        arm.holdTimer += frameDt;
+        arm.grip -= frameDt / arm.holdDuration;
+
+        // Element follows tip
+        _domPlay(arm);
+
+        // Drop conditions: grip depleted, high stress, recoil, shy mood
+        if (arm.grip <= 0 || stress > DC.stressDropThreshold ||
+            arm.recoilTimer > 0 || mood === 'shy') {
+          _domDrop(arm);
+        }
+        break;
+
+      case 'dropping':
+        // Wait for CSS return transition to complete
+        arm.holdTimer += frameDt;
+        if (arm.holdTimer > CFG.dom.returnTransition + 0.2) {
+          _domCleanupArm(arm);
+        }
+        break;
+    }
+
+    // Emergency drop: flee/alert + high stress drops everything immediately
+    if (arm.interactionState === 'grabbing' &&
+        (mood === 'shy' || mood === 'alert') && stress > 0.5) {
+      _domDrop(arm);
+    }
+  }
+
+  // =========================================================================
+  // 9D — Midnight Cleanup (daily reset of all DOM interactions)
+  // =========================================================================
+
+  function midnightCleanup() {
+    const now = new Date();
+    const lastCleanupStr = localStorage.getItem(CFG.storageKeys.lastCleanup);
+    const lastDate = lastCleanupStr
+      ? new Date(parseInt(lastCleanupStr, 10)).toDateString()
+      : null;
+
+    if (now.toDateString() === lastDate) return; // already cleaned today
+
+    // First: force-drop all held elements
+    for (let t = 0; t < TENT_N; t++) {
+      const arm = tentacles[t];
+      if (arm.heldElement) {
+        _domDrop(arm);
+      }
+      arm.interactionState = 'none';
+      arm.interactionTarget = null;
+      arm.interestLevel = 0;
+      arm.holdTimer = 0;
+    }
+
+    // Smooth return all disturbed elements
+    const trans = CFG.dom.cleanupTransition;
+    const touched = document.querySelectorAll('[data-lili-touched]');
+    for (let i = 0; i < touched.length; i++) {
+      const el = touched[i];
+      const info = _domState.disturbed.get(el);
+      el.style.transition = 'transform ' + trans + 's ease-out, color ' + trans + 's ease-out';
+      el.style.transform = info ? info.originalTransform : '';
+      el.style.color = info ? info.originalColor : '';
+    }
+
+    // Delayed attribute cleanup
+    setTimeout(function () {
+      const els = document.querySelectorAll('[data-lili-touched]');
+      for (let i = 0; i < els.length; i++) {
+        els[i].style.transition = '';
+        delete els[i].dataset.liliTouched;
+        delete els[i].dataset.liliHeld;
+      }
+      _domState.disturbed.clear();
+      _domState.disturbedCount = 0;
+      _domState.heldCount = 0;
+    }, trans * 1000 + 200);
+
+    localStorage.setItem(CFG.storageKeys.lastCleanup, String(Date.now()));
+  }
+
+  function checkMidnightCleanup() {
+    if (frameCount - _domState.lastCleanupCheck < CFG.dom.cleanupCheckFrames) return;
+    _domState.lastCleanupCheck = frameCount;
+    midnightCleanup();
+  }
+
+  // =========================================================================
   // 4 — Visual System: chromatophores, hull rendering, body, eyes
   // =========================================================================
 
   // 4D — Chromatophore color computation (HSL)
+  // Phase 13A: mood chromatophore expression blended in
   function computeColors() {
     const baseHue = ageVal(CFG.baseHue);
     const baseSat = ageVal(CFG.baseSaturation);
@@ -1349,16 +3133,27 @@
     const stressHue = stress * CFG.stressHueShift;     // negative = warmer
     const stressSat = stress * CFG.stressSaturationBoost;
 
-    const h = baseHue + circadianHue + stressHue;
-    const s = Math.min(baseSat + stressSat, 100);
-    const l = baseLit + circadianLit;
+    // Phase 13A: Mood chromatophore modulation (smoothly blended)
+    const moodHue = _chromaBlend.hueShift;
+    const moodSat = _chromaBlend.satShift;
+    const moodLit = _chromaBlend.litShift;
+    // Exploring: slow hue drift over time
+    const driftHue = _chromaBlend.hueDrift > 0
+      ? Math.sin(frameCount * _chromaBlend.hueDrift) * 12 : 0;
+    // Curious: subtle saturation pulsing
+    const satPulse = _chromaBlend.satPulse > 0
+      ? Math.sin(frameCount * 0.08) * _chromaBlend.satPulse * 100 : 0;
+
+    const h = baseHue + circadianHue + stressHue + moodHue + driftHue;
+    const s = Math.min(Math.max(baseSat + stressSat + moodSat + satPulse, 20), 100);
+    const l = Math.min(Math.max(baseLit + circadianLit + moodLit, 15), 85);
 
     return {
       bodyHsl: `hsl(${h}, ${s}%, ${l}%)`,
       bodyHslAlpha: function(a) { return `hsla(${h}, ${s}%, ${l}%, ${a})`; },
       tentHsl: `hsl(${h + 5}, ${s - 5}%, ${l + 5}%)`,
       tentHslAlpha: function(a) { return `hsla(${h + 5}, ${s - 5}%, ${l + 5}%, ${a})`; },
-      glowHsl: `hsla(${h - 10}, ${s + 10}%, ${l + 20}%, ${ageVal(CFG.glowIntensity) * 0.15})`,
+      glowHsl: `hsla(${h - 10}, ${s + 10}%, ${l + 20}%, ${ageVal(CFG.glowIntensity) * _chromaBlend.glowMod * 0.15})`,
       eyeWhite: `hsl(${h}, 15%, 92%)`,
       pupilHsl: `hsl(${h + 30}, ${s + 20}%, ${Math.max(l - 25, 10)}%)`,
       h, s, l
@@ -1385,21 +3180,44 @@
   }
 
   // Draw one side of a hull as Catmull-Rom → cubic Bézier segments
-  function drawHullSide(pts, n) {
+  // Draw Catmull-Rom spline through hull points. reverse=true draws backward.
+  function drawHullSide(pts, n, reverse) {
     if (n < 2) return;
-    ctx.moveTo(pts[0].x, pts[0].y);
     const tau = CFG.hullCatmullTension;
-    for (let i = 0; i < n - 1; i++) {
-      const p0 = pts[Math.max(i - 1, 0)];
-      const p1 = pts[i];
-      const p2 = pts[i + 1];
-      const p3 = pts[Math.min(i + 2, n - 1)];
-      const cp1x = p1.x + (p2.x - p0.x) / tau;
-      const cp1y = p1.y + (p2.y - p0.y) / tau;
-      const cp2x = p2.x - (p3.x - p1.x) / tau;
-      const cp2y = p2.y - (p3.y - p1.y) / tau;
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    if (!reverse) {
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 0; i < n - 1; i++) {
+        const p0 = pts[Math.max(i - 1, 0)];
+        const p1 = pts[i];
+        const p2 = pts[i + 1];
+        const p3 = pts[Math.min(i + 2, n - 1)];
+        ctx.bezierCurveTo(
+          p1.x + (p2.x - p0.x) / tau, p1.y + (p2.y - p0.y) / tau,
+          p2.x - (p3.x - p1.x) / tau, p2.y - (p3.y - p1.y) / tau,
+          p2.x, p2.y);
+      }
+    } else {
+      // Draw from last to first (no array mutation)
+      ctx.moveTo(pts[n - 1].x, pts[n - 1].y);
+      for (let i = n - 1; i > 0; i--) {
+        const p0 = pts[Math.min(i + 1, n - 1)];
+        const p1 = pts[i];
+        const p2 = pts[i - 1];
+        const p3 = pts[Math.max(i - 2, 0)];
+        ctx.bezierCurveTo(
+          p1.x + (p2.x - p0.x) / tau, p1.y + (p2.y - p0.y) / tau,
+          p2.x - (p3.x - p1.x) / tau, p2.y - (p3.y - p1.y) / tau,
+          p2.x, p2.y);
+      }
     }
+  }
+
+  // 12B: Pre-allocated hull point arrays (zero-allocation render loop)
+  const _hullLeft = new Array(JOINTS);
+  const _hullRight = new Array(JOINTS);
+  for (let j = 0; j < JOINTS; j++) {
+    _hullLeft[j] = { x: 0, y: 0 };
+    _hullRight[j] = { x: 0, y: 0 };
   }
 
   function renderTentaclesHull(colors) {
@@ -1413,8 +3231,8 @@
 
     for (let t = 0; t < TENT_N; t++) {
       const arm = tentacles[t];
-      const leftPts = [];
-      const rightPts = [];
+      const leftPts = _hullLeft;
+      const rightPts = _hullRight;
 
       for (let j = 0; j < JOINTS; j++) {
         const tang = polyTangent(arm.x, arm.y, j, JOINTS);
@@ -1424,8 +3242,10 @@
         const nv = noise.noise2D(arm.x[j] * 0.02 + t60, arm.y[j] * 0.02 + t * 3.7);
         const w = baseW * taper * (1 + nv * noiseAmp);
 
-        leftPts.push({ x: arm.x[j] + tang.nx * w, y: arm.y[j] + tang.ny * w });
-        rightPts.push({ x: arm.x[j] - tang.nx * w, y: arm.y[j] - tang.ny * w });
+        leftPts[j].x = arm.x[j] + tang.nx * w;
+        leftPts[j].y = arm.y[j] + tang.ny * w;
+        rightPts[j].x = arm.x[j] - tang.nx * w;
+        rightPts[j].y = arm.y[j] - tang.ny * w;
       }
 
       // Draw hull: right side forward, arc at tip, left side backward
@@ -1435,15 +3255,15 @@
       const tipIdx = JOINTS - 1;
       ctx.arc(arm.x[tipIdx], arm.y[tipIdx], baseW * 0.15, 0, Math.PI);
 
-      // Left side backward
-      drawHullSide(leftPts.reverse(), JOINTS);
+      // Left side backward (reverse traversal, no mutation)
+      drawHullSide(leftPts, JOINTS, true);
 
       // Close back to base
       ctx.closePath();
     }
 
-    // Single fill for all tentacles
-    ctx.fillStyle = colors.tentHslAlpha(0.65);
+    // Single fill for all tentacles (higher alpha for dark bg visibility)
+    ctx.fillStyle = colors.tentHslAlpha(0.75);
     ctx.fill();
 
     // Second pass: translucent tip highlights for depth
@@ -1474,9 +3294,11 @@
     const ry = r * CFG.bodyRadiusYScale;
 
     // Breathing modulation (Research #1: 18 bpm sine, 3% amplitude)
+    // Phase 13C: mood modulates breathing rate and depth
     const breathT = frameCount / 60;
-    const breathFreq = CFG.breathingBpm / 60;
-    const breathMod = 1 + Math.sin(breathT * breathFreq * Math.PI * 2) * CFG.breathingAmplitude;
+    const breathFreq = (CFG.breathingBpm / 60) * _bodyBlend.breathMod;
+    const breathAmp = CFG.breathingAmplitude * (0.7 + _bodyBlend.breathMod * 0.5);
+    const breathMod = 1 + Math.sin(breathT * breathFreq * Math.PI * 2) * breathAmp;
 
     // Pulse-glide mantle deformation
     const powerRatio = ageVal(CFG.pulsePowerRatio);
@@ -1490,18 +3312,25 @@
       pulseMod = 1 + contraction * 0.3 * Math.sin(glideT * Math.PI * 0.5);
     }
 
-    const finalRx = rx * breathMod * pulseMod;
-    const finalRy = ry * breathMod * pulseMod;
+    // Phase 13C: mood body scale (shy=shrink, playful=expand)
+    const moodScale = _bodyBlend.bodyScale;
+    const finalRx = rx * breathMod * pulseMod * moodScale;
+    const finalRy = ry * breathMod * pulseMod * moodScale;
 
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(lili.heading);
 
-    // Glow (bioluminescence — age-dependent intensity)
-    const glowR = r * 2.5;
-    const glowAlpha = ageVal(CFG.glowIntensity) * 0.12;
-    const glow = ctx.createRadialGradient(0, 0, r * 0.3, 0, 0, glowR);
-    glow.addColorStop(0, colors.bodyHslAlpha(glowAlpha));
+    // Glow (bioluminescence — age-dependent intensity, visible on dark bg)
+    // Phase 13C: mood glow pulsation (curious/exploring pulse at ~0.5Hz)
+    const glowR = r * 3.0;
+    let glowIntensity = ageVal(CFG.glowIntensity) * _chromaBlend.glowMod;
+    if (_bodyBlend.glowPulseHz > 0) {
+      glowIntensity *= 1 + Math.sin(frameCount / 60 * _bodyBlend.glowPulseHz * Math.PI * 2) * 0.25;
+    }
+    const glow = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, glowR);
+    glow.addColorStop(0, colors.bodyHslAlpha(glowIntensity * 0.18));
+    glow.addColorStop(0.4, colors.bodyHslAlpha(glowIntensity * 0.08));
     glow.addColorStop(1, colors.bodyHslAlpha(0));
     ctx.fillStyle = glow;
     ctx.beginPath();
@@ -1528,11 +3357,14 @@
     }
     ctx.closePath();
 
-    // Body fill with subtle gradient
-    const bodyGrad = ctx.createRadialGradient(0, -finalRy * 0.2, finalRx * 0.1, 0, 0, Math.max(finalRx, finalRy));
-    bodyGrad.addColorStop(0, colors.bodyHslAlpha(0.85));
-    bodyGrad.addColorStop(0.7, colors.bodyHslAlpha(0.75));
-    bodyGrad.addColorStop(1, colors.bodyHslAlpha(0.55));
+    // Body fill with richer gradient (3D roundness)
+    const bodyGrad = ctx.createRadialGradient(
+      -finalRx * 0.15, -finalRy * 0.25, finalRx * 0.05,
+      0, 0, Math.max(finalRx, finalRy));
+    bodyGrad.addColorStop(0, colors.bodyHslAlpha(0.92));
+    bodyGrad.addColorStop(0.45, colors.bodyHslAlpha(0.8));
+    bodyGrad.addColorStop(0.8, colors.bodyHslAlpha(0.65));
+    bodyGrad.addColorStop(1, colors.bodyHslAlpha(0.45));
     ctx.fillStyle = bodyGrad;
     ctx.fill();
 
@@ -1540,6 +3372,7 @@
   }
 
   // 4C — Eyes (track cursor, reactive pupils)
+  // Phase 13B: blinking, mood-driven pupil dilation, squint, gaze direction
   function renderEyes(colors) {
     const x = lili.pos.x;
     const y = lili.pos.y;
@@ -1565,37 +3398,124 @@
     const rightEyeX = x + fwdX - perpX;
     const rightEyeY = y + fwdY - perpY;
 
-    // Pupil offset: track mouse position
+    // Pupil offset: track mouse position (or DOM element for curious/exploring)
     const maxOff = eyeR * CFG.eyePupilMaxOffset;
 
+    // Phase 13B: Blink eyelid factor (0=open, 1=closed)
+    const blinkDur = CFG.blinkDurationFrames;
+    let lidClose = 0;
+    if (_blink.phase > 0) {
+      const half = blinkDur * 0.5;
+      const remaining = _blink.phase;
+      // Ease in/out: close then open
+      if (remaining > half) {
+        lidClose = (blinkDur - remaining) / half; // closing
+      } else {
+        lidClose = remaining / half; // opening
+      }
+    }
+
+    // Phase 13B: Squint from mood (playful = slight squint)
+    const squintAmount = _eyeBlend.squint;
+
     function drawEye(ex, ey) {
-      // Sclera (white)
-      ctx.fillStyle = colors.eyeWhite;
+      // Soft eye shadow (subtle depth)
+      ctx.fillStyle = colors.bodyHslAlpha(0.3);
+      ctx.beginPath();
+      ctx.arc(ex, ey, eyeR * 1.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Phase 13B: Eyelid clipping (blink + squint)
+      const totalLid = Math.min(lidClose + squintAmount, 0.95);
+      if (totalLid > 0.01) {
+        ctx.save();
+        ctx.beginPath();
+        // Clip to lower portion of eye circle (eyelid closes from top)
+        const clipY = ey - eyeR + eyeR * 2 * totalLid;
+        ctx.rect(ex - eyeR * 1.5, clipY, eyeR * 3, eyeR * 3);
+        ctx.clip();
+      }
+
+      // Sclera (warm white, slight gradient for roundness)
+      const scleraGrad = ctx.createRadialGradient(
+        ex - eyeR * 0.15, ey - eyeR * 0.15, eyeR * 0.1,
+        ex, ey, eyeR);
+      scleraGrad.addColorStop(0, 'rgba(255, 252, 248, 0.95)');
+      scleraGrad.addColorStop(1, colors.eyeWhite);
+      ctx.fillStyle = scleraGrad;
       ctx.beginPath();
       ctx.arc(ex, ey, eyeR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Pupil direction toward mouse
-      let dx = mouse.pos.x - ex;
-      let dy = mouse.pos.y - ey;
+      // Pupil gaze target: mouse by default, nearby DOM for curious/exploring
+      let gazeX = mouse.pos.x;
+      let gazeY = mouse.pos.y;
+      if (_eyeBlend.gazeDOM) {
+        // Look at nearest spatial hash element if close enough
+        const nearby = getNearby(lili.pos.x, lili.pos.y);
+        if (nearby.length > 0) {
+          const el = nearby[0];
+          gazeX = el.x + el.w * 0.5;
+          gazeY = el.y + el.h * 0.5;
+        }
+      }
+
+      let dx = gazeX - ex;
+      let dy = gazeY - ey;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+      // Idle: gaze drifts to center (looking "into the void")
+      if (lili.mood === 'idle' && lili.moodBlend > 0.5) {
+        const blend = Math.min((lili.moodBlend - 0.5) * 2, 1);
+        dx *= (1 - blend * 0.7);
+        dy *= (1 - blend * 0.7);
+      }
+
       const off = Math.min(dist * 0.01, maxOff);
       const px = ex + (dx / dist) * off;
       const py = ey + (dy / dist) * off;
 
-      // Pupil size: dilate when fleeing (speed-based), constrict when idle
-      const speed = lili.vel.mag();
-      const pupilScale = 0.8 + Math.min(speed * 0.05, 0.4);
+      // Pupil size: base stress dilation + Phase 13B mood modulation
+      const pupilScale = (0.85 + stress * 0.35 + Math.min(lili.vel.mag() * 0.03, 0.2))
+        * _eyeBlend.pupilScale;
 
-      ctx.fillStyle = colors.pupilHsl;
+      // Pupil with subtle radial gradient (depth)
+      const pupilGrad = ctx.createRadialGradient(
+        px - pupilR * 0.1, py - pupilR * 0.1, pupilR * 0.05,
+        px, py, pupilR * pupilScale);
+      pupilGrad.addColorStop(0, colors.pupilHsl);
+      pupilGrad.addColorStop(0.7, colors.pupilHsl);
+      pupilGrad.addColorStop(1, 'rgba(0,0,0,0.6)');
+      ctx.fillStyle = pupilGrad;
       ctx.beginPath();
       ctx.arc(px, py, pupilR * pupilScale, 0, Math.PI * 2);
       ctx.fill();
 
-      // Specular highlight (tiny white dot for life)
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      // Restore clipping if we applied eyelid
+      if (totalLid > 0.01) {
+        ctx.restore();
+
+        // Draw eyelid skin over the clipped area
+        ctx.fillStyle = colors.bodyHslAlpha(0.85);
+        ctx.beginPath();
+        const lidY = ey - eyeR + eyeR * 2 * totalLid;
+        ctx.arc(ex, ey, eyeR, -Math.PI, 0);
+        ctx.lineTo(ex + eyeR, lidY);
+        ctx.lineTo(ex - eyeR, lidY);
+        ctx.closePath();
+        if (lidY < ey + eyeR) ctx.fill();
+      }
+
+      // Primary specular highlight (larger, softer — gives life)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
       ctx.beginPath();
-      ctx.arc(ex - eyeR * 0.2, ey - eyeR * 0.25, eyeR * 0.18, 0, Math.PI * 2);
+      ctx.arc(ex - eyeR * 0.18, ey - eyeR * 0.22, eyeR * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Secondary tiny sparkle (adds dimension)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.beginPath();
+      ctx.arc(ex + eyeR * 0.15, ey + eyeR * 0.12, eyeR * 0.08, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -1674,25 +3594,37 @@
     updateMouse();
     updateSensors();
     updateStress();
+    brainDecisionCycle(); // Phase 8: RL mood selection before physics
+    updateMoodBlend();   // Phase 13: smooth mood expression blending
     updatePhysics(frameDt);
     updateTentacles(frameDt);
-    // Phase 8+ : RL decision, Phase 9+ : DOM interaction
+    checkMidnightCleanup(); // Phase 9D: periodic midnight reset check
   }
 
   function render() {
     ctx.clearRect(0, 0, W, H);
 
-    // 4E — Rendering pipeline (correct z-order)
-    const colors = computeColors();
+    // 12A: Render culling — skip Canvas rendering if Lili is fully offscreen
+    if (isOnScreen()) {
+      const colors = computeColors();
 
-    // 1. Tentacles behind body (hull envelope rendering)
-    renderTentaclesHull(colors);
+      // 4E — Rendering pipeline (correct z-order)
+      // 1. Tentacles behind body (hull envelope rendering)
+      renderTentaclesHull(colors);
 
-    // 2. Body (noise-deformed ellipse with glow)
-    renderBody(colors);
+      // 2. Body (noise-deformed ellipse with glow)
+      renderBody(colors);
 
-    // 3. Eyes (on top of body)
-    renderEyes(colors);
+      // 3. Eyes (on top of body)
+      renderEyes(colors);
+    }
+
+    // 12C: FPS monitoring (always runs, even when offscreen)
+    updateFps();
+    checkFpsWarning();
+
+    // Phase 10B: Debug panel update (DOM, not Canvas)
+    updateDebugPanel();
   }
 
   // =========================================================================
@@ -1700,6 +3632,7 @@
   // =========================================================================
 
   function boot() {
+    const bootStart = performance.now();
     initCanvas();
 
     window.addEventListener('resize', onResize);
@@ -1712,21 +3645,43 @@
       localStorage.setItem(CFG.storageKeys.genesis, String(Date.now()));
     }
     age.genesisMs = parseInt(localStorage.getItem(CFG.storageKeys.genesis), 10);
+
+    // Register phase transition listeners
+    onPhaseTransition(function (from, to, atMs) {
+      const days = (atMs / 86400000).toFixed(1);
+      console.info('[Lili] Phase transition: ' + from + ' → ' + to + ' at day ' + days);
+    });
+    onPhaseTransition(_onPhaseTransitionJournal); // Phase 8: journal milestone
+
     updateAge();
 
     // Increment visit counter
     const visits = parseInt(localStorage.getItem(CFG.storageKeys.visits) || '0', 10);
     localStorage.setItem(CFG.storageKeys.visits, String(visits + 1));
 
-    // Initialize Lili's position (center of viewport or restored)
-    lili.pos.set(W * 0.5, H * 0.5);
+    // Phase 8: Load Q-table and journal from localStorage
+    brainLoad();
+    journalLoad();
+    console.info('[Lili] Brain loaded: ' + _qtable.size + ' Q-states, ' +
+      _decision.totalDecisions + ' lifetime decisions, mood=' + lili.mood);
+
+    // Phase 9A: Wrap text nodes into <span class="lili-word"> (once, irreversible)
+    wrapWords();
+
+    // Phase 11A: Restore position from localStorage (or center of viewport)
     lili.bodyR = ageVal(CFG.bodyRadius);
+    if (!restorePosition()) {
+      lili.pos.set(W * 0.5, H * 0.5);
+    }
 
     // Initialize tentacles (8 FABRIK chains)
     initTentacles();
 
-    // Build initial spatial hash grid (Phase 5)
+    // Build initial spatial hash grid (Phase 5 — after wrapWords so spans are indexed)
     buildSpatialHash();
+
+    // Phase 9D: Check for missed midnight cleanup (e.g. user returns after days)
+    midnightCleanup();
 
     // Rebuild on resize (debounced)
     window.addEventListener('resize', function () {
@@ -1742,6 +3697,29 @@
     // MutationObserver: rebuild when DOM structure changes
     const observer = new MutationObserver(onDomMutation);
     observer.observe(document.body, { childList: true, subtree: true });
+
+    // Phase 11: Save all state on page unload
+    window.addEventListener('beforeunload', function () {
+      brainSave();
+      journalSaveMilestones();
+      journalSaveRingBuffer();
+      savePosition();
+    });
+
+    // Phase 11B: Request persistent storage + detect data loss
+    requestPersistentStorage();
+    detectDataLoss();
+
+    // Phase 10: Click on Lili → tooltip
+    document.addEventListener('click', onLiliClick);
+
+    // Console API: window.lili.export(), .import(), .debug(), .status(), .data()
+    exposeConsoleAPI();
+
+    // 12C: Init timing
+    const bootMs = performance.now() - bootStart;
+    console.info('[Lili] Boot complete in ' + bootMs.toFixed(1) + 'ms' +
+      (bootMs > CFG.maxInitMs ? ' ⚠ exceeds target ' + CFG.maxInitMs + 'ms' : ''));
 
     // Start loop
     lastTime = 0;
