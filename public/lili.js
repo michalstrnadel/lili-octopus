@@ -1556,12 +1556,27 @@
   let _tooltipTimer = 0;
 
   function onLiliClick(e) {
-    const dx = e.clientX - lili.pos.x;
-    const dy = e.clientY - lili.pos.y;
+    const cx = e.clientX;
+    const cy = e.clientY;
+    const dx = cx - lili.pos.x;
+    const dy = cy - lili.pos.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (dist > lili.bodyR * CFG.clickHitboxScale) return;
 
-    showTooltip(e.clientX, e.clientY);
+    showTooltip(cx, cy);
+  }
+
+  // Mobile: touchstart on canvas area (click may not fire through pointer-events:none)
+  function onLiliTouch(e) {
+    if (!e.touches || !e.touches[0]) return;
+    const t = e.touches[0];
+    const dx = t.clientX - lili.pos.x;
+    const dy = t.clientY - lili.pos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > lili.bodyR * CFG.clickHitboxScale) return;
+
+    e.preventDefault();
+    showTooltip(t.clientX, t.clientY);
   }
 
   function showTooltip(x, y) {
@@ -1616,13 +1631,11 @@
     const dotColor = moodDotColors[lili.mood] || '#888';
 
     el.innerHTML =
-      '<b style="color:#8cf">Lili</b>  <span style="color:#6a8">' + age.phase + '</span><br>' +
-      'age: ' + ageStr + '<br>' +
-      'mood: <span style="display:inline-block;width:7px;height:7px;border-radius:50%;' +
-      'background:' + dotColor + ';margin-right:4px;vertical-align:middle"></span>' +
-      lili.mood + '<br>' +
-      'preference: ' + topMood + '<br>' +
-      'visits: ' + visits;
+      '<b style="color:#8cf">Lili</b> ' +
+      '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;' +
+      'background:' + dotColor + ';vertical-align:middle"></span><br>' +
+      '<span style="color:#667">Autonomous octopus living on this page.</span><br>' +
+      '<span style="color:#6a8">' + age.phase + '</span> · ' + ageStr + ' · ' + lili.mood;
 
     // Position: prefer above the click point, shift to stay in viewport
     document.body.appendChild(el);
@@ -3913,8 +3926,9 @@
     requestPersistentStorage();
     detectDataLoss();
 
-    // Phase 10: Click on Lili → tooltip
+    // Phase 10: Click/tap on Lili → tooltip
     document.addEventListener('click', onLiliClick);
+    document.addEventListener('touchstart', onLiliTouch, { passive: false });
 
     // Console API: window.lili.export(), .import(), .debug(), .status(), .data()
     exposeConsoleAPI();
