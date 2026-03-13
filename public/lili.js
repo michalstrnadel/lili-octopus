@@ -258,6 +258,14 @@
       milestones:  'lili_milestones',
     },
 
+    // --- Phase 14: Cloud sync ---
+    sync: {
+      enabled: true,
+      endpoint: '/api/lili',
+      intervalMs: 5 * 60 * 1000,  // 5 minutes
+      retryMs: 30 * 1000,         // 30s after failure
+    },
+
     // --- Performance targets ---
     targetFps: 60,
     maxInitMs: 200,
@@ -1768,9 +1776,11 @@
       export: function () { exportData(); },
       import: function () { importData(); },
       debug:  function () { toggleDebug(); },
+      sync:   function () { _sync.dirty = true; syncSave(); },
       status: function () {
         var ageDays = (Date.now() - age.genesisMs) / 86400000;
         var visits = parseInt(localStorage.getItem(CFG.storageKeys.visits) || '0', 10);
+        var syncAge = _sync.lastSyncMs ? ((Date.now() - _sync.lastSyncMs) / 1000).toFixed(0) + 's ago' : 'never';
         console.info(
           '[Lili] Status\n' +
           '  Phase: ' + age.phase + ' (' + (age.phaseProgress * 100).toFixed(1) + '%)\n' +
@@ -1780,12 +1790,13 @@
           '  Q-states: ' + _qtable.size + '\n' +
           '  Decisions: ' + _decision.totalDecisions + '\n' +
           '  Milestones: ' + _journal.milestones.length + '\n' +
-          '  Daily aggregates: ' + _journal.dailyAggregates.length
+          '  Daily aggregates: ' + _journal.dailyAggregates.length + '\n' +
+          '  Cloud sync: ' + syncAge + (_sync.dirty ? ' (dirty)' : '')
         );
       },
       data: function () { return exportData(true); },
     });
-    console.info('[Lili] Console API ready — try: lili.status(), lili.export(), lili.debug()');
+    console.info('[Lili] Console API ready — try: lili.status(), lili.sync(), lili.export()');
   }
 
   // =========================================================================
@@ -1890,6 +1901,197 @@
     });
 
     input.click();
+  }
+
+  // =========================================================================
+  // 14 — Cloud Sync (GitHub persistence via /api/lili)
+  // Loads state on boot, saves periodically + beforeunload.
+  // localStorage remains as offline fallback.
+  // =========================================================================
+
+  const _sync = {
+    sha: null,            // GitHub file SHA (needed for PUT)
+    timer: null,          // setInterval handle
+    lastSyncMs: 0,        // timestamp of last successful sync
+    dirty: false,         // true if local state changed since last sync
+    loading: false,       // prevent concurrent requests
+  };
+
+  // Build state object for sync (same format as data/state.json)
+  function _buildSyncState() {
+    // Flush pending daily aggregate
+    if (_journal.dayDecisionCount > 0) {
+      _flushDailyAggregate();
+    }
+    return {
+      format: 'lili_state_v1',
+      lastSync: new Date().toISOString(),
+      metadata: {
+        genesis: age.genesisMs,
+        visits: parseInt(localStorage.getItem(CFG.storageKeys.visits) || '0', 10),
+        totalDecisions: _decision.totalDecisions,
+        totalReward: _decision.totalReward,
+        phase: age.phase,
+        phaseProgress: age.phaseProgress,
+        mood: lili.mood,
+      },
+      brain: JSON.parse(brainSerialize()),
+      journal: {
+        ringBuffer: _journal.ringBuffer.slice(-2000), // keep last 2000 for sync
+        dailyAggregates: _journal.dailyAggregates,
+        milestones: _journal.milestones,
+      },
+    };
+  }
+
+  // Merge remote state into local (remote wins for brain if it has more decisions)
+  function _applySyncState(remote) {
+    if (!remote || remote.format !== 'lili_state_v1') return false;
+
+    var applied = false;
+
+    // Genesis: keep the earliest
+    if (remote.metadata && remote.metadata.genesis) {
+      if (!age.genesisMs || remote.metadata.genesis < age.genesisMs) {
+        age.genesisMs = remote.metadata.genesis;
+        localStorage.setItem(CFG.storageKeys.genesis, String(age.genesisMs));
+        updateAge();
+      }
+    }
+
+    // Brain: remote wins if it has more lifetime decisions
+    if (remote.brain && remote.metadata &&
+        remote.metadata.totalDecisions > _decision.totalDecisions) {
+      brainDeserialize(JSON.stringify(remote.brain));
+      brainSave();
+      applied = true;
+    }
+
+    // Visits: keep the higher count
+    if (remote.metadata && remote.metadata.visits) {
+      var localVisits = parseInt(localStorage.getItem(CFG.storageKeys.visits) || '0', 10);
+      if (remote.metadata.visits > localVisits) {
+        localStorage.setItem(CFG.storageKeys.visits, String(remote.metadata.visits));
+      }
+    }
+
+    // Journal: merge daily aggregates (unique by day)
+    if (remote.journal) {
+      if (remote.journal.dailyAggregates && remote.journal.dailyAggregates.length) {
+        var existingDays = new Set(_journal.dailyAggregates.map(function (a) { return a.day; }));
+        for (var i = 0; i < remote.journal.dailyAggregates.length; i++) {
+          if (!existingDays.has(remote.journal.dailyAggregates[i].day)) {
+            _journal.dailyAggregates.push(remote.journal.dailyAggregates[i]);
+          }
+        }
+        _journal.dailyAggregates.sort(function (a, b) { return a.day < b.day ? -1 : 1; });
+        try { localStorage.setItem(CFG.storageKeys.dailyAgg, JSON.stringify(_journal.dailyAggregates)); }
+        catch (e) { /* */ }
+      }
+
+      // Milestones: merge by type+ts
+      if (remote.journal.milestones && remote.journal.milestones.length) {
+        var existingMs = new Set(_journal.milestones.map(function (m) { return m.type + ':' + m.ts; }));
+        for (var j = 0; j < remote.journal.milestones.length; j++) {
+          var key = remote.journal.milestones[j].type + ':' + remote.journal.milestones[j].ts;
+          if (!existingMs.has(key)) {
+            _journal.milestones.push(remote.journal.milestones[j]);
+          }
+        }
+        _journal.milestones.sort(function (a, b) { return a.ts - b.ts; });
+        journalSaveMilestones();
+      }
+      applied = true;
+    }
+
+    return applied;
+  }
+
+  // Fetch state from server
+  function syncLoad(callback) {
+    if (!CFG.sync.enabled || _sync.loading) return;
+    _sync.loading = true;
+
+    fetch(CFG.sync.endpoint, { method: 'GET', cache: 'no-store' })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (data) {
+        _sync.loading = false;
+        if (!data || !data.state) {
+          console.info('[Lili] Sync: no remote state found');
+          if (callback) callback(false);
+          return;
+        }
+        _sync.sha = data.sha;
+        var applied = _applySyncState(data.state);
+        console.info('[Lili] Sync: loaded from cloud' + (applied ? ' (merged)' : ' (local is newer)'));
+        _sync.lastSyncMs = Date.now();
+        if (callback) callback(applied);
+      })
+      .catch(function (err) {
+        _sync.loading = false;
+        console.warn('[Lili] Sync: load failed — using localStorage', err.message || err);
+        if (callback) callback(false);
+      });
+  }
+
+  // Push state to server
+  function syncSave() {
+    if (!CFG.sync.enabled || _sync.loading || !_sync.sha) return;
+    if (!_sync.dirty && _decision.totalDecisions === 0) return;
+    _sync.loading = true;
+
+    var state = _buildSyncState();
+
+    fetch(CFG.sync.endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state: state, sha: _sync.sha }),
+    })
+      .then(function (res) { return res.ok ? res.json() : res.json().then(function (e) { throw e; }); })
+      .then(function (data) {
+        _sync.loading = false;
+        _sync.sha = data.sha;
+        _sync.dirty = false;
+        _sync.lastSyncMs = Date.now();
+        console.info('[Lili] Sync: saved to cloud (' + _decision.totalDecisions + ' decisions)');
+      })
+      .catch(function (err) {
+        _sync.loading = false;
+        // On conflict, reload remote state and retry
+        if (err && err.error === 'conflict') {
+          console.info('[Lili] Sync: conflict detected, reloading remote...');
+          syncLoad(function () { _sync.dirty = true; });
+          return;
+        }
+        console.warn('[Lili] Sync: save failed', err.message || err.error || err);
+        // Retry sooner
+        setTimeout(function () { _sync.dirty = true; }, CFG.sync.retryMs);
+      });
+  }
+
+  // Start periodic sync (called from boot, after initial load)
+  function syncStart() {
+    if (!CFG.sync.enabled) return;
+
+    // Mark dirty whenever brain saves locally
+    var origBrainSave = brainSave;
+    brainSave = function () {
+      origBrainSave();
+      _sync.dirty = true;
+    };
+
+    // Periodic sync
+    _sync.timer = setInterval(function () {
+      if (_sync.dirty) syncSave();
+    }, CFG.sync.intervalMs);
+
+    // Sync on page unload (best-effort)
+    window.addEventListener('beforeunload', function () {
+      if (_sync.dirty && _sync.sha) {
+        var state = _buildSyncState();
+        navigator.sendBeacon(CFG.sync.endpoint, JSON.stringify({ state: state, sha: _sync.sha }));
+      }
+    });
   }
 
   // =========================================================================
@@ -3720,6 +3922,12 @@
     const bootMs = performance.now() - bootStart;
     console.info('[Lili] Boot complete in ' + bootMs.toFixed(1) + 'ms' +
       (bootMs > CFG.maxInitMs ? ' ⚠ exceeds target ' + CFG.maxInitMs + 'ms' : ''));
+
+    // Phase 14: Cloud sync — load remote state, then start periodic sync
+    syncLoad(function () {
+      syncStart();
+      console.info('[Lili] Sync: connected');
+    });
 
     // Start loop
     lastTime = 0;

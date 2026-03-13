@@ -1,0 +1,16 @@
+{
+  "format": "lili_state_v1",
+  "lastSync": null,
+  "metadata": {
+    "genesis": null,
+    "visits": 0,
+    "totalDecisions": 0,
+    "totalReward": 0
+  },
+  "brain": null,
+  "journal": {
+    "ringBuffer": [],
+    "dailyAggregates": [],
+    "milestones": []
+  }
+}

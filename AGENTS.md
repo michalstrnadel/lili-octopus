@@ -33,8 +33,9 @@ Hotovo:
 - ✅ **Fáze 11:** Persistence — position save/restore (localStorage, periodic + beforeunload), viewport clamping, mood restore, `navigator.storage.persist()`, data loss detection (Safari ITP), import systém (klávesa I, merge duplicates), graceful fallback pro corrupted data
 - ✅ **Fáze 12:** Optimalizace — render culling (offscreen skip), pre-allocated hull arrays (zero-alloc render), drawHullSide reverse traversal (no array mutation), FPS monitoring (rolling avg + console warning <50), init timing (performance.now)
 - ✅ **Fáze 13:** Emoční exprese — chromatoforová exprese nálad (HSL mood modulation), oční exprese (mrkání, pupil dilation, squint, DOM gaze), tělesná exprese (breathing rate/depth, body scale, glow pulsation), chapadlová exprese (amplitude, spread, gravity, noise, forward bias per mood), tooltip mood dot, debug mood history, onMoodChange callbacks, moodBlend smooth transitions, sustained_mood milestones
+- ✅ **Fáze 14:** Cloud Sync — GitHub persistence přes `/api/lili` (Vercel serverless → GitHub API), `data/state.json` jako single source of truth, 5min sync interval + sendBeacon na beforeunload, merge strategie (brain: více decisions vyhrává, genesis: nejstarší, journal: merge by day/type), SHA conflict detection + retry, localStorage jako offline fallback, `lili.sync()` console API
 
-**Další krok:** Testování, launch, akademické baselines.
+**Další krok:** Nastavit GITHUB_TOKEN na Vercelu, testování sync, akademické baselines.
 
 ## Co číst a kdy
 
@@ -152,5 +153,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-03-13 (Fáze 1-13 implementovány, lili.js ~3715 řádků)*
+*Poslední aktualizace: 2026-03-13 (Fáze 1-14 implementovány, lili.js ~3944 řádků)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*
