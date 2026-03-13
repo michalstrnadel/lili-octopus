@@ -15,7 +15,7 @@
   const CFG = {
     // --- Canvas ---
     canvasId: 'lili-canvas',
-    canvasZIndex: 9999,
+    canvasZIndex: 9990,
     resizeDebounceMs: 150,
 
     // --- Body (age-dependent defaults start at adult) ---
