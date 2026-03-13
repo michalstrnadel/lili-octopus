@@ -847,6 +847,10 @@
     scrollOx = window.scrollX || window.pageXOffset || 0;
     scrollOy = window.scrollY || window.pageYOffset || 0;
     updateDocDimensions();
+    // Force immediate re-render during scroll — on mobile (iOS Safari),
+    // rAF is paused during momentum scroll, so without this Lili appears
+    // to scroll with the viewport instead of staying on the page.
+    if (ctx) render();
   }
 
   // Time of day classification
