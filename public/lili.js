@@ -692,6 +692,15 @@
     mouse.active = true;
   }
 
+  // Mobile: track finger position in document coords (same as mousemove for desktop)
+  function onTouchMove(e) {
+    if (!e.touches || !e.touches[0]) return;
+    var t = e.touches[0];
+    mouse.prev.setFrom(mouse.pos);
+    mouse.pos.set(t.clientX + scrollOx, t.clientY + scrollOy);
+    mouse.active = true;
+  }
+
   function updateMouse() {
     if (!mouse.active) return;
     mouse.vel.set(mouse.pos.x - mouse.prev.x, mouse.pos.y - mouse.prev.y);
@@ -3892,6 +3901,7 @@
     window.addEventListener('resize', onResize);
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
     window.addEventListener('scroll', onScroll, { passive: true });
 
     // Genesis timestamp (never overwrite — PRD rule)
