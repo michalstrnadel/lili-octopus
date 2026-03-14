@@ -1,20 +1,20 @@
 {
   "format": "lili_state_v1",
-  "lastSync": "2026-03-14T14:54:09.058Z",
+  "lastSync": "2026-03-14T16:36:41.886Z",
   "metadata": {
     "genesis": 1773395030923,
     "visits": 16,
-    "totalDecisions": 1151,
-    "totalReward": -530.0999999999983,
+    "totalDecisions": 1154,
+    "totalReward": -536.0999999999983,
     "phase": "hatchling",
-    "phaseProgress": 0.08682054232804233,
+    "phaseProgress": 0.09190720816798942,
     "mood": "calm"
   },
   "brain": {
     "v": 1,
     "mood": 3,
-    "decisions": 1151,
-    "reward": -530.0999999999983,
+    "decisions": 1154,
+    "reward": -536.0999999999983,
     "entries": [
       [
         320,
@@ -380,8 +380,8 @@
         325,
         [
           -0.40650000000000003,
-          -0.6615866295275653,
-          -0.40700000000000003,
+          -0.9158186601798279,
+          -0.566264994875,
           -0.33945000000000003,
           -0.6233,
           -0.2,
@@ -645,244 +645,40 @@
   "journal": {
     "ringBuffer": [
       {
-        "ts": 1773500030067,
-        "ageMs": 104999143,
+        "ts": 1773506199590,
+        "ageMs": 111168666,
         "phase": "hatchling",
-        "state": 1405,
+        "state": 325,
         "mood": 2,
         "exp": 1,
-        "reward": -0.3,
-        "stress": 0.37,
-        "x": 1359,
-        "y": 786
-      },
-      {
-        "ts": 1773500030816,
-        "ageMs": 104999893,
-        "phase": "hatchling",
-        "state": 685,
-        "mood": 1,
-        "exp": 1,
         "reward": -2,
-        "stress": 0.13,
-        "x": 1361,
-        "y": 786
-      },
-      {
-        "ts": 1773500031568,
-        "ageMs": 105000645,
-        "phase": "hatchling",
-        "state": 325,
-        "mood": 1,
-        "exp": 1,
-        "reward": 0.3,
-        "stress": 0.24,
-        "x": 1363,
-        "y": 788
-      },
-      {
-        "ts": 1773500032317,
-        "ageMs": 105001394,
-        "phase": "hatchling",
-        "state": 1405,
-        "mood": 3,
-        "exp": 1,
-        "reward": -2,
-        "stress": 0.14,
-        "x": 1364,
-        "y": 788
-      },
-      {
-        "ts": 1773500033066,
-        "ageMs": 105002143,
-        "phase": "hatchling",
-        "state": 325,
-        "mood": 0,
-        "exp": 1,
-        "reward": -1.5,
         "stress": 0.1,
-        "x": 1364,
-        "y": 791
+        "x": 961,
+        "y": 539
       },
       {
-        "ts": 1773500033823,
-        "ageMs": 105002900,
-        "phase": "hatchling",
-        "state": 325,
-        "mood": 6,
-        "exp": 0,
-        "reward": 0,
-        "stress": 0.2,
-        "x": 1365,
-        "y": 790
-      },
-      {
-        "ts": 1773500034567,
-        "ageMs": 105003644,
-        "phase": "hatchling",
-        "state": 2865,
-        "mood": 6,
-        "exp": 1,
-        "reward": 0,
-        "stress": 0.4,
-        "x": 1367,
-        "y": 788
-      },
-      {
-        "ts": 1773500035323,
-        "ageMs": 105004399,
-        "phase": "hatchling",
-        "state": 685,
-        "mood": 1,
-        "exp": 1,
-        "reward": -2,
-        "stress": 0.13,
-        "x": 1369,
-        "y": 789
-      },
-      {
-        "ts": 1773500036067,
-        "ageMs": 105005144,
-        "phase": "hatchling",
-        "state": 325,
-        "mood": 3,
-        "exp": 1,
-        "reward": 0,
-        "stress": 0.32,
-        "x": 1370,
-        "y": 790
-      },
-      {
-        "ts": 1773500036817,
-        "ageMs": 105005894,
-        "phase": "hatchling",
-        "state": 1045,
-        "mood": 1,
-        "exp": 1,
-        "reward": 0.3,
-        "stress": 0.44,
-        "x": 1371,
-        "y": 790
-      },
-      {
-        "ts": 1773500037567,
-        "ageMs": 105006644,
-        "phase": "hatchling",
-        "state": 1045,
-        "mood": 1,
-        "exp": 1,
-        "reward": -2,
-        "stress": 0.14,
-        "x": 1373,
-        "y": 791
-      },
-      {
-        "ts": 1773500038316,
-        "ageMs": 105007393,
-        "phase": "hatchling",
-        "state": 325,
-        "mood": 6,
-        "exp": 0,
-        "reward": 0,
-        "stress": 0.21,
-        "x": 1374,
-        "y": 790
-      },
-      {
-        "ts": 1773500039068,
-        "ageMs": 105008145,
-        "phase": "hatchling",
-        "state": 685,
-        "mood": 0,
-        "exp": 1,
-        "reward": 0.5,
-        "stress": 0.28,
-        "x": 1373,
-        "y": 793
-      },
-      {
-        "ts": 1773500039817,
-        "ageMs": 105008894,
-        "phase": "hatchling",
-        "state": 1405,
-        "mood": 1,
-        "exp": 1,
-        "reward": 0.3,
-        "stress": 0.3,
-        "x": 1374,
-        "y": 794
-      },
-      {
-        "ts": 1773500040572,
-        "ageMs": 105009649,
-        "phase": "hatchling",
-        "state": 685,
-        "mood": 4,
-        "exp": 1,
-        "reward": -0.3,
-        "stress": 0.26,
-        "x": 1376,
-        "y": 794
-      },
-      {
-        "ts": 1773500041318,
-        "ageMs": 105010394,
-        "phase": "hatchling",
-        "state": 685,
-        "mood": 0,
-        "exp": 0,
-        "reward": -1.5,
-        "stress": 0.15,
-        "x": 1374,
-        "y": 797
-      },
-      {
-        "ts": 1773500042066,
-        "ageMs": 105011143,
+        "ts": 1773506200398,
+        "ageMs": 111169475,
         "phase": "hatchling",
         "state": 325,
         "mood": 1,
         "exp": 1,
         "reward": -2,
-        "stress": 0.24,
-        "x": 1375,
-        "y": 798
+        "stress": 0.1,
+        "x": 963,
+        "y": 540
       },
       {
-        "ts": 1773500042818,
-        "ageMs": 105011895,
+        "ts": 1773506201151,
+        "ageMs": 111170228,
         "phase": "hatchling",
-        "state": 1765,
-        "mood": 2,
-        "exp": 0,
-        "reward": -2,
-        "stress": 0.25,
-        "x": 1375,
-        "y": 796
-      },
-      {
-        "ts": 1773500043567,
-        "ageMs": 105012644,
-        "phase": "hatchling",
-        "state": 1765,
+        "state": 325,
         "mood": 1,
         "exp": 1,
         "reward": -2,
-        "stress": 0.25,
-        "x": 1376,
-        "y": 798
-      },
-      {
-        "ts": 1773500048467,
-        "ageMs": 105017544,
-        "phase": "hatchling",
-        "state": 1765,
-        "mood": 2,
-        "exp": 1,
-        "reward": -2.3,
-        "stress": 0.12,
-        "x": 1377,
-        "y": 796
+        "stress": 0.1,
+        "x": 966,
+        "y": 540
       }
     ],
     "dailyAggregates": [
@@ -1053,6 +849,27 @@
         "qhash": -136.73,
         "decisions": 20,
         "totalReward": -18.5
+      },
+      {
+        "day": "2026-03-14",
+        "ageMs": 111170959,
+        "phase": "hatchling",
+        "moodDist": [
+          0,
+          2,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "avgReward": -2,
+        "explorationRate": 1,
+        "entropy": 0.918,
+        "lzc": 0,
+        "qhash": -137.72,
+        "decisions": 3,
+        "totalReward": -6
       }
     ],
     "milestones": [
@@ -1811,6 +1628,18 @@
         "mood": "alert",
         "ts": 1773500040572,
         "ageMs": 105009649
+      },
+      {
+        "type": "first_mood",
+        "mood": "shy",
+        "ts": 1773506199590,
+        "ageMs": 111168666
+      },
+      {
+        "type": "first_mood",
+        "mood": "playful",
+        "ts": 1773506200398,
+        "ageMs": 111169475
       }
     ]
   }
