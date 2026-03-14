@@ -1,13 +1,13 @@
 {
   "format": "lili_state_v1",
-  "lastSync": "2026-03-14T16:36:41.886Z",
+  "lastSync": "2026-03-14T20:54:10.890Z",
   "metadata": {
     "genesis": 1773395030923,
     "visits": 16,
     "totalDecisions": 1154,
     "totalReward": -536.0999999999983,
     "phase": "hatchling",
-    "phaseProgress": 0.09190720816798942,
+    "phaseProgress": 0.10467206845238096,
     "mood": "calm"
   },
   "brain": {
@@ -643,44 +643,7 @@
     ]
   },
   "journal": {
-    "ringBuffer": [
-      {
-        "ts": 1773506199590,
-        "ageMs": 111168666,
-        "phase": "hatchling",
-        "state": 325,
-        "mood": 2,
-        "exp": 1,
-        "reward": -2,
-        "stress": 0.1,
-        "x": 961,
-        "y": 539
-      },
-      {
-        "ts": 1773506200398,
-        "ageMs": 111169475,
-        "phase": "hatchling",
-        "state": 325,
-        "mood": 1,
-        "exp": 1,
-        "reward": -2,
-        "stress": 0.1,
-        "x": 963,
-        "y": 540
-      },
-      {
-        "ts": 1773506201151,
-        "ageMs": 111170228,
-        "phase": "hatchling",
-        "state": 325,
-        "mood": 1,
-        "exp": 1,
-        "reward": -2,
-        "stress": 0.1,
-        "x": 966,
-        "y": 540
-      }
-    ],
+    "ringBuffer": [],
     "dailyAggregates": [
       {
         "day": "2026-03-13",
