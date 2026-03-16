@@ -1,19 +1,19 @@
 {
   "format": "lili_state_v1",
-  "lastSync": "2026-03-16T18:48:35.360Z",
+  "lastSync": "2026-03-16T18:56:45.431Z",
   "metadata": {
     "genesis": 1773395030923,
     "visits": 16,
-    "totalDecisions": 1180,
+    "totalDecisions": 1182,
     "totalReward": -536.6999999999987,
     "phase": "hatchling",
-    "phaseProgress": 0.24082594659391535,
-    "mood": "idle"
+    "phaseProgress": 0.24171172867063492,
+    "mood": "calm"
   },
   "brain": {
     "v": 1,
-    "mood": 5,
-    "decisions": 1180,
+    "mood": 3,
+    "decisions": 1182,
     "reward": -536.6999999999987,
     "entries": [
       [
@@ -36,8 +36,8 @@
           -0.2549545552684808,
           -0.02036643488711304,
           -0.08331214107608441,
-          0.030399799332547175,
-          -0.16537080282907035
+          0.02994380234255897,
+          -0.1462884993470458
         ]
       ],
       [
@@ -943,6 +943,30 @@
         "stress": 0.49,
         "x": 975,
         "y": 473
+      },
+      {
+        "ts": 1773687404446,
+        "ageMs": 292373523,
+        "phase": "hatchling",
+        "state": 1400,
+        "mood": 5,
+        "exp": 1,
+        "reward": 0,
+        "stress": 0.5,
+        "x": 975,
+        "y": 473
+      },
+      {
+        "ts": 1773687405196,
+        "ageMs": 292374273,
+        "phase": "hatchling",
+        "state": 1400,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0,
+        "stress": 0.5,
+        "x": 975,
+        "y": 473
       }
     ],
     "dailyAggregates": [
@@ -1196,6 +1220,27 @@
         "lzc": 13,
         "qhash": -138.09,
         "decisions": 25,
+        "totalReward": -0.6
+      },
+      {
+        "day": "2026-03-16",
+        "ageMs": 292374507,
+        "phase": "hatchling",
+        "moodDist": [
+          4,
+          9,
+          3,
+          3,
+          2,
+          2,
+          4
+        ],
+        "avgReward": -0.022,
+        "explorationRate": 0.815,
+        "entropy": 2.605,
+        "lzc": 14,
+        "qhash": -137.96,
+        "decisions": 27,
         "totalReward": -0.6
       }
     ],
