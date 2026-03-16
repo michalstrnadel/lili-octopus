@@ -1,20 +1,20 @@
 {
   "format": "lili_state_v1",
-  "lastSync": "2026-03-14T20:54:10.890Z",
+  "lastSync": "2026-03-16T18:42:12.219Z",
   "metadata": {
     "genesis": 1773395030923,
     "visits": 16,
-    "totalDecisions": 1154,
-    "totalReward": -536.0999999999983,
+    "totalDecisions": 1177,
+    "totalReward": -580.399999999998,
     "phase": "hatchling",
-    "phaseProgress": 0.10467206845238096,
-    "mood": "calm"
+    "phaseProgress": 0.24098981316137566,
+    "mood": "exploring"
   },
   "brain": {
     "v": 1,
-    "mood": 3,
-    "decisions": 1154,
-    "reward": -536.0999999999983,
+    "mood": 6,
+    "decisions": 1177,
+    "reward": -580.399999999998,
     "entries": [
       [
         320,
@@ -639,11 +639,288 @@
           0,
           0.00041182500000000005
         ]
+      ],
+      [
+        335,
+        [
+          -0.4432837500000001,
+          -0.9719680000000002,
+          -0.86925925,
+          -0.5743,
+          -0.45399999999999996,
+          -0.397,
+          -0.39275000000000004
+        ]
       ]
     ]
   },
   "journal": {
-    "ringBuffer": [],
+    "ringBuffer": [
+      {
+        "ts": 1773686516452,
+        "ageMs": 291485528,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 2,
+        "exp": 1,
+        "reward": -2.3,
+        "stress": 0.1,
+        "x": 401,
+        "y": 298
+      },
+      {
+        "ts": 1773686517202,
+        "ageMs": 291486279,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 1,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 403,
+        "y": 300
+      },
+      {
+        "ts": 1773686517951,
+        "ageMs": 291487028,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 1,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 402,
+        "y": 304
+      },
+      {
+        "ts": 1773686518701,
+        "ageMs": 291487778,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 3,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 402,
+        "y": 305
+      },
+      {
+        "ts": 1773686519451,
+        "ageMs": 291488528,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 0,
+        "exp": 1,
+        "reward": -1.5,
+        "stress": 0.1,
+        "x": 401,
+        "y": 307
+      },
+      {
+        "ts": 1773686520201,
+        "ageMs": 291489278,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 4,
+        "exp": 0,
+        "reward": -2.3,
+        "stress": 0.1,
+        "x": 401,
+        "y": 308
+      },
+      {
+        "ts": 1773686520951,
+        "ageMs": 291490028,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 6,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 400,
+        "y": 308
+      },
+      {
+        "ts": 1773686521701,
+        "ageMs": 291490778,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 1,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 398,
+        "y": 310
+      },
+      {
+        "ts": 1773686522451,
+        "ageMs": 291491527,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 3,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 398,
+        "y": 311
+      },
+      {
+        "ts": 1773686523201,
+        "ageMs": 291492278,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 1,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 397,
+        "y": 312
+      },
+      {
+        "ts": 1773686523951,
+        "ageMs": 291493028,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 5,
+        "exp": 0,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 397,
+        "y": 313
+      },
+      {
+        "ts": 1773686524701,
+        "ageMs": 291493778,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 6,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 396,
+        "y": 311
+      },
+      {
+        "ts": 1773686525451,
+        "ageMs": 291494528,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 0,
+        "exp": 1,
+        "reward": -1.5,
+        "stress": 0.1,
+        "x": 396,
+        "y": 311
+      },
+      {
+        "ts": 1773686526201,
+        "ageMs": 291495278,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 1,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 395,
+        "y": 313
+      },
+      {
+        "ts": 1773686526951,
+        "ageMs": 291496028,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 4,
+        "exp": 1,
+        "reward": -2.3,
+        "stress": 0.1,
+        "x": 395,
+        "y": 314
+      },
+      {
+        "ts": 1773686527701,
+        "ageMs": 291496778,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 5,
+        "exp": 0,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 395,
+        "y": 315
+      },
+      {
+        "ts": 1773686528451,
+        "ageMs": 291497528,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 1,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 393,
+        "y": 317
+      },
+      {
+        "ts": 1773686529201,
+        "ageMs": 291498278,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 2,
+        "exp": 0,
+        "reward": -2.3,
+        "stress": 0.1,
+        "x": 393,
+        "y": 315
+      },
+      {
+        "ts": 1773686529951,
+        "ageMs": 291499028,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 0,
+        "exp": 0,
+        "reward": -1.5,
+        "stress": 0.1,
+        "x": 392,
+        "y": 316
+      },
+      {
+        "ts": 1773686530701,
+        "ageMs": 291499778,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 2,
+        "exp": 1,
+        "reward": -2.3,
+        "stress": 0.1,
+        "x": 392,
+        "y": 314
+      },
+      {
+        "ts": 1773686531451,
+        "ageMs": 291500527,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 3,
+        "exp": 1,
+        "reward": -2,
+        "stress": 0.1,
+        "x": 392,
+        "y": 315
+      },
+      {
+        "ts": 1773686532201,
+        "ageMs": 291501278,
+        "phase": "hatchling",
+        "state": 335,
+        "mood": 2,
+        "exp": 1,
+        "reward": -2.3,
+        "stress": 0.1,
+        "x": 392,
+        "y": 314
+      }
+    ],
     "dailyAggregates": [
       {
         "day": "2026-03-13",
@@ -833,6 +1110,27 @@
         "qhash": -137.72,
         "decisions": 3,
         "totalReward": -6
+      },
+      {
+        "day": "2026-03-17",
+        "ageMs": 291501278,
+        "phase": "hatchling",
+        "moodDist": [
+          3,
+          6,
+          4,
+          3,
+          2,
+          2,
+          2
+        ],
+        "avgReward": -2.014,
+        "explorationRate": 0.773,
+        "entropy": 2.686,
+        "lzc": 14,
+        "qhash": -152.41,
+        "decisions": 22,
+        "totalReward": -44.3
       }
     ],
     "milestones": [
@@ -1603,6 +1901,48 @@
         "mood": "playful",
         "ts": 1773506200398,
         "ageMs": 111169475
+      },
+      {
+        "type": "first_mood",
+        "mood": "shy",
+        "ts": 1773686516452,
+        "ageMs": 291485528
+      },
+      {
+        "type": "first_mood",
+        "mood": "playful",
+        "ts": 1773686517202,
+        "ageMs": 291486279
+      },
+      {
+        "type": "first_mood",
+        "mood": "calm",
+        "ts": 1773686518701,
+        "ageMs": 291487778
+      },
+      {
+        "type": "first_mood",
+        "mood": "curious",
+        "ts": 1773686519451,
+        "ageMs": 291488528
+      },
+      {
+        "type": "first_mood",
+        "mood": "alert",
+        "ts": 1773686520201,
+        "ageMs": 291489278
+      },
+      {
+        "type": "first_mood",
+        "mood": "exploring",
+        "ts": 1773686520951,
+        "ageMs": 291490028
+      },
+      {
+        "type": "first_mood",
+        "mood": "idle",
+        "ts": 1773686523951,
+        "ageMs": 291493028
       }
     ]
   }
