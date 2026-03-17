@@ -126,13 +126,13 @@
     // --- Mood → steering weight profiles (Phase 8: mood replaces action) ---
     // Moods set tendencies; obstacle avoidance + boundary always have minimums
     moodWeights: {
-      curious:   { wander: 0.3, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.6, boundary: 0.5, seekDom: 0.8, followSlow: 0.2, seekEdge: 0 },
-      playful:   { wander: 0.7, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.5, boundary: 0.5, seekDom: 0.4, followSlow: 0.3, seekEdge: 0 },
-      shy:       { wander: 0.1, seekWhitespace: 0.3, flee: 1.2, obstacleAvoid: 0.3, boundary: 0.8, seekDom: 0,   followSlow: 0,   seekEdge: 0.4 },
-      calm:      { wander: 0.2, seekWhitespace: 0.8, flee: 0,   obstacleAvoid: 0.6, boundary: 0.5, seekDom: 0,   followSlow: 0,   seekEdge: 0 },
-      alert:     { wander: 0.3, seekWhitespace: 0,   flee: 0.8, obstacleAvoid: 0.9, boundary: 0.6, seekDom: 0,   followSlow: 0,   seekEdge: 0 },
-      idle:      { wander: 0.05,seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.3, boundary: 0.3, seekDom: 0,   followSlow: 0,   seekEdge: 0 },
-      exploring: { wander: 0.5, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.6, boundary: 0,   seekDom: 0.3, followSlow: 0,   seekEdge: 0.6 },
+      curious:   { wander: 0.3, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.6, boundary: 0.5, seekDom: 0.8, followSlow: 0.2, seekEdge: 0,   placeMemory: 0.3 },
+      playful:   { wander: 0.7, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.5, boundary: 0.5, seekDom: 0.4, followSlow: 0.3, seekEdge: 0,   placeMemory: 0.1 },
+      shy:       { wander: 0.1, seekWhitespace: 0.3, flee: 1.2, obstacleAvoid: 0.3, boundary: 0.8, seekDom: 0,   followSlow: 0,   seekEdge: 0.4, placeMemory: 0.6 },
+      calm:      { wander: 0.2, seekWhitespace: 0.8, flee: 0,   obstacleAvoid: 0.6, boundary: 0.5, seekDom: 0,   followSlow: 0,   seekEdge: 0,   placeMemory: 0.4 },
+      alert:     { wander: 0.3, seekWhitespace: 0,   flee: 0.8, obstacleAvoid: 0.9, boundary: 0.6, seekDom: 0,   followSlow: 0,   seekEdge: 0,   placeMemory: 0.7 },
+      idle:      { wander: 0.05,seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.3, boundary: 0.3, seekDom: 0,   followSlow: 0,   seekEdge: 0,   placeMemory: 0.2 },
+      exploring: { wander: 0.5, seekWhitespace: 0,   flee: 0,   obstacleAvoid: 0.6, boundary: 0,   seekDom: 0.3, followSlow: 0,   seekEdge: 0.6, placeMemory: 0.1 },
     },
 
     // --- Mood → tentacle parameter influence ---
@@ -246,6 +246,69 @@
     clickHitboxScale: 2.5,
     tooltipDurationMs: 3500,
 
+    // --- Phase 15: Place Memory ---
+    placeMemory: {
+      cellSize: 240,             // px — discretized spatial grid
+      decayRate: 0.998,          // per decision cycle (slow fade)
+      maxValue: 5,               // clamp absolute value per cell
+    },
+
+    // --- Phase 15: Day/Night Rhythm ---
+    circadian: {
+      sleepStart: 23,            // hour (0-23)
+      sleepEnd: 6,               // hour
+      wakeStretchMs: 8000,       // "waking stretch" animation duration
+      nightSpeedMul: 0.15,       // maxSpeed multiplier during sleep
+      nightForceMul: 0.15,       // maxForce multiplier during sleep
+    },
+
+    // --- Phase 15: Visit Recognition ---
+    visitRecognition: {
+      trustVisitsMax: 20,        // visits to reach trust=1
+      recencyHalfLifeMs: 7 * 86400000, // 7 days half-life
+      maxTimestamps: 30,         // keep last 30 visit timestamps
+      trustFleeReduction: 0.5,   // max flee weight reduction at trust=1
+      trustRewardBonus: 0.3,     // reward bonus for calm near cursor at high trust
+    },
+
+    // --- Phase 15: DOM Structure Learning ---
+    domLearning: {
+      decayRate: 0.999,          // per decision cycle
+      rewardBonus: 0.2,          // reward bonus for interacting with preferred types
+      typeMap: { H1: 'heading', H2: 'heading', H3: 'heading', H4: 'heading', H5: 'heading', H6: 'heading',
+                 IMG: 'image', A: 'link', P: 'paragraph', SPAN: 'paragraph', DIV: 'other' },
+    },
+
+    // --- Phase 15: Ink Secretion ---
+    ink: {
+      poolSize: 50,              // max particles
+      stressThreshold: 0.8,      // stress > this to trigger
+      cooldownMs: 8000,          // between emissions
+      particleLifeMs: 2500,      // alpha fade duration
+      emitCount: 8,              // particles per emission
+      spreadSpeed: 2.5,          // initial spread velocity
+      particleRadius: { min: 3, max: 7 },
+    },
+
+    // --- Phase 15: Enhanced DOM Interaction ---
+    enhancedDom: {
+      canvasTextFont: '14px monospace',
+      canvasTextMaxLen: 20,      // max characters to show
+      textSwayAmplitude: 3,      // gentle sway px
+      textSwaySpeed: 0.03,       // sway frequency
+    },
+
+    // --- Phase 15: Visual Metamorphosis ---
+    metamorphosis: {
+      chromatophoreCount: { juvenile: 3, adult: 6, mature: 6, elder: 6 },
+      chromatophorePulseSpeed: 0.02,
+      scarMaxCount: 12,          // max interaction scars (mature)
+      biolumPointCount: 8,       // elder bioluminescence points
+      biolumPulseSpeed: 0.008,   // slow majestic pulsing
+      biolumRadius: { min: 2, max: 5 },
+      noiseTextureScale: 0.04,   // adult mood-reactive noise
+    },
+
     // --- localStorage keys ---
     storageKeys: {
       genesis:     'lili_genesis',
@@ -256,6 +319,9 @@
       journal:     'lili_journal',
       dailyAgg:    'lili_daily',
       milestones:  'lili_milestones',
+      placeMemory: 'lili_placemem',
+      visitProfile:'lili_visitprof',
+      domLearning: 'lili_domlearn',
     },
 
     // --- Phase 14: Cloud sync ---
@@ -611,6 +677,331 @@
   };
 
   function onMoodChange(fn) { _moodListeners.push(fn); }
+
+  // =========================================================================
+  // 15A — Place Memory (discretized spatial grid of experience)
+  // =========================================================================
+
+  const _placeMemory = {
+    grid: new Map(),   // key: "gx,gy" → value: number (positive=safe, negative=dangerous)
+  };
+
+  function _placeKey(x, y) {
+    const cs = CFG.placeMemory.cellSize;
+    return ((x / cs) | 0) + ',' + ((y / cs) | 0);
+  }
+
+  function placeMemoryUpdate(x, y, rewardSign) {
+    const key = _placeKey(x, y);
+    const cur = _placeMemory.grid.get(key) || 0;
+    const next = Math.max(-CFG.placeMemory.maxValue,
+      Math.min(CFG.placeMemory.maxValue, cur + rewardSign * 0.1));
+    _placeMemory.grid.set(key, next);
+  }
+
+  function placeMemoryDecay() {
+    const decay = CFG.placeMemory.decayRate;
+    _placeMemory.grid.forEach(function (v, k) {
+      const nv = v * decay;
+      if (Math.abs(nv) < 0.001) _placeMemory.grid.delete(k);
+      else _placeMemory.grid.set(k, nv);
+    });
+  }
+
+  function placeMemoryGet(x, y) {
+    return _placeMemory.grid.get(_placeKey(x, y)) || 0;
+  }
+
+  function placeMemorySerialize() {
+    const entries = [];
+    _placeMemory.grid.forEach(function (v, k) { entries.push([k, +v.toFixed(4)]); });
+    return JSON.stringify(entries);
+  }
+
+  function placeMemoryDeserialize(json) {
+    try {
+      const arr = JSON.parse(json);
+      _placeMemory.grid.clear();
+      for (let i = 0; i < arr.length; i++) _placeMemory.grid.set(arr[i][0], arr[i][1]);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function placeMemorySave() {
+    try { localStorage.setItem(CFG.storageKeys.placeMemory, placeMemorySerialize()); }
+    catch (e) { /* */ }
+  }
+
+  function placeMemoryLoad() {
+    var json = localStorage.getItem(CFG.storageKeys.placeMemory);
+    if (json) return placeMemoryDeserialize(json);
+    return false;
+  }
+
+  // =========================================================================
+  // 15B — Day/Night Rhythm (circadian state derived from clock)
+  // =========================================================================
+
+  const _circadian = {
+    activityMul: 1,    // 0..1 movement multiplier
+    eyeOpenness: 1,    // 0..1 how open eyes are
+    isAsleep: false,
+    wakingTimer: 0,    // ms remaining of "waking stretch"
+    lastHour: -1,      // detect sleep→wake transition
+  };
+
+  function updateCircadian() {
+    const now = new Date();
+    const h = now.getHours() + now.getMinutes() / 60;
+    const C = CFG.circadian;
+
+    // Determine if currently in sleep window
+    let sleeping;
+    if (C.sleepStart > C.sleepEnd) {
+      // e.g. 23-6: sleep if h >= 23 OR h < 6
+      sleeping = h >= C.sleepStart || h < C.sleepEnd;
+    } else {
+      sleeping = h >= C.sleepStart && h < C.sleepEnd;
+    }
+
+    // Detect wake-up transition
+    if (_circadian.isAsleep && !sleeping) {
+      _circadian.wakingTimer = C.wakeStretchMs;
+    }
+    _circadian.isAsleep = sleeping;
+
+    // Waking timer countdown
+    if (_circadian.wakingTimer > 0) {
+      _circadian.wakingTimer -= dt * 1000;
+      if (_circadian.wakingTimer < 0) _circadian.wakingTimer = 0;
+    }
+
+    // Compute activity multiplier
+    if (sleeping) {
+      // Gradual drowsiness: lerp to nightSpeedMul over ~30 min
+      _circadian.activityMul += (C.nightSpeedMul - _circadian.activityMul) * 0.002;
+      _circadian.eyeOpenness += (0.05 - _circadian.eyeOpenness) * 0.003;
+    } else if (_circadian.wakingTimer > 0) {
+      // Waking: ramp up from sleep
+      const wakeProgress = 1 - _circadian.wakingTimer / C.wakeStretchMs;
+      _circadian.activityMul = C.nightSpeedMul + (1 - C.nightSpeedMul) * wakeProgress;
+      _circadian.eyeOpenness = 0.05 + 0.95 * wakeProgress;
+    } else {
+      _circadian.activityMul += (1 - _circadian.activityMul) * 0.01;
+      _circadian.eyeOpenness += (1 - _circadian.eyeOpenness) * 0.01;
+    }
+
+    _circadian.lastHour = h;
+  }
+
+  // =========================================================================
+  // 15C — Visit Recognition (trust from repeated visits)
+  // =========================================================================
+
+  const _visitProfile = {
+    totalVisits: 0,
+    timestamps: [],       // last N visit timestamps (ms)
+    trustLevel: 0,        // computed: 0..1
+  };
+
+  function computeTrust() {
+    const VR = CFG.visitRecognition;
+    const visits = _visitProfile.totalVisits;
+    const visitFactor = Math.min(1, visits / VR.trustVisitsMax);
+
+    // Recency: recent visits count more
+    const now = Date.now();
+    let recencySum = 0;
+    for (let i = 0; i < _visitProfile.timestamps.length; i++) {
+      const ageMs = now - _visitProfile.timestamps[i];
+      recencySum += Math.pow(0.5, ageMs / VR.recencyHalfLifeMs);
+    }
+    const recencyFactor = Math.min(1, recencySum / 5); // 5 recent visits = full recency
+
+    _visitProfile.trustLevel = visitFactor * (0.3 + 0.7 * recencyFactor);
+  }
+
+  function visitProfileSerialize() {
+    return JSON.stringify({
+      total: _visitProfile.totalVisits,
+      ts: _visitProfile.timestamps,
+    });
+  }
+
+  function visitProfileDeserialize(json) {
+    try {
+      var data = JSON.parse(json);
+      _visitProfile.totalVisits = data.total || 0;
+      _visitProfile.timestamps = data.ts || [];
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function visitProfileSave() {
+    try { localStorage.setItem(CFG.storageKeys.visitProfile, visitProfileSerialize()); }
+    catch (e) { /* */ }
+  }
+
+  function visitProfileLoad() {
+    var json = localStorage.getItem(CFG.storageKeys.visitProfile);
+    if (json) return visitProfileDeserialize(json);
+    return false;
+  }
+
+  // =========================================================================
+  // 15D — DOM Structure Learning (element type preferences)
+  // =========================================================================
+
+  const _domLearning = {
+    counts: { heading: 0, image: 0, link: 0, paragraph: 0, other: 0 },
+    preferences: { heading: 0.2, image: 0.2, link: 0.2, paragraph: 0.2, other: 0.2 },
+  };
+
+  function domLearningTrack(el) {
+    const tagName = el.tagName;
+    const type = CFG.domLearning.typeMap[tagName] || 'other';
+    _domLearning.counts[type]++;
+    _domLearningNormalize();
+  }
+
+  function _domLearningNormalize() {
+    const c = _domLearning.counts;
+    let total = 0;
+    for (var k in c) total += c[k];
+    if (total === 0) return;
+    for (var k2 in c) _domLearning.preferences[k2] = c[k2] / total;
+  }
+
+  function domLearningDecay() {
+    const decay = CFG.domLearning.decayRate;
+    var c = _domLearning.counts;
+    for (var k in c) c[k] *= decay;
+    _domLearningNormalize();
+  }
+
+  function domLearningGetPreference(el) {
+    var type = CFG.domLearning.typeMap[el.tagName] || 'other';
+    return _domLearning.preferences[type] || 0.2;
+  }
+
+  function domLearningSerialize() {
+    return JSON.stringify(_domLearning.counts);
+  }
+
+  function domLearningDeserialize(json) {
+    try {
+      var data = JSON.parse(json);
+      for (var k in data) {
+        if (_domLearning.counts.hasOwnProperty(k)) _domLearning.counts[k] = data[k];
+      }
+      _domLearningNormalize();
+      return true;
+    } catch (e) { return false; }
+  }
+
+  function domLearningSave() {
+    try { localStorage.setItem(CFG.storageKeys.domLearning, domLearningSerialize()); }
+    catch (e) { /* */ }
+  }
+
+  function domLearningLoad() {
+    var json = localStorage.getItem(CFG.storageKeys.domLearning);
+    if (json) return domLearningDeserialize(json);
+    return false;
+  }
+
+  // =========================================================================
+  // 15E — Ink Secretion (defensive particle system)
+  // =========================================================================
+
+  const _ink = {
+    pool: [],            // pre-allocated particle pool
+    activeCount: 0,      // currently visible particles
+    lastEmitMs: 0,       // timestamp of last emission
+  };
+
+  // Pre-allocate ink particle pool
+  (function initInkPool() {
+    for (let i = 0; i < CFG.ink.poolSize; i++) {
+      _ink.pool.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, r: 4, born: 0, life: 0 });
+    }
+  })();
+
+  function emitInk() {
+    const now = Date.now();
+    if (now - _ink.lastEmitMs < CFG.ink.cooldownMs) return;
+    _ink.lastEmitMs = now;
+
+    const IC = CFG.ink;
+    // Emit away from cursor
+    const dx = lili.pos.x - mouse.pos.x;
+    const dy = lili.pos.y - mouse.pos.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    const awayX = dx / d;
+    const awayY = dy / d;
+
+    let emitted = 0;
+    for (let i = 0; i < IC.poolSize && emitted < IC.emitCount; i++) {
+      var p = _ink.pool[i];
+      if (p.active) continue;
+      p.active = true;
+      p.x = lili.pos.x + (noiseRng() - 0.5) * lili.bodyR;
+      p.y = lili.pos.y + (noiseRng() - 0.5) * lili.bodyR;
+      const angle = Math.atan2(awayY, awayX) + (noiseRng() - 0.5) * 1.2;
+      const spd = IC.spreadSpeed * (0.6 + noiseRng() * 0.8);
+      p.vx = Math.cos(angle) * spd;
+      p.vy = Math.sin(angle) * spd;
+      p.r = IC.particleRadius.min + noiseRng() * (IC.particleRadius.max - IC.particleRadius.min);
+      p.born = now;
+      p.life = IC.particleLifeMs;
+      emitted++;
+    }
+    _ink.activeCount += emitted;
+  }
+
+  function updateInk() {
+    if (_ink.activeCount === 0) return;
+    const now = Date.now();
+    let active = 0;
+    for (let i = 0; i < CFG.ink.poolSize; i++) {
+      var p = _ink.pool[i];
+      if (!p.active) continue;
+      const elapsed = now - p.born;
+      if (elapsed >= p.life) { p.active = false; continue; }
+      // Drift
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+      active++;
+    }
+    _ink.activeCount = active;
+  }
+
+  function renderInk(colors) {
+    if (_ink.activeCount === 0) return;
+    const now = Date.now();
+    for (let i = 0; i < CFG.ink.poolSize; i++) {
+      var p = _ink.pool[i];
+      if (!p.active) continue;
+      const elapsed = now - p.born;
+      const t = elapsed / p.life;
+      // Quadratic alpha fade
+      const alpha = (1 - t) * (1 - t) * 0.7;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * (1 + t * 0.5), 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(15, 12, 20, ' + alpha.toFixed(3) + ')';
+      ctx.fill();
+    }
+  }
+
+  // =========================================================================
+  // 15F — Enhanced DOM Interaction state (canvas text for grabbed elements)
+  // =========================================================================
+
+  const _enhancedDom = {
+    texts: [],  // { text, tipX, tipY, armIndex }
+  };
 
   // Blend all mood expression parameters toward current mood target
   function updateMoodBlend() {
@@ -1149,6 +1540,28 @@
       reward += R.moodRepetition;
     }
 
+    // Phase 15A: Update place memory with reward sign
+    placeMemoryUpdate(lili.pos.x, lili.pos.y, reward > 0 ? 1 : reward < 0 ? -1 : 0);
+
+    // Phase 15C: Trust reward — calm near cursor at high trust
+    if (_visitProfile.trustLevel > 0.3 &&
+        (mood === 'calm' || mood === 'curious') &&
+        sensors.cursorProximity === 'near') {
+      reward += CFG.visitRecognition.trustRewardBonus * _visitProfile.trustLevel;
+    }
+
+    // Phase 15D: DOM learning reward bonus for interacting with preferred types
+    if (sensors.domDensity !== 'sparse') {
+      var nearby = getNearby(lili.pos.x, lili.pos.y);
+      if (nearby.length > 0) {
+        var nearEl = nearby[0].el || nearby[0];
+        if (nearEl && nearEl.tagName) {
+          var domPref = domLearningGetPreference(nearEl);
+          if (domPref > 0.3) reward += CFG.domLearning.rewardBonus * domPref;
+        }
+      }
+    }
+
     return reward;
   }
 
@@ -1241,6 +1654,8 @@
       brainSave();
       savePosition();
       journalSaveRingBuffer();
+      placeMemorySave();     // Phase 15A
+      domLearningSave();     // Phase 15D
     }
   }
 
@@ -1528,6 +1943,9 @@
       dailyAggregates: _journal.dailyAggregates,
       milestones: _journal.milestones,
       recentDecisions: _journal.ringBuffer.slice(-1000), // last 1000
+      placeMemory: JSON.parse(placeMemorySerialize()),     // Phase 15A
+      visitProfile: JSON.parse(visitProfileSerialize()),   // Phase 15C
+      domLearning: JSON.parse(domLearningSerialize()),     // Phase 15D
     };
 
     // Serialize Q-table
@@ -1799,6 +2217,12 @@
       'held:     ' + _domState.heldCount + '/' + CFG.dom.maxHeld + '\n' +
       'tentRecoil:' + recoilCount + ' touch:' + touchingCount + ' grab:' + grabbingCount + '\n' +
       'hash cells:' + spatialHash.grid.size + '  objs:' + spatialHash.all.length + '\n' +
+      '── Phase 15 ────────────\n' +
+      'placeGrid:' + _placeMemory.grid.size + ' cells\n' +
+      'circadian:' + (_circadian.isAsleep ? 'SLEEP' : 'awake') + ' act:' + _circadian.activityMul.toFixed(2) + '\n' +
+      'trust:    ' + _visitProfile.trustLevel.toFixed(2) + ' (' + _visitProfile.totalVisits + ' visits)\n' +
+      'domPref:  ' + Object.keys(_domLearning.preferences).map(function(k) { return k[0] + ':' + _domLearning.preferences[k].toFixed(2); }).join(' ') + '\n' +
+      'ink:      ' + _ink.activeCount + '/' + CFG.ink.poolSize + '\n' +
       '── Perf ────────────────\n' +
       'FPS:      ' + _fpsAvg.toFixed(1) + (_fpsAvg < 50 ? ' ⚠' : '') + '\n' +
       'frame#:   ' + frameCount;
@@ -1825,6 +2249,9 @@
           '  Decisions: ' + _decision.totalDecisions + '\n' +
           '  Milestones: ' + _journal.milestones.length + '\n' +
           '  Daily aggregates: ' + _journal.dailyAggregates.length + '\n' +
+          '  Trust: ' + _visitProfile.trustLevel.toFixed(2) + '\n' +
+          '  Circadian: ' + (_circadian.isAsleep ? 'sleeping' : 'awake') + '\n' +
+          '  Place memory: ' + _placeMemory.grid.size + ' cells\n' +
           '  Cloud sync: ' + syncAge + (_sync.dirty ? ' (dirty)' : '')
         );
       },
@@ -1975,6 +2402,9 @@
         dailyAggregates: _journal.dailyAggregates,
         milestones: _journal.milestones,
       },
+      placeMemory: JSON.parse(placeMemorySerialize()),
+      visitProfile: JSON.parse(visitProfileSerialize()),
+      domLearning: JSON.parse(domLearningSerialize()),
     };
   }
 
@@ -2036,6 +2466,21 @@
         journalSaveMilestones();
       }
       applied = true;
+    }
+
+    // Phase 15: merge place memory, visit profile, dom learning
+    if (remote.placeMemory) {
+      placeMemoryDeserialize(JSON.stringify(remote.placeMemory));
+      placeMemorySave();
+    }
+    if (remote.visitProfile) {
+      visitProfileDeserialize(JSON.stringify(remote.visitProfile));
+      computeTrust();
+      visitProfileSave();
+    }
+    if (remote.domLearning) {
+      domLearningDeserialize(JSON.stringify(remote.domLearning));
+      domLearningSave();
     }
 
     return applied;
@@ -2497,6 +2942,39 @@
     return out;
   }
 
+  // --- Place memory steering (seek safe spots, avoid dangerous ones) ---
+  function steerPlaceMemory(out) {
+    out.set(0, 0);
+    const cs = CFG.placeMemory.cellSize;
+    const lookR = cs * 1.5;
+    let bestVal = -Infinity;
+    let bestX = lili.pos.x, bestY = lili.pos.y;
+
+    // Sample 8 directions + current position
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI * 0.25;
+      const px = lili.pos.x + Math.cos(a) * lookR;
+      const py = lili.pos.y + Math.sin(a) * lookR;
+      if (px < 0 || px > docW || py < 0 || py > docH) continue;
+      const v = placeMemoryGet(px, py);
+      if (v > bestVal) { bestVal = v; bestX = px; bestY = py; }
+    }
+
+    // Also consider avoiding current cell if negative
+    const curVal = placeMemoryGet(lili.pos.x, lili.pos.y);
+    if (curVal < -0.5) {
+      // Move away from current negative spot
+      if (bestVal > curVal) {
+        steerSeek(out, bestX, bestY, true);
+      }
+    } else if (bestVal > 0.5 && bestVal > curVal + 0.2) {
+      // Seek positive spot
+      steerSeek(out, bestX, bestY, true);
+      out.multIn(0.5);
+    }
+    return out;
+  }
+
   // =========================================================================
   // 2D — Behavior weight combiner (mood-driven, Phase 8)
   // =========================================================================
@@ -2510,6 +2988,7 @@
   const _steerDom    = new Vec2();
   const _steerEdge   = new Vec2();
   const _steerFollow = new Vec2();
+  const _steerPlace  = new Vec2();
 
   function computeSteering() {
     // Phase 8: mood-based weight selection (replaces action-based)
@@ -2564,6 +3043,21 @@
       lili.acc.y += _steerFollow.y * weights.followSlow;
     }
 
+    // Place memory steering (seek safe spots, avoid dangerous)
+    if (weights.placeMemory > 0) {
+      steerPlaceMemory(_steerPlace);
+      lili.acc.x += _steerPlace.x * weights.placeMemory;
+      lili.acc.y += _steerPlace.y * weights.placeMemory;
+    }
+
+    // Visit recognition: reduce flee weight based on trust
+    if (weights.flee > 0 && mouse.active && _visitProfile.trustLevel > 0.1) {
+      const trustReduce = _visitProfile.trustLevel * CFG.visitRecognition.trustFleeReduction;
+      const fleeSub = 1 - Math.max(0.2, 1 - trustReduce);
+      lili.acc.x -= _steerFlee.x * weights.flee * fleeSub;
+      lili.acc.y -= _steerFlee.y * weights.flee * fleeSub;
+    }
+
     // Obstacle avoidance — ALWAYS active (safety layer per PRD)
     steerObstacleAvoidance(_steerObs);
     const obsW = Math.max(weights.obstacleAvoid, 0.3); // minimum 0.3 always
@@ -2576,8 +3070,8 @@
     lili.acc.x += _steerBound.x * bndW;
     lili.acc.y += _steerBound.y * bndW;
 
-    // Truncate total steering force
-    lili.acc.limitIn(ageVal(CFG.maxForce));
+    // Truncate total steering force (circadian modulates max force)
+    lili.acc.limitIn(ageVal(CFG.maxForce) * _circadian.activityMul);
   }
 
   // =========================================================================
@@ -2598,7 +3092,7 @@
 
     // Integrate: velocity += acceleration
     lili.vel.addIn(lili.acc);
-    lili.vel.limitIn(ageVal(CFG.maxSpeed));
+    lili.vel.limitIn(ageVal(CFG.maxSpeed) * _circadian.activityMul);
 
     // Damping — base damping from PRD + coherence-based efficiency modifier
     // Research #1: Paralarva jets are turbulent and inefficient (no separated vortex rings)
@@ -3111,6 +3605,7 @@
     arm.heldElement = el;
     el.dataset.liliHeld = String(arm.index);
     _domState.heldCount++;
+    domLearningTrack(el); // Phase 15D: learn element type preference
 
     // Ensure it's in disturbed map with original rect
     if (!_domState.disturbed.has(el)) {
@@ -3655,7 +4150,8 @@
     }
 
     // Phase 13B: Squint from mood (playful = slight squint)
-    const squintAmount = _eyeBlend.squint;
+    // Phase 15B: Circadian eye closure (sleeping = eyes nearly closed)
+    const squintAmount = _eyeBlend.squint + (1 - _circadian.eyeOpenness) * 0.9;
 
     function drawEye(ex, ey) {
       // Soft eye shadow (subtle depth)
@@ -3762,6 +4258,38 @@
     drawEye(rightEyeX, rightEyeY);
   }
 
+  // 15F — Enhanced DOM: render grabbed text on canvas near tentacle tips
+  function renderEnhancedDomText(colors) {
+    _enhancedDom.texts.length = 0;
+    const EC = CFG.enhancedDom;
+    for (let t = 0; t < TENT_N; t++) {
+      var arm = tentacles[t];
+      if (!arm.heldElement) continue;
+      var el = arm.heldElement;
+      var raw = el.textContent || '';
+      var txt = raw.trim().substring(0, EC.canvasTextMaxLen);
+      if (!txt) continue;
+      // Get tentacle tip position
+      var tip = arm.points[arm.points.length - 1];
+      _enhancedDom.texts.push({ text: txt, x: tip.x, y: tip.y });
+    }
+
+    if (_enhancedDom.texts.length === 0) return;
+
+    ctx.font = EC.canvasTextFont;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+
+    for (var i = 0; i < _enhancedDom.texts.length; i++) {
+      var item = _enhancedDom.texts[i];
+      var sway = Math.sin(frameCount * EC.textSwaySpeed + i * 2) * EC.textSwayAmplitude;
+      var alpha = 0.75 + Math.sin(frameCount * 0.02) * 0.15;
+
+      ctx.fillStyle = 'rgba(60, 50, 80, ' + alpha.toFixed(2) + ')';
+      ctx.fillText(item.text, item.x + sway, item.y - 10);
+    }
+  }
+
   // =========================================================================
   // 1D — Canvas bootstrap & lifecycle
   // =========================================================================
@@ -3848,6 +4376,7 @@
 
     updateAge();
     lili.bodyR = ageVal(CFG.bodyRadius); // grow with age
+    updateCircadian();                   // Phase 15B: day/night rhythm
     updateMouse();
     updateSensors();
     updateStress();
@@ -3855,6 +4384,17 @@
     updateMoodBlend();   // Phase 13: smooth mood expression blending
     updatePhysics(frameDt);
     updateTentacles(frameDt);
+
+    // Phase 15A: Place memory decay (every decision cycle)
+    if (_decision.frameCounter === 0) {
+      placeMemoryDecay();
+      domLearningDecay(); // Phase 15D
+    }
+
+    // Phase 15E: Ink emission when stressed
+    if (stress > CFG.ink.stressThreshold) emitInk();
+    updateInk();
+
     checkMidnightCleanup(); // Phase 9D: periodic midnight reset check
   }
 
@@ -3870,14 +4410,20 @@
       ctx.translate(-scrollOx, -scrollOy);
 
       // 4E — Rendering pipeline (correct z-order)
+      // 0. Ink cloud behind everything (Phase 15E)
+      renderInk(colors);
+
       // 1. Tentacles behind body (hull envelope rendering)
       renderTentaclesHull(colors);
 
       // 2. Body (noise-deformed ellipse with glow)
       renderBody(colors);
 
-      // 3. Eyes (on top of body)
+      // 3. Eyes (on top of body) — circadian eye openness applied
       renderEyes(colors);
+
+      // 4. Enhanced DOM: render grabbed text on canvas (Phase 15F)
+      renderEnhancedDomText(colors);
 
       ctx.restore();
     }
@@ -3922,6 +4468,22 @@
     // Increment visit counter
     const visits = parseInt(localStorage.getItem(CFG.storageKeys.visits) || '0', 10);
     localStorage.setItem(CFG.storageKeys.visits, String(visits + 1));
+
+    // Phase 15: Load persistent memory subsystems
+    placeMemoryLoad();
+    domLearningLoad();
+    visitProfileLoad();
+
+    // Phase 15C: Register this visit and compute trust
+    _visitProfile.totalVisits++;
+    _visitProfile.timestamps.push(Date.now());
+    while (_visitProfile.timestamps.length > CFG.visitRecognition.maxTimestamps) {
+      _visitProfile.timestamps.shift();
+    }
+    computeTrust();
+    visitProfileSave();
+    console.info('[Lili] Trust level: ' + _visitProfile.trustLevel.toFixed(2) +
+      ' (' + _visitProfile.totalVisits + ' visits)');
 
     // Phase 8: Load Q-table and journal from localStorage
     brainLoad();
@@ -3974,6 +4536,9 @@
       journalSaveMilestones();
       journalSaveRingBuffer();
       savePosition();
+      placeMemorySave();     // Phase 15A
+      domLearningSave();     // Phase 15D
+      visitProfileSave();    // Phase 15C
     });
 
     // Phase 11B: Request persistent storage + detect data loss
