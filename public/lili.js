@@ -298,6 +298,26 @@
       textSwaySpeed: 0.03,       // sway frequency
     },
 
+    // --- Phase 16: DOM Novelty (autonomous curiosity via reward) ---
+    novelty: {
+      maxTracked: 200,           // max elements tracked as "seen"
+      rewardBonus: 0.6,          // reward for being near unseen DOM elements
+      nearRadius: 150,           // px — distance to count as "near" novel element
+      seenDecayMs: 3600000,      // 1h — forget seen elements after this (fresh novelty)
+    },
+
+    // --- Phase 16: Bubble Communication ---
+    bubbles: {
+      poolSize: 12,              // max simultaneous bubbles
+      riseSpeed: 0.6,            // px/frame upward
+      swayAmplitude: 8,          // px horizontal sway
+      swaySpeed: 0.04,           // sway frequency
+      lifetimeMs: 2800,          // fade duration
+      cooldownMs: 5000,          // min ms between bubble emissions
+      fontSize: 16,              // symbol size
+      spawnRadius: 15,           // px offset from body center
+    },
+
     // --- Phase 15: Visual Metamorphosis ---
     metamorphosis: {
       chromatophoreCount: { juvenile: 3, adult: 6, mature: 6, elder: 6 },
@@ -996,6 +1016,190 @@
   }
 
   // =========================================================================
+  // 16A — DOM Novelty (autonomous curiosity via reward signal)
+  // =========================================================================
+
+  const _novelty = {
+    seenElements: new Map(),  // WeakRef-like key → timestamp when first seen
+    seenKeys: [],             // ordered list of keys for eviction
+    pendingNewRects: [],      // rects of novel elements detected by MutationObserver
+  };
+
+  // Called from MutationObserver when new elements are added to DOM
+  function noveltyTrackNewElements(mutations) {
+    const NC = CFG.novelty;
+    const now = Date.now();
+    for (let m = 0; m < mutations.length; m++) {
+      const added = mutations[m].addedNodes;
+      if (!added) continue;
+      for (let n = 0; n < added.length; n++) {
+        const el = added[n];
+        if (el.nodeType !== 1) continue; // only elements
+        if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE' || el.tagName === 'LINK') continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.width < 10 || rect.height < 10) continue; // skip tiny
+        // Use a simple key: tag + position snapshot
+        const key = el.tagName + '|' + Math.round(rect.left) + '|' + Math.round(rect.top);
+        if (_novelty.seenElements.has(key)) continue;
+
+        // Track as novel
+        _novelty.seenElements.set(key, now);
+        _novelty.seenKeys.push(key);
+        _novelty.pendingNewRects.push({
+          x: rect.left + (window.scrollX || 0),
+          y: rect.top + (window.scrollY || 0),
+          w: rect.width,
+          h: rect.height,
+          born: now,
+        });
+
+        // Evict old entries
+        while (_novelty.seenKeys.length > NC.maxTracked) {
+          const oldKey = _novelty.seenKeys.shift();
+          _novelty.seenElements.delete(oldKey);
+        }
+      }
+    }
+  }
+
+  // Decay: forget seen elements after seenDecayMs
+  function noveltyDecay() {
+    const now = Date.now();
+    const decayMs = CFG.novelty.seenDecayMs;
+    // Remove expired pending rects
+    _novelty.pendingNewRects = _novelty.pendingNewRects.filter(function (r) {
+      return now - r.born < decayMs;
+    });
+    // Remove expired seen keys
+    const fresh = [];
+    for (let i = 0; i < _novelty.seenKeys.length; i++) {
+      const k = _novelty.seenKeys[i];
+      const ts = _novelty.seenElements.get(k);
+      if (ts && now - ts < decayMs) {
+        fresh.push(k);
+      } else {
+        _novelty.seenElements.delete(k);
+      }
+    }
+    _novelty.seenKeys = fresh;
+  }
+
+  // Check if Lili is near any novel (recently added) DOM element
+  function noveltyNearBonus() {
+    const NC = CFG.novelty;
+    const now = Date.now();
+    const px = lili.pos.x, py = lili.pos.y;
+    const r2 = NC.nearRadius * NC.nearRadius;
+    for (let i = _novelty.pendingNewRects.length - 1; i >= 0; i--) {
+      var nr = _novelty.pendingNewRects[i];
+      // Center of novel element
+      var cx = nr.x + nr.w * 0.5;
+      var cy = nr.y + nr.h * 0.5;
+      var dx = px - cx, dy = py - cy;
+      if (dx * dx + dy * dy < r2) {
+        // Consume this novelty (one-time reward)
+        _novelty.pendingNewRects.splice(i, 1);
+        return NC.rewardBonus;
+      }
+    }
+    return 0;
+  }
+
+  // =========================================================================
+  // 16B — Bubble Communication (symbol emissions based on internal state)
+  // =========================================================================
+
+  const _bubbles = {
+    pool: [],
+    activeCount: 0,
+    lastEmitMs: 0,
+  };
+
+  // Pre-allocate bubble pool
+  (function initBubblePool() {
+    for (let i = 0; i < CFG.bubbles.poolSize; i++) {
+      _bubbles.pool.push({
+        active: false,
+        symbol: '',
+        x: 0, y: 0,
+        born: 0,
+        phase: 0, // sway phase offset
+      });
+    }
+  })();
+
+  // Determine which symbol to emit based on Lili's internal state
+  function chooseBubbleSymbol() {
+    if (_circadian.isAsleep) return '💤';
+    if (_visitProfile.trustLevel > 0.7 && sensors.cursorProximity === 'near') return '♥';
+    if (lili.mood === 'curious' && sensors.domDensity !== 'sparse') return '?';
+    if (stress > 0.7) return '!';
+    if (lili.mood === 'playful') return '~';
+    if (_novelty.pendingNewRects.length > 0) return '✦';
+    if (lili.mood === 'calm' && _visitProfile.trustLevel > 0.4) return '◦';
+    return null; // no bubble
+  }
+
+  function emitBubble() {
+    const now = Date.now();
+    if (now - _bubbles.lastEmitMs < CFG.bubbles.cooldownMs) return;
+    const symbol = chooseBubbleSymbol();
+    if (!symbol) return;
+
+    // Find inactive slot
+    for (let i = 0; i < CFG.bubbles.poolSize; i++) {
+      var b = _bubbles.pool[i];
+      if (b.active) continue;
+      b.active = true;
+      b.symbol = symbol;
+      b.x = lili.pos.x + (noiseRng() - 0.5) * CFG.bubbles.spawnRadius * 2;
+      b.y = lili.pos.y - lili.bodyR * 0.8;
+      b.born = now;
+      b.phase = noiseRng() * Math.PI * 2;
+      _bubbles.activeCount++;
+      _bubbles.lastEmitMs = now;
+      return;
+    }
+  }
+
+  function updateBubbles() {
+    if (_bubbles.activeCount === 0) return;
+    const now = Date.now();
+    const BC = CFG.bubbles;
+    let active = 0;
+    for (let i = 0; i < BC.poolSize; i++) {
+      var b = _bubbles.pool[i];
+      if (!b.active) continue;
+      const elapsed = now - b.born;
+      if (elapsed >= BC.lifetimeMs) { b.active = false; continue; }
+      // Rise upward
+      b.y -= BC.riseSpeed;
+      // Sway
+      b.x += Math.sin(b.phase + elapsed * BC.swaySpeed) * BC.swayAmplitude * 0.02;
+      active++;
+    }
+    _bubbles.activeCount = active;
+  }
+
+  function renderBubbles() {
+    if (_bubbles.activeCount === 0) return;
+    const now = Date.now();
+    const BC = CFG.bubbles;
+    ctx.font = BC.fontSize + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < BC.poolSize; i++) {
+      var b = _bubbles.pool[i];
+      if (!b.active) continue;
+      const t = (now - b.born) / BC.lifetimeMs; // 0..1
+      const alpha = t < 0.1 ? t / 0.1 : (1 - t); // fade in briefly, then fade out
+      ctx.globalAlpha = Math.max(0, alpha);
+      ctx.fillText(b.symbol, b.x, b.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // =========================================================================
   // 15F — Enhanced DOM Interaction state (canvas text for grabbed elements)
   // =========================================================================
 
@@ -1214,11 +1418,13 @@
     return count;
   }
 
-  // MutationObserver: rebuild hash when DOM changes
+  // MutationObserver: rebuild hash when DOM changes + track novelty
   let mutationRebuildTimer = 0;
-  function onDomMutation() {
+  function onDomMutation(mutations) {
     clearTimeout(mutationRebuildTimer);
     mutationRebuildTimer = setTimeout(buildSpatialHash, CFG.spatialHashRebuildMs);
+    // Phase 16A: Track novel DOM elements for curiosity reward
+    if (mutations && mutations.length) noveltyTrackNewElements(mutations);
   }
 
   // =========================================================================
@@ -1549,6 +1755,10 @@
         sensors.cursorProximity === 'near') {
       reward += CFG.visitRecognition.trustRewardBonus * _visitProfile.trustLevel;
     }
+
+    // Phase 16A: Novelty reward — bonus for being near unseen DOM content
+    var noveltyBonus = noveltyNearBonus();
+    if (noveltyBonus > 0) reward += noveltyBonus;
 
     // Phase 15D: DOM learning reward bonus for interacting with preferred types
     if (sensors.domDensity !== 'sparse') {
@@ -2223,6 +2433,9 @@
       'trust:    ' + _visitProfile.trustLevel.toFixed(2) + ' (' + _visitProfile.totalVisits + ' visits)\n' +
       'domPref:  ' + Object.keys(_domLearning.preferences).map(function(k) { return k[0] + ':' + _domLearning.preferences[k].toFixed(2); }).join(' ') + '\n' +
       'ink:      ' + _ink.activeCount + '/' + CFG.ink.poolSize + '\n' +
+      '── Phase 16 ────────────\n' +
+      'novelRects:' + _novelty.pendingNewRects.length + ' seen:' + _novelty.seenKeys.length + '\n' +
+      'bubbles:  ' + _bubbles.activeCount + '/' + CFG.bubbles.poolSize + '\n' +
       '── Perf ────────────────\n' +
       'FPS:      ' + _fpsAvg.toFixed(1) + (_fpsAvg < 50 ? ' ⚠' : '') + '\n' +
       'frame#:   ' + frameCount;
@@ -4395,6 +4608,13 @@
     if (stress > CFG.ink.stressThreshold) emitInk();
     updateInk();
 
+    // Phase 16A: Novelty decay
+    if (_decision.frameCounter === 0) noveltyDecay();
+
+    // Phase 16B: Bubble communication
+    emitBubble();
+    updateBubbles();
+
     checkMidnightCleanup(); // Phase 9D: periodic midnight reset check
   }
 
@@ -4424,6 +4644,9 @@
 
       // 4. Enhanced DOM: render grabbed text on canvas (Phase 15F)
       renderEnhancedDomText(colors);
+
+      // 5. Bubble communication (Phase 16B) — floats above body
+      renderBubbles();
 
       ctx.restore();
     }
