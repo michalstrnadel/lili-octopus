@@ -1,20 +1,20 @@
 {
   "format": "lili_state_v1",
-  "lastSync": "2026-03-20T14:03:16.129Z",
+  "lastSync": "2026-03-20T15:46:33.441Z",
   "metadata": {
     "genesis": 1773395030923,
     "visits": 25,
-    "totalDecisions": 2838,
-    "totalReward": -1407.3999999999996,
+    "totalDecisions": 2843,
+    "totalReward": -1407.7999999999997,
     "phase": "hatchling",
-    "phaseProgress": 0.5126903298611111,
-    "mood": "curious"
+    "phaseProgress": 0.5179914872685185,
+    "mood": "alert"
   },
   "brain": {
     "v": 1,
-    "mood": 0,
-    "decisions": 2838,
-    "reward": -1407.3999999999996,
+    "mood": 4,
+    "decisions": 2843,
+    "reward": -1407.7999999999997,
     "entries": [
       [
         320,
@@ -271,7 +271,7 @@
       [
         1045,
         [
-          0.154675246998345,
+          0.1037174415243446,
           -0.14640500000000004,
           -0.2738620076781996,
           0.0033502702707976896,
@@ -2383,6 +2383,66 @@
         "stress": 0.3,
         "x": 760,
         "y": 469
+      },
+      {
+        "ts": 1774018426226,
+        "ageMs": 623395302,
+        "phase": "hatchling",
+        "state": 1045,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0,
+        "stress": 0.3,
+        "x": 758,
+        "y": 468
+      },
+      {
+        "ts": 1774018452056,
+        "ageMs": 623421133,
+        "phase": "hatchling",
+        "state": 1045,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0,
+        "stress": 0.3,
+        "x": 757,
+        "y": 466
+      },
+      {
+        "ts": 1774021590326,
+        "ageMs": 626559403,
+        "phase": "hatchling",
+        "state": 1045,
+        "mood": 0,
+        "exp": 0,
+        "reward": 0,
+        "stress": 0.3,
+        "x": 754,
+        "y": 465
+      },
+      {
+        "ts": 1774021591095,
+        "ageMs": 626560172,
+        "phase": "hatchling",
+        "state": 1045,
+        "mood": 0,
+        "exp": 0,
+        "reward": -0.2,
+        "stress": 0.3,
+        "x": 754,
+        "y": 464
+      },
+      {
+        "ts": 1774021592858,
+        "ageMs": 626561935,
+        "phase": "hatchling",
+        "state": 1045,
+        "mood": 0,
+        "exp": 0,
+        "reward": -0.2,
+        "stress": 0.3,
+        "x": 754,
+        "y": 463
       }
     ],
     "dailyAggregates": [
@@ -3252,6 +3312,27 @@
         "qhash": -322.44,
         "decisions": 114,
         "totalReward": -75.2
+      },
+      {
+        "day": "2026-03-20",
+        "ageMs": 626562503,
+        "phase": "hatchling",
+        "moodDist": [
+          35,
+          12,
+          17,
+          15,
+          8,
+          19,
+          13
+        ],
+        "avgReward": -0.635,
+        "explorationRate": 0.739,
+        "entropy": 2.664,
+        "lzc": 46,
+        "qhash": -322.49,
+        "decisions": 119,
+        "totalReward": -75.6
       }
     ],
     "milestones": [
