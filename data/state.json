@@ -1,13 +1,13 @@
 {
   "format": "lili_state_v1",
-  "lastSync": "2026-03-28T03:35:46.298Z",
+  "lastSync": "2026-03-28T16:32:13.938Z",
   "metadata": {
     "genesis": 1773395030923,
     "visits": 28,
     "totalDecisions": 5378,
     "totalReward": -1850.8,
     "phase": "juvenile",
-    "phaseProgress": 0.009794617446393762,
+    "phaseProgress": 0.016311781645955165,
     "mood": "playful"
   },
   "brain": {
@@ -1651,6 +1651,66 @@
         "stress": 0.49,
         "x": 726,
         "y": 203
+      },
+      {
+        "ts": 1774711737424,
+        "ageMs": 1316706501,
+        "phase": "juvenile",
+        "state": 1405,
+        "mood": 4,
+        "exp": 0,
+        "reward": 0,
+        "stress": 0.5,
+        "x": 728,
+        "y": 205
+      },
+      {
+        "ts": 1774711738174,
+        "ageMs": 1316707251,
+        "phase": "juvenile",
+        "state": 1406,
+        "mood": 5,
+        "exp": 1,
+        "reward": 0,
+        "stress": 0.41,
+        "x": 728,
+        "y": 205
+      },
+      {
+        "ts": 1774711738924,
+        "ageMs": 1316708001,
+        "phase": "juvenile",
+        "state": 2486,
+        "mood": 0,
+        "exp": 0,
+        "reward": 0,
+        "stress": 0.49,
+        "x": 722,
+        "y": 203
+      },
+      {
+        "ts": 1774711739674,
+        "ageMs": 1316708751,
+        "phase": "juvenile",
+        "state": 2126,
+        "mood": 0,
+        "exp": 0,
+        "reward": 0,
+        "stress": 0.35,
+        "x": 719,
+        "y": 202
+      },
+      {
+        "ts": 1774711740424,
+        "ageMs": 1316709501,
+        "phase": "juvenile",
+        "state": 1046,
+        "mood": 3,
+        "exp": 1,
+        "reward": 0,
+        "stress": 0.3,
+        "x": 722,
+        "y": 205
       }
     ],
     "dailyAggregates": [
@@ -2765,6 +2825,27 @@
         "totalReward": -16
       },
       {
+        "day": "2026-03-26",
+        "ageMs": 1316706501,
+        "phase": "juvenile",
+        "moodDist": [
+          10,
+          5,
+          6,
+          4,
+          4,
+          4,
+          6
+        ],
+        "avgReward": -0.41,
+        "explorationRate": 0.744,
+        "entropy": 2.725,
+        "lzc": 20,
+        "qhash": -210.89,
+        "decisions": 39,
+        "totalReward": -16
+      },
+      {
         "day": "2026-03-27",
         "ageMs": 1187515166,
         "phase": "hatchling",
@@ -2775,12 +2856,45 @@
       },
       {
         "day": "2026-03-28",
-        "ageMs": 1273915375,
+        "ageMs": 1316709683,
         "phase": "juvenile",
-        "source": "cron",
-        "decisions": 288,
-        "totalDecisions": 5378,
-        "totalReward": -1850.8
+        "moodDist": [
+          2,
+          0,
+          0,
+          1,
+          1,
+          1,
+          0
+        ],
+        "avgReward": 0,
+        "explorationRate": 0.4,
+        "entropy": 1.922,
+        "lzc": 21,
+        "qhash": -210.89,
+        "decisions": 5,
+        "totalReward": 0
+      },
+      {
+        "day": "2026-03-28",
+        "ageMs": 1316709683,
+        "phase": "juvenile",
+        "moodDist": [
+          2,
+          0,
+          0,
+          1,
+          1,
+          1,
+          0
+        ],
+        "avgReward": 0,
+        "explorationRate": 0.4,
+        "entropy": 1.922,
+        "lzc": 21,
+        "qhash": -170.19,
+        "decisions": 5,
+        "totalReward": 0
       }
     ],
     "milestones": [
@@ -4318,6 +4432,14 @@
         "ageMs": 1273915375,
         "decisions": 288,
         "phase": "juvenile"
+      },
+      {
+        "type": "phase_transition",
+        "from": "hatchling",
+        "to": "juvenile",
+        "ts": 1774711737052,
+        "ageMs": 1316706127,
+        "decisions": 4802
       }
     ]
   }
