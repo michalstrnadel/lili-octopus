@@ -2880,8 +2880,12 @@
       var p = _inkDefense.particles[i];
       p.life--;
       if (p.life <= 0) { _inkDefense.particles.splice(i, 1); continue; }
-      p.x += p.vx;
-      p.y += p.vy;
+      // Turbulence swirl for defense ink
+      var dinkT = p.life * 0.02;
+      var dturbX = noise.noise2D(p.x * 0.006 + dinkT, p.y * 0.006) * 0.6;
+      var dturbY = noise.noise2D(p.y * 0.006 + dinkT, p.x * 0.006 + 70) * 0.6;
+      p.x += p.vx + dturbX;
+      p.y += p.vy + dturbY;
       p.vx *= 0.94;
       p.vy *= 0.94;
       p.vy -= 0.02; // slight upward drift (ink rises)
@@ -3660,9 +3664,12 @@
       if (!p.active) continue;
       const elapsed = now - p.born;
       if (elapsed >= p.life) { p.active = false; continue; }
-      // Drift
-      p.x += p.vx;
-      p.y += p.vy;
+      // Drift with turbulence (Perlin noise velocity field for swirling ink)
+      var inkT = elapsed * 0.0015;
+      var turbX = noise.noise2D(p.x * 0.008 + inkT, p.y * 0.008) * 0.35;
+      var turbY = noise.noise2D(p.y * 0.008 + inkT, p.x * 0.008 + 50) * 0.35;
+      p.x += p.vx + turbX;
+      p.y += p.vy + turbY;
       p.vx *= 0.96;
       p.vy *= 0.96;
       active++;
@@ -3904,11 +3911,18 @@
       var wobbleX = 1 + Math.sin(wobblePhase) * 0.12; // ±12% scaleX
       var wobbleY = 1 - Math.sin(wobblePhase) * 0.08; // inverse, ±8% scaleY
 
-      // Bubble body: translucent ellipse with mood-tinted color
+      // Bubble body: 3D sphere shading with radial gradient
       var h = (computeColors().h || 190) + b.hueShift;
+      var bubbleGrad = ctx.createRadialGradient(
+        bx - r * 0.2 * wobbleX, by - r * 0.25 * wobbleY, r * 0.05,
+        bx, by, r * Math.max(wobbleX, wobbleY));
+      bubbleGrad.addColorStop(0, 'hsla(' + h + ', 50%, 88%, ' + (alpha * 0.28) + ')');
+      bubbleGrad.addColorStop(0.4, 'hsla(' + h + ', 40%, 72%, ' + (alpha * 0.18) + ')');
+      bubbleGrad.addColorStop(0.8, 'hsla(' + h + ', 35%, 60%, ' + (alpha * 0.1) + ')');
+      bubbleGrad.addColorStop(1, 'hsla(' + h + ', 30%, 50%, ' + (alpha * 0.04) + ')');
       ctx.beginPath();
       ctx.ellipse(bx, by, r * wobbleX, r * wobbleY, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'hsla(' + h + ', 40%, 70%, ' + (alpha * 0.18) + ')';
+      ctx.fillStyle = bubbleGrad;
       ctx.fill();
 
       // Bubble rim: thin bright ring
@@ -3916,11 +3930,17 @@
       ctx.lineWidth = 0.5;
       ctx.stroke();
 
-      // Specular highlight: small bright dot (top-left)
+      // Primary specular: crescent highlight (top-left)
       var specR = r * BC.specularSize;
       ctx.beginPath();
-      ctx.arc(bx - r * 0.25, by - r * 0.25, specR, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, ' + (alpha * 0.55) + ')';
+      ctx.arc(bx - r * 0.3, by - r * 0.3, specR * 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, ' + (alpha * 0.6) + ')';
+      ctx.fill();
+
+      // Secondary specular: tiny sparkle (bottom-right, opposite)
+      ctx.beginPath();
+      ctx.arc(bx + r * 0.18, by + r * 0.15, specR * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, ' + (alpha * 0.25) + ')';
       ctx.fill();
     }
   }
@@ -8431,6 +8451,11 @@
     ctx.fillStyle = colors.tentHslAlpha(0.75);
     ctx.fill();
 
+    // Subtle outline stroke for tentacle definition
+    ctx.strokeStyle = colors.tentHslAlpha(0.2);
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
     // Second pass: tip highlights — radial glow on dark bg (bioluminescence)
     var darkBg = _ambient.adapted < 0.4;
     for (let t = 0; t < TENT_N; t++) {
@@ -8558,6 +8583,19 @@
     bodyGrad.addColorStop(0.8, colors.bodyHslAlpha(0.65));
     bodyGrad.addColorStop(1, colors.bodyHslAlpha(0.45));
     ctx.fillStyle = bodyGrad;
+    ctx.fill();
+
+    // Body specular highlight (lit side — matches gradient light source)
+    var specSize = Math.min(finalRx, finalRy) * 0.18;
+    var specGrad = ctx.createRadialGradient(
+      -finalRx * 0.28, -finalRy * 0.32, specSize * 0.1,
+      -finalRx * 0.28, -finalRy * 0.32, specSize);
+    specGrad.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
+    specGrad.addColorStop(0.6, 'rgba(255, 255, 255, 0.1)');
+    specGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = specGrad;
+    ctx.beginPath();
+    ctx.arc(-finalRx * 0.28, -finalRy * 0.32, specSize, 0, Math.PI * 2);
     ctx.fill();
 
     // Phase 18F: Chromatophore cells (visible pulsing spots on body surface)
