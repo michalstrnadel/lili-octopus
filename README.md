@@ -35,7 +35,7 @@ Lili je autonomní digitální organismus ve formě chobotnice, žijící na web
 
 ## Aktuální stav (2026-04-10)
 
-**41 implementačních fází hotovo** — `public/lili.js` (~8031 řádků)
+**52 implementačních fází hotovo** — `public/lili.js` (~8782 řádků)
 
 | Fáze | Popis |
 |------|-------|
@@ -72,6 +72,17 @@ Lili je autonomní digitální organismus ve formě chobotnice, žijící na web
 | **39** | **Ink Defense** — dramatický inkoustový výbuch při náhlém stresu |
 | **40** | **Camouflage** — mood-dependent background matching (shy=100%, curious=10%) |
 | **41** | **Growth Visualization** — plynulý růst těla v rámci životních fází |
+| **42** | **Mobile Touch** — tap, swipe, long press interakce na dotykových zařízeních |
+| **43** | **Retina Rendering** — devicePixelRatio scaling (implementováno v Phase 1) |
+| **44** | **Visual Debug Overlay** — in-canvas grafy (stress, energy, reward, surprise) |
+| **45** | **Death & Legacy** — animace umírání po 10 letech, fade, poslední milestone |
+| **46** | **Page Memory** — paměť chování per URL (mood, stress, návštěvy) |
+| **47** | **Q-table Compression** — automatické prořezávání při > 5000 stavech |
+| **48** | **Meta-Learning** — detekce stability prostředí, adaptivní learning rate |
+| **49** | **Web Worker Brain** — offload brainLearn do background threadu |
+| **50** | **Life Narrative** — generovaný textový deníček ze životních milníků |
+| **51** | **Q-table Visualization** — heatmapa mozku jako generativní umění |
+| **52** | **Seasonal Sounds** — sezónní modulace zvukového krajobaze |
 
 ## Akademické funkce (Fáze 19-24)
 
@@ -227,6 +238,10 @@ lili.cogmap()        // zobrazit cognitive map statistiky
 lili.temporal()      // zobrazit temporal patterns (24h profil)
 lili.temperament()   // zobrazit personality drift axes
 lili.surprise()      // zobrazit surprise signal stav
+lili.narrative()     // zobrazit životní příběh Lili
+lili.pages()         // zobrazit page memory (per-URL data)
+lili.metalearning()  // zobrazit meta-learning stav
+lili.brain()         // zobrazit Q-table stats a worker stav
 ```
 
 ## Akademický rozměr

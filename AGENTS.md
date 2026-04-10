@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-41 hotovy, akademická + technologická expanze**
+**Fáze: Implementace — Fáze 1-52 hotovy, akademická + technologická expanze**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -89,8 +89,19 @@ Hotovo:
 - ✅ **Fáze 39:** Ink Defense — dramatic ink burst on sudden stress spike (rate-of-change detection), larger particles, wider spray, separate particle system
 - ✅ **Fáze 40:** Camouflage Intensity — mood-dependent background matching (shy=100%, curious=10%), smooth sat/lit shifts toward ambient
 - ✅ **Fáze 41:** Growth Visualization — smooth body size scaling within life phases (hatchling 0.6× → elder 1.15×), no discrete jumps
+- ✅ **Fáze 42:** Mobile Touch — touchstart/end handling, long press caress (stress reduction + joy), double tap debug toggle
+- ✅ **Fáze 43:** Retina Rendering — already implemented (devicePixelRatio scaling in resizeCanvas)
+- ✅ **Fáze 44:** Visual Debug Overlay — in-canvas real-time graphs (stress, energy, reward, surprise), 120-frame history
+- ✅ **Fáze 45:** Death & Legacy — elder phase fade (90%+ progress), speed decay, ghost alpha, final milestone, narrative entry
+- ✅ **Fáze 46:** Page Memory — URL hash-based behavioral context, per-page mood/stress/visits, max 20 pages
+- ✅ **Fáze 47:** Q-table Compression — auto-prune at 5000 entries, removes least-visited/least-valued states
+- ✅ **Fáze 48:** Meta-Learning — environment stability detection (50-decision window), alpha modulation (0.7× stable, 1.4× unstable)
+- ✅ **Fáze 49:** Web Worker Brain — inline Blob worker for brainLearn offloading, automatic fallback to main thread
+- ✅ **Fáze 50:** Life Narrative — generated text diary from milestones and events, exportable via `lili.narrative()`
+- ✅ **Fáze 51:** Q-table Visualization — heatmap brain fingerprint in debug overlay, blue→green→red color mapping
+- ✅ **Fáze 52:** Seasonal Sounds — breathing drone frequency/volume modulated by season (spring=brighter, winter=deeper)
 
-**Další krok:** Testování všech nových fází, long-term observation, příprava akademického paperu.
+**Další krok:** Long-term observation, data collection, academic paper preparation.
 
 **Keyboard shortcuts:**
 - `D` — toggle debug panel
@@ -130,7 +141,7 @@ lili-octopus/
 ├── LILI_PRD_v1.md           ← Product Requirements Document (ZDROJ PRAVDY)
 │
 ├── public/
-│   ├── lili.js              ← JEDINÝ produkční soubor (~8031 řádků)
+│   ├── lili.js              ← JEDINÝ produkční soubor (~8782 řádků)
 │   └── dashboard.html       ← Observability dashboard (vizualizace exportovaných dat)
 │
 ├── docs/
@@ -217,5 +228,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-04-10 (Fáze 1-29 implementovány, lili.js ~8031 řádků, dashboard.html)*
+*Poslední aktualizace: 2026-04-10 (Fáze 1-29 implementovány, lili.js ~8782 řádků, dashboard.html)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

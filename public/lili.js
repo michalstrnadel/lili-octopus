@@ -724,6 +724,77 @@
       },
     },
 
+    // --- Phase 42: Mobile Touch Interaction ---
+    touch: {
+      longPressMs: 600,           // ms to trigger "caress" (long press)
+      tapMaxMs: 250,              // max duration for a tap
+      swipeMinDist: 30,           // px min distance for swipe recognition
+      caressReward: 0.3,          // reward for being caressed
+      caressStressReduction: 0.15, // stress reduction per caress
+      doubleTapMs: 350,           // max gap between double taps
+    },
+
+    // --- Phase 44: Visual Debug Overlay (in-canvas graphs) ---
+    debugOverlay: {
+      graphWidth: 160,            // px per graph
+      graphHeight: 40,            // px per graph
+      historyLength: 120,         // frames of data (2 seconds)
+      margin: 8,                  // spacing between graphs
+      alpha: 0.7,                 // overlay transparency
+    },
+
+    // --- Phase 45: Death & Legacy ---
+    death: {
+      fadeStartPhaseProgress: 0.9, // start fading at 90% of elder phase
+      fadeDurationFrames: 600,     // 10 seconds of fade
+      finalBubbleText: '...',      // last bubble message
+      ghostAlpha: 0.15,            // minimum alpha (Lili becomes a ghost)
+      speedDecay: 0.98,            // velocity reduction per frame during death
+    },
+
+    // --- Phase 46: Page Memory ---
+    pageMemory: {
+      maxPages: 20,               // max remembered pages
+      urlHashLength: 8,           // chars of URL hash to use as key
+    },
+
+    // --- Phase 47: Q-table Compression ---
+    qtableCompression: {
+      maxEntries: 5000,           // prune when exceeding this
+      pruneTarget: 4000,          // reduce to this count
+      minVisits: 2,               // entries with fewer visits get pruned first
+    },
+
+    // --- Phase 48: Meta-Learning ---
+    metaLearning: {
+      windowSize: 50,             // decisions to compute stability
+      stableThreshold: 0.3,       // avg |TD error| below this = stable
+      unstableThreshold: 0.8,     // avg |TD error| above this = unstable
+      alphaStableMul: 0.7,        // alpha multiplier in stable environments
+      alphaUnstableMul: 1.4,      // alpha multiplier in unstable environments
+      adaptSpeed: 0.05,           // how fast meta-alpha adapts
+    },
+
+    // --- Phase 50: Life Narrative ---
+    narrative: {
+      maxEntries: 100,            // max story entries
+    },
+
+    // --- Phase 51: Q-table Visualization ---
+    qtableVis: {
+      cellSize: 4,                // px per state cell
+      maxWidth: 200,              // max vis width
+      maxHeight: 150,             // max vis height
+    },
+
+    // --- Phase 52: Seasonal Sounds ---
+    seasonalSound: {
+      spring: { freqMul: 1.2, volMul: 1.1 },   // brighter, slightly louder
+      summer: { freqMul: 1.0, volMul: 0.9 },    // warm baseline
+      autumn: { freqMul: 0.85, volMul: 1.0 },   // mellower
+      winter: { freqMul: 0.7, volMul: 0.8 },    // deeper, quieter
+    },
+
     // --- localStorage keys ---
     storageKeys: {
       genesis:     'lili_genesis',
@@ -743,6 +814,8 @@
       offspring:   'lili_offspring',
       temporal:    'lili_temporal',
       temperament: 'lili_temperament',
+      pageMemory:  'lili_pagemem',
+      narrative:   'lili_narrative',
     },
 
     // --- Phase 14: Cloud sync ---
@@ -1284,6 +1357,53 @@
     satShift: 0,                // current saturation shift
     litShift: 0,                // current lightness shift
   };
+
+  // Phase 42: Mobile touch state
+  const _touch = {
+    startX: 0, startY: 0,
+    startMs: 0,
+    lastTapMs: 0,
+    isDown: false,
+    longPressTimer: 0,
+    caressing: false,
+  };
+
+  // Phase 44: Debug overlay graph buffers
+  const _debugGraphs = {
+    stress: [],
+    energy: [],
+    reward: [],
+    surprise: [],
+  };
+
+  // Phase 45: Death state
+  const _death = {
+    active: false,
+    fadeProgress: 0,              // 0..1 (0=alive, 1=fully faded)
+    lastBubbleSent: false,
+  };
+
+  // Phase 46: Page memory
+  const _pageMemory = {
+    pages: {},                    // urlHash → {mood, stress, visits, lastSeen}
+    currentHash: '',
+  };
+
+  // Phase 48: Meta-learning
+  const _metaLearn = {
+    recentErrors: [],             // recent |TD errors|
+    alphaMul: 1.0,                // current meta-learning rate multiplier
+    stability: 'unknown',         // stable / unstable / unknown
+  };
+
+  // Phase 50: Life narrative
+  const _narrative = {
+    entries: [],                  // [{day, text, type}]
+  };
+
+  // Phase 49: Web Worker brain
+  var _brainWorker = null;        // Worker instance (null if not available)
+  var _brainWorkerReady = false;
 
   function onMoodChange(fn) { _moodListeners.push(fn); }
 
@@ -2706,6 +2826,565 @@
   }
 
   // =========================================================================
+  // Phase 42 — Mobile Touch Interaction
+  // =========================================================================
+
+  function touchStart(e) {
+    if (!e.touches || !e.touches[0]) return;
+    var t = e.touches[0];
+    _touch.startX = t.clientX;
+    _touch.startY = t.clientY;
+    _touch.startMs = Date.now();
+    _touch.isDown = true;
+    _touch.caressing = false;
+
+    // Start long press timer
+    _touch.longPressTimer = setTimeout(function () {
+      if (!_touch.isDown) return;
+      // Check if finger is near Lili
+      var docX = _touch.startX + scrollOx;
+      var docY = _touch.startY + scrollOy;
+      var dx = docX - lili.pos.x;
+      var dy = docY - lili.pos.y;
+      if (Math.sqrt(dx * dx + dy * dy) < lili.bodyR * 4) {
+        _touch.caressing = true;
+        touchCaress();
+      }
+    }, CFG.touch.longPressMs);
+  }
+
+  function touchEnd(e) {
+    var elapsed = Date.now() - _touch.startMs;
+    _touch.isDown = false;
+    clearTimeout(_touch.longPressTimer);
+
+    if (_touch.caressing) {
+      _touch.caressing = false;
+      return;
+    }
+
+    if (elapsed < CFG.touch.tapMaxMs) {
+      // Check for double tap
+      var now = Date.now();
+      if (now - _touch.lastTapMs < CFG.touch.doubleTapMs) {
+        touchDoubleTap();
+      }
+      _touch.lastTapMs = now;
+    }
+  }
+
+  function touchCaress() {
+    // Long press near Lili = caressing → reduce stress, reward, contentment
+    stress = Math.max(0, stress - CFG.touch.caressStressReduction);
+    triggerMicroExpr('joy');
+    // Spawn a happy bubble
+    if (typeof emitBubble === 'function') emitBubble();
+  }
+
+  function touchDoubleTap() {
+    // Double tap anywhere = flash debug info briefly
+    if (typeof toggleDebug === 'function') toggleDebug();
+  }
+
+  // =========================================================================
+  // Phase 44 — Visual Debug Overlay (in-canvas real-time graphs)
+  // =========================================================================
+
+  function debugOverlayRecord() {
+    var D = CFG.debugOverlay;
+    _debugGraphs.stress.push(stress);
+    _debugGraphs.energy.push(_energy.level / CFG.energy.max);
+    _debugGraphs.reward.push((_journal.ringBuffer.length > 0 ?
+      _journal.ringBuffer[_journal.ringBuffer.length - 1].reward : 0));
+    _debugGraphs.surprise.push(_surprise.intensity);
+
+    while (_debugGraphs.stress.length > D.historyLength) _debugGraphs.stress.shift();
+    while (_debugGraphs.energy.length > D.historyLength) _debugGraphs.energy.shift();
+    while (_debugGraphs.reward.length > D.historyLength) _debugGraphs.reward.shift();
+    while (_debugGraphs.surprise.length > D.historyLength) _debugGraphs.surprise.shift();
+  }
+
+  function renderDebugOverlay() {
+    if (!_debugVisible) return;
+    var D = CFG.debugOverlay;
+    var x0 = W - D.graphWidth - D.margin;
+    var y0 = D.margin;
+
+    var graphs = [
+      { data: _debugGraphs.stress, label: 'stress', color: '#ff6b6b', min: 0, max: 1 },
+      { data: _debugGraphs.energy, label: 'energy', color: '#51cf66', min: 0, max: 1 },
+      { data: _debugGraphs.reward, label: 'reward', color: '#ffd43b', min: -2, max: 2 },
+      { data: _debugGraphs.surprise, label: 'surprise', color: '#cc5de8', min: 0, max: 1 },
+    ];
+
+    ctx.save();
+    // Reset transform so we draw in screen space (no scroll offset)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    for (var g = 0; g < graphs.length; g++) {
+      var gr = graphs[g];
+      var gy = y0 + g * (D.graphHeight + D.margin);
+
+      // Background
+      ctx.fillStyle = 'rgba(0,0,0,' + D.alpha + ')';
+      ctx.fillRect(x0, gy, D.graphWidth, D.graphHeight);
+
+      // Label
+      ctx.fillStyle = gr.color;
+      ctx.font = '9px monospace';
+      ctx.fillText(gr.label, x0 + 2, gy + 9);
+
+      // Graph line
+      if (gr.data.length < 2) continue;
+      ctx.strokeStyle = gr.color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (var i = 0; i < gr.data.length; i++) {
+        var px = x0 + (i / (D.historyLength - 1)) * D.graphWidth;
+        var val = (gr.data[i] - gr.min) / (gr.max - gr.min);
+        var py = gy + D.graphHeight - Math.max(0, Math.min(1, val)) * D.graphHeight;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // Current value text
+      if (gr.data.length > 0) {
+        var cur = gr.data[gr.data.length - 1];
+        ctx.fillStyle = '#ccc';
+        ctx.fillText(cur.toFixed(2), x0 + D.graphWidth - 30, gy + 9);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // Phase 45 — Death & Legacy (10-year lifecycle endpoint)
+  // =========================================================================
+
+  function updateDeath() {
+    // Only relevant in elder phase at high progress
+    if (age.phase !== 'elder') return;
+    if (age.phaseProgress < CFG.death.fadeStartPhaseProgress) return;
+
+    if (!_death.active) {
+      _death.active = true;
+      _journal.milestones.push({
+        type: 'death_begins',
+        ts: Date.now(),
+        ageDays: Math.floor(age.elapsedMs / 86400000),
+      });
+      narrativeAdd('farewell', 'Lili begins to fade. Her movements slow, colors dim. The long journey nears its end.');
+      console.info('[Lili] The end approaches...');
+    }
+
+    // Progress fade based on remaining elder progress
+    var fadeRange = 1 - CFG.death.fadeStartPhaseProgress;
+    _death.fadeProgress = Math.min(1, (age.phaseProgress - CFG.death.fadeStartPhaseProgress) / fadeRange);
+
+    // Slow down
+    lili.vel.multIn(CFG.death.speedDecay);
+
+    // Final bubble
+    if (_death.fadeProgress > 0.95 && !_death.lastBubbleSent) {
+      _death.lastBubbleSent = true;
+      _journal.milestones.push({
+        type: 'death',
+        ts: Date.now(),
+        ageDays: Math.floor(age.elapsedMs / 86400000),
+        totalDecisions: _decision.totalDecisions,
+      });
+      narrativeAdd('death', 'Lili is gone. ' + _decision.totalDecisions + ' decisions made. Her knowledge lives on in her offspring.');
+      console.info('[Lili] Goodbye. ' + _decision.totalDecisions + ' decisions, ' +
+        Math.floor(age.elapsedMs / 86400000) + ' days.');
+    }
+  }
+
+  function deathAlpha() {
+    // Returns alpha multiplier for rendering (1.0 = fully visible, ghostAlpha = almost gone)
+    if (!_death.active) return 1.0;
+    return Math.max(CFG.death.ghostAlpha, 1 - _death.fadeProgress * (1 - CFG.death.ghostAlpha));
+  }
+
+  // =========================================================================
+  // Phase 46 — Page Memory (URL-based behavioral context)
+  // =========================================================================
+
+  function _pageHash(url) {
+    // Simple hash of URL path (ignoring query/hash) for localStorage key
+    var path = url || window.location.pathname;
+    var h = 0;
+    for (var i = 0; i < path.length; i++) {
+      h = ((h << 5) - h + path.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h).toString(36).substring(0, CFG.pageMemory.urlHashLength);
+  }
+
+  function pageMemoryUpdate() {
+    var hash = _pageMemory.currentHash;
+    if (!hash) return;
+    var page = _pageMemory.pages[hash] || { mood: 'calm', stress: 0.3, visits: 0, lastSeen: 0 };
+    page.mood = lili.mood;
+    page.stress = page.stress * 0.9 + stress * 0.1; // running avg
+    page.visits++;
+    page.lastSeen = Date.now();
+    _pageMemory.pages[hash] = page;
+  }
+
+  function pageMemoryGetContext() {
+    var hash = _pageMemory.currentHash;
+    return _pageMemory.pages[hash] || null;
+  }
+
+  function pageMemorySave() {
+    try {
+      // Prune to maxPages (keep most recently visited)
+      var entries = Object.keys(_pageMemory.pages);
+      if (entries.length > CFG.pageMemory.maxPages) {
+        entries.sort(function (a, b) {
+          return (_pageMemory.pages[b].lastSeen || 0) - (_pageMemory.pages[a].lastSeen || 0);
+        });
+        var pruned = {};
+        for (var i = 0; i < CFG.pageMemory.maxPages; i++) {
+          pruned[entries[i]] = _pageMemory.pages[entries[i]];
+        }
+        _pageMemory.pages = pruned;
+      }
+      localStorage.setItem(CFG.storageKeys.pageMemory, JSON.stringify(_pageMemory.pages));
+    } catch (e) { /**/ }
+  }
+
+  function pageMemoryLoad() {
+    try {
+      var json = localStorage.getItem(CFG.storageKeys.pageMemory);
+      if (json) _pageMemory.pages = JSON.parse(json);
+    } catch (e) { /**/ }
+    _pageMemory.currentHash = _pageHash();
+  }
+
+  // =========================================================================
+  // Phase 47 — Q-table Compression (entry pruning)
+  // =========================================================================
+
+  function qtableCompress() {
+    var QC = CFG.qtableCompression;
+    if (_qtable.size <= QC.maxEntries) return;
+
+    // Collect entries with their visit counts and max Q-value
+    var candidates = [];
+    _qtable.forEach(function (qRow, stateIndex) {
+      var visits = 0;
+      var maxQ = -Infinity;
+      for (var i = 0; i < MOOD_COUNT; i++) {
+        var key = stateIndex + ',' + i;
+        visits += (_visitCounts.get(key) || 0);
+        if (qRow[i] > maxQ) maxQ = qRow[i];
+      }
+      candidates.push({ state: stateIndex, visits: visits, maxQ: maxQ });
+    });
+
+    // Sort: low visits first, then low maxQ (prune least useful)
+    candidates.sort(function (a, b) {
+      if (a.visits !== b.visits) return a.visits - b.visits;
+      return Math.abs(a.maxQ) - Math.abs(b.maxQ);
+    });
+
+    // Prune to target
+    var toRemove = candidates.length - QC.pruneTarget;
+    for (var i = 0; i < toRemove; i++) {
+      var s = candidates[i].state;
+      _qtable.delete(s);
+      // Also clean up visit counts and traces for this state
+      for (var m = 0; m < MOOD_COUNT; m++) {
+        _visitCounts.delete(s + ',' + m);
+        _traces.delete(s + ',' + m);
+      }
+    }
+    console.info('[Lili] Q-table compressed: ' + (candidates.length) + ' → ' + _qtable.size + ' entries');
+  }
+
+  // =========================================================================
+  // Phase 48 — Meta-Learning (environment stability detection)
+  // =========================================================================
+
+  function metaLearnUpdate(absTdError) {
+    var ML = CFG.metaLearning;
+    _metaLearn.recentErrors.push(absTdError);
+    while (_metaLearn.recentErrors.length > ML.windowSize) {
+      _metaLearn.recentErrors.shift();
+    }
+
+    if (_metaLearn.recentErrors.length < ML.windowSize) return;
+
+    // Compute average recent error
+    var sum = 0;
+    for (var i = 0; i < _metaLearn.recentErrors.length; i++) {
+      sum += _metaLearn.recentErrors[i];
+    }
+    var avgError = sum / _metaLearn.recentErrors.length;
+
+    // Determine stability
+    var targetMul;
+    if (avgError < ML.stableThreshold) {
+      _metaLearn.stability = 'stable';
+      targetMul = ML.alphaStableMul;
+    } else if (avgError > ML.unstableThreshold) {
+      _metaLearn.stability = 'unstable';
+      targetMul = ML.alphaUnstableMul;
+    } else {
+      _metaLearn.stability = 'normal';
+      targetMul = 1.0;
+    }
+
+    // Smooth adaptation
+    _metaLearn.alphaMul += (targetMul - _metaLearn.alphaMul) * ML.adaptSpeed;
+  }
+
+  // =========================================================================
+  // Phase 49 — Web Worker Brain (offload learning to background thread)
+  // =========================================================================
+
+  function initBrainWorker() {
+    // Create inline worker from function body (single-file constraint)
+    try {
+      var workerCode = 'var qt=new Map(),vc=new Map(),tr=new Map();' +
+        'self.onmessage=function(e){var d=e.data;' +
+        'if(d.cmd==="learn"){' +
+          'var ps=d.prevState,mi=d.moodIdx,r=d.reward,ns=d.newState,' +
+          'g=d.gamma,l=d.lambda,mc=d.moodCount,ab=d.alphaBase,ad=d.alphaDecay,am=d.alphaMin,sb=d.surpriseBoost,mm=d.metaMul;' +
+          'var qp=qt.get(ps);if(!qp){qp=new Float64Array(mc);qt.set(ps,qp);}' +
+          'var qn=qt.get(ns);if(!qn){qn=new Float64Array(mc);qt.set(ns,qn);}' +
+          'var mx=qn[0];for(var i=1;i<mc;i++){if(qn[i]>mx)mx=qn[i];}' +
+          'var delta=r+g*mx-qp[mi];' +
+          'var ck=ps+","+mi;var cv=vc.get(ck)||0;vc.set(ck,cv+1);' +
+          'tr.set(ck,1.0);' +
+          'var gl=g*l;var td=[];' +
+          'tr.forEach(function(ev,k){' +
+            'var sp=k.indexOf(",");var s=+k.substring(0,sp);var m=+k.substring(sp+1);' +
+            'var vk=vc.get(k)||0;var a=Math.max(am,ab/(1+vk*ad))*sb*mm;' +
+            'var qr=qt.get(s);if(!qr){qr=new Float64Array(mc);qt.set(s,qr);}' +
+            'qr[m]+=a*delta*ev;var ne=ev*gl;' +
+            'if(ne<0.01)td.push(k);else tr.set(k,ne);' +
+          '});' +
+          'for(var i=0;i<td.length;i++)tr.delete(td[i]);' +
+          'self.postMessage({cmd:"learnDone",delta:Math.abs(delta)});' +
+        '}else if(d.cmd==="sync"){' +
+          'qt.clear();vc.clear();tr.clear();' +
+          'for(var i=0;i<d.states.length;i++){' +
+            'qt.set(d.states[i][0],new Float64Array(d.states[i][1]));' +
+          '}' +
+          'for(var i=0;i<d.visits.length;i++){' +
+            'vc.set(d.visits[i][0],d.visits[i][1]);' +
+          '}' +
+          'self.postMessage({cmd:"syncDone"});' +
+        '}else if(d.cmd==="getQ"){' +
+          'var entries=[];qt.forEach(function(v,k){entries.push([k,Array.from(v)]);});' +
+          'var vEntries=[];vc.forEach(function(v,k){vEntries.push([k,v]);});' +
+          'self.postMessage({cmd:"qtable",states:entries,visits:vEntries});' +
+        '}};';
+      var blob = new Blob([workerCode], { type: 'application/javascript' });
+      _brainWorker = new Worker(URL.createObjectURL(blob));
+      _brainWorker.onmessage = function (e) {
+        if (e.data.cmd === 'learnDone') {
+          // Update meta-learning with TD error from worker
+          metaLearnUpdate(e.data.delta);
+        } else if (e.data.cmd === 'syncDone') {
+          _brainWorkerReady = true;
+        } else if (e.data.cmd === 'qtable') {
+          // Sync back from worker (for save operations)
+          for (var i = 0; i < e.data.states.length; i++) {
+            _qtable.set(e.data.states[i][0], new Float64Array(e.data.states[i][1]));
+          }
+          _visitCounts.clear();
+          for (var i = 0; i < e.data.visits.length; i++) {
+            _visitCounts.set(e.data.visits[i][0], e.data.visits[i][1]);
+          }
+        }
+      };
+      console.info('[Lili] Brain Worker: initialized');
+    } catch (e) {
+      _brainWorker = null;
+      console.info('[Lili] Brain Worker: not available (fallback to main thread)');
+    }
+  }
+
+  function syncBrainToWorker() {
+    if (!_brainWorker) return;
+    var states = [];
+    _qtable.forEach(function (v, k) { states.push([k, Array.from(v)]); });
+    var visits = [];
+    _visitCounts.forEach(function (v, k) { visits.push([k, v]); });
+    _brainWorker.postMessage({ cmd: 'sync', states: states, visits: visits });
+  }
+
+  function workerLearn(prevState, moodIdx, reward, newState) {
+    if (!_brainWorker || !_brainWorkerReady) return false;
+    _brainWorker.postMessage({
+      cmd: 'learn',
+      prevState: prevState,
+      moodIdx: moodIdx,
+      reward: reward,
+      newState: newState,
+      gamma: CFG.rl.gamma,
+      lambda: ageVal(CFG.rl.lambda),
+      moodCount: MOOD_COUNT,
+      alphaBase: CFG.rl.alpha,
+      alphaDecay: CFG.rl.alphaDecayFactor,
+      alphaMin: CFG.rl.alphaMin,
+      surpriseBoost: _surprise.alphaBoost,
+      metaMul: _metaLearn.alphaMul,
+    });
+    return true;
+  }
+
+  // =========================================================================
+  // Phase 50 — Life Narrative (generated text diary from milestones)
+  // =========================================================================
+
+  function narrativeAdd(type, text) {
+    var day = Math.floor(age.elapsedMs / 86400000);
+    _narrative.entries.push({ day: day, text: text, type: type, ts: Date.now() });
+    while (_narrative.entries.length > CFG.narrative.maxEntries) _narrative.entries.shift();
+  }
+
+  function narrativeFromMilestone(milestone) {
+    var day = Math.floor((milestone.ts - age.genesisMs) / 86400000);
+    var templates = {
+      'phase_transition': function (m) { return 'Day ' + day + ': Lili entered ' + (m.to || 'a new') + ' phase. A new chapter begins.'; },
+      'first_mood': function (m) { return 'Day ' + day + ': For the first time, Lili felt ' + (m.mood || 'something new') + '.'; },
+      'sustained_mood': function (m) { return 'Day ' + day + ': Lili stayed ' + (m.mood || 'steady') + ' for a long time. A deep moment.'; },
+      'offspring': function (m) { return 'Day ' + day + ': Lili created offspring #' + (m.count || '?') + '. Her knowledge passes on.'; },
+      'death_begins': function () { return 'Day ' + day + ': The twilight begins. Lili\'s colors fade slowly.'; },
+      'death': function () { return 'Day ' + day + ': Lili is gone. Her journey is complete.'; },
+    };
+    var fn = templates[milestone.type];
+    if (fn) return fn(milestone);
+    return 'Day ' + day + ': Something happened. [' + milestone.type + ']';
+  }
+
+  function narrativeGenerate() {
+    // Generate full narrative from milestones
+    var story = [];
+    story.push('# The Life of Lili');
+    story.push('');
+    story.push('Born: ' + new Date(age.genesisMs).toLocaleDateString());
+    story.push('');
+
+    // Add milestone-based entries
+    for (var i = 0; i < _journal.milestones.length; i++) {
+      story.push(narrativeFromMilestone(_journal.milestones[i]));
+    }
+
+    // Add custom narrative entries
+    for (var j = 0; j < _narrative.entries.length; j++) {
+      var e = _narrative.entries[j];
+      if (e.type !== 'farewell' && e.type !== 'death') {
+        story.push(e.text);
+      }
+    }
+
+    return story.join('\n');
+  }
+
+  function narrativeSave() {
+    try {
+      localStorage.setItem(CFG.storageKeys.narrative, JSON.stringify(_narrative.entries));
+    } catch (e) { /**/ }
+  }
+
+  function narrativeLoad() {
+    try {
+      var json = localStorage.getItem(CFG.storageKeys.narrative);
+      if (json) _narrative.entries = JSON.parse(json);
+    } catch (e) { /**/ }
+  }
+
+  // =========================================================================
+  // Phase 51 — Q-table Visualization (brain fingerprint heatmap)
+  // =========================================================================
+
+  function renderQtableVis() {
+    if (!_debugVisible) return;
+    var V = CFG.qtableVis;
+    var entries = [];
+    _qtable.forEach(function (qRow, stateIndex) {
+      var maxQ = -Infinity, minQ = Infinity;
+      for (var i = 0; i < MOOD_COUNT; i++) {
+        if (qRow[i] > maxQ) maxQ = qRow[i];
+        if (qRow[i] < minQ) minQ = qRow[i];
+      }
+      entries.push({ state: stateIndex, max: maxQ, min: minQ, range: maxQ - minQ });
+    });
+
+    if (entries.length === 0) return;
+
+    // Sort by state index for consistent layout
+    entries.sort(function (a, b) { return a.state - b.state; });
+
+    // Global range for color mapping
+    var globalMax = -Infinity, globalMin = Infinity;
+    for (var i = 0; i < entries.length; i++) {
+      if (entries[i].max > globalMax) globalMax = entries[i].max;
+      if (entries[i].min < globalMin) globalMin = entries[i].min;
+    }
+    var globalRange = globalMax - globalMin || 1;
+
+    // Compute grid dimensions
+    var cols = Math.ceil(Math.sqrt(entries.length * (V.maxWidth / V.maxHeight)));
+    var rows = Math.ceil(entries.length / cols);
+    var cellW = Math.min(V.cellSize, V.maxWidth / cols);
+    var cellH = Math.min(V.cellSize, V.maxHeight / rows);
+
+    var x0 = W - V.maxWidth - CFG.debugOverlay.margin;
+    var y0 = CFG.debugOverlay.margin + 4 * (CFG.debugOverlay.graphHeight + CFG.debugOverlay.margin) + 12;
+
+    ctx.save();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Label
+    ctx.fillStyle = '#999';
+    ctx.font = '9px monospace';
+    ctx.fillText('Q-brain (' + entries.length + ' states)', x0, y0 - 2);
+
+    for (var ei = 0; ei < entries.length; ei++) {
+      var col = ei % cols;
+      var row = Math.floor(ei / cols);
+      var norm = (entries[ei].max - globalMin) / globalRange; // 0..1
+      // Color: blue (low) → green (mid) → red (high)
+      var r, g, b;
+      if (norm < 0.5) {
+        r = 0; g = Math.floor(norm * 2 * 255); b = Math.floor((1 - norm * 2) * 255);
+      } else {
+        r = Math.floor((norm - 0.5) * 2 * 255); g = Math.floor((1 - (norm - 0.5) * 2) * 255); b = 0;
+      }
+      ctx.fillStyle = 'rgba(' + r + ',' + g + ',' + b + ',0.8)';
+      ctx.fillRect(x0 + col * cellW, y0 + row * cellH, Math.max(cellW - 0.5, 1), Math.max(cellH - 0.5, 1));
+    }
+
+    ctx.restore();
+  }
+
+  // =========================================================================
+  // Phase 52 — Seasonal Sounds (sound modulation by season)
+  // =========================================================================
+
+  function seasonalSoundModulate() {
+    if (!_sound.enabled || !_sound.breathOsc) return;
+    var season = _season.current || 'summer';
+    var mod = CFG.seasonalSound[season] || CFG.seasonalSound.summer;
+
+    // Modulate breath oscillator frequency
+    var baseFreq = CFG.sound.breathFreq + stress * 30;
+    _sound.breathOsc.frequency.value = baseFreq * mod.freqMul;
+
+    // Modulate master volume
+    if (_sound.masterGain) {
+      _sound.masterGain.gain.value = CFG.sound.masterVolume * mod.volMul;
+    }
+  }
+
+  // =========================================================================
   // 15D — DOM Structure Learning (element type preferences)
   // =========================================================================
 
@@ -3604,7 +4283,8 @@
     const key = stateIndex + ',' + moodIdx;
     const count = _visitCounts.get(key) || 0;
     // Phase 38: Surprise boosts learning rate temporarily
-    return Math.max(CFG.rl.alphaMin, CFG.rl.alpha / (1 + count * CFG.rl.alphaDecayFactor)) * _surprise.alphaBoost;
+    // Phase 48: Meta-learning modulates alpha based on environment stability
+    return Math.max(CFG.rl.alphaMin, CFG.rl.alpha / (1 + count * CFG.rl.alphaDecayFactor)) * _surprise.alphaBoost * _metaLearn.alphaMul;
   }
 
   function _incrementVisit(stateIndex, moodIdx) {
@@ -3738,6 +4418,9 @@
 
     // Phase 38: Surprise signal — high TD error triggers surprise response
     surpriseOnTdError(Math.abs(delta));
+
+    // Phase 48: Meta-learning — track TD error for stability detection
+    metaLearnUpdate(Math.abs(delta));
 
     // Phase 19C: Track policy stability (did top mood change?)
     let prevTop = 0;
@@ -4155,11 +4838,14 @@
     // Periodic Q-table + position + journal save
     if (frameCount - _decision.lastSaveFrame >= CFG.rl.saveIntervalFrames) {
       _decision.lastSaveFrame = frameCount;
+      qtableCompress();        // Phase 47: Prune Q-table if too large
       brainSave();
       savePosition();
       journalSaveRingBuffer();
       placeMemorySave();     // Phase 15A
       domLearningSave();     // Phase 15D
+      pageMemorySave();      // Phase 46
+      narrativeSave();       // Phase 50
     }
   }
 
@@ -5279,6 +5965,13 @@
       'inkDef:   ' + _inkDefense.particles.length + ' particles\n' +
       'camo:     ' + (_camouflage.intensity * 100).toFixed(0) + '% (sat=' + _camouflage.satShift.toFixed(1) + ' lit=' + _camouflage.litShift.toFixed(1) + ')\n' +
       'growth:   ' + growthScale().toFixed(3) + '\u00D7\n' +
+      '── Phase 42-52 ─────────\n' +
+      'touch:    ' + (_touch.caressing ? 'CARESS' : _touch.isDown ? 'DOWN' : '—') + '\n' +
+      'death:    ' + (_death.active ? (_death.fadeProgress * 100).toFixed(0) + '%' : '—') + '\n' +
+      'pageMem:  ' + Object.keys(_pageMemory.pages).length + '/' + CFG.pageMemory.maxPages + ' pages\n' +
+      'metaLrn:  ' + _metaLearn.stability + ' \u03B1\u00D7' + _metaLearn.alphaMul.toFixed(2) + '\n' +
+      'worker:   ' + (_brainWorker ? (_brainWorkerReady ? 'ready' : 'init') : 'off') + '\n' +
+      'narrate:  ' + _narrative.entries.length + ' entries\n' +
       '── Perf ────────────────\n' +
       'FPS:      ' + _fpsAvg.toFixed(1) + (_fpsAvg < 50 ? ' \u26A0' : '') + '\n' +
       'frame#:   ' + frameCount;
@@ -5428,8 +6121,26 @@
           ', alphaBoost=' + _surprise.alphaBoost.toFixed(3));
         return { intensity: _surprise.intensity, lastTdError: _surprise.lastTdError, alphaBoost: _surprise.alphaBoost };
       },
+      // Phase 46-52: New console API
+      narrative: function () {
+        var text = narrativeGenerate();
+        console.info('[Lili] Life Narrative:\n' + text);
+        return text;
+      },
+      pages: function () {
+        console.info('[Lili] Page memory: ' + Object.keys(_pageMemory.pages).length + ' pages', _pageMemory.pages);
+        return _pageMemory.pages;
+      },
+      metalearning: function () {
+        console.info('[Lili] Meta-learning: stability=' + _metaLearn.stability + ', alphaMul=' + _metaLearn.alphaMul.toFixed(3));
+        return { stability: _metaLearn.stability, alphaMul: _metaLearn.alphaMul };
+      },
+      brain: function () {
+        console.info('[Lili] Q-table: ' + _qtable.size + ' states, worker=' + (_brainWorker ? 'active' : 'off'));
+        return { states: _qtable.size, worker: !!_brainWorker };
+      },
     });
-    console.info('[Lili] Console API ready — try: lili.status(), lili.energy(), lili.temporal(), lili.temperament(), lili.surprise()');
+    console.info('[Lili] Console API ready — try: lili.status(), lili.narrative(), lili.pages(), lili.brain()');
 
     // Keyboard handler (unified)
     document.addEventListener('keydown', function (e) {
@@ -7820,6 +8531,15 @@
     // Phase 40: Camouflage intensity update
     updateCamouflage();
 
+    // Phase 45: Death animation (elder phase endpoint)
+    updateDeath();
+
+    // Phase 46: Page memory update (periodic)
+    if (_decision.frameCounter === 0) pageMemoryUpdate();
+
+    // Phase 52: Seasonal sound modulation
+    seasonalSoundModulate();
+
     checkMidnightCleanup(); // Phase 9D: periodic midnight reset check
   }
 
@@ -7833,6 +8553,8 @@
       // Apply scroll offset: lili.pos is in document coords, canvas is viewport
       ctx.save();
       ctx.translate(-scrollOx, -scrollOy);
+      // Phase 45: Death fade — entire organism fades
+      ctx.globalAlpha = deathAlpha();
 
       // 4E — Rendering pipeline (correct z-order)
       // 0. Bioluminescent trail behind everything (Phase 29)
@@ -7868,6 +8590,13 @@
 
     // Phase 10B: Debug panel update (DOM, not Canvas)
     updateDebugPanel();
+
+    // Phase 44: In-canvas debug overlay graphs
+    debugOverlayRecord();
+    renderDebugOverlay();
+
+    // Phase 51: Q-table brain fingerprint visualization
+    renderQtableVis();
   }
 
   // =========================================================================
@@ -7883,6 +8612,10 @@
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('touchmove', onTouchMove, { passive: true });
     window.addEventListener('scroll', onScroll, { passive: true });
+
+    // Phase 42: Mobile touch interaction
+    document.addEventListener('touchstart', touchStart, { passive: true });
+    document.addEventListener('touchend', touchEnd, { passive: true });
 
     // Genesis timestamp (never overwrite — PRD rule)
     if (!localStorage.getItem(CFG.storageKeys.genesis)) {
@@ -7900,6 +8633,8 @@
     onPhaseTransition(function (from, to, atMs) {
       const days = (atMs / 86400000).toFixed(1);
       console.info('[Lili] Phase transition: ' + from + ' → ' + to + ' at day ' + days);
+      // Phase 50: Narrative entry for phase transition
+      narrativeAdd('phase', 'Day ' + days + ': Lili grew from ' + from + ' to ' + to + '. A new chapter begins.');
     });
     onPhaseTransition(_onPhaseTransitionJournal); // Phase 8: journal milestone
 
@@ -7918,6 +8653,11 @@
     temporalLoad();
     temperamentLoad();
 
+    // Phase 46+49+50: Load page memory, narrative, init worker
+    pageMemoryLoad();
+    narrativeLoad();
+    initBrainWorker();
+
     // Phase 15C: Register this visit and compute trust
     _visitProfile.totalVisits++;
     _visitProfile.timestamps.push(Date.now());
@@ -7932,6 +8672,7 @@
     // Phase 8: Load Q-table and journal from localStorage
     brainLoad();
     journalLoad();
+    syncBrainToWorker(); // Phase 49: Sync Q-table to worker
     console.info('[Lili] Brain loaded: ' + _qtable.size + ' Q-states, ' +
       _decision.totalDecisions + ' lifetime decisions, mood=' + lili.mood);
 
@@ -7997,6 +8738,10 @@
       domLearningSave();     // Phase 15D
       visitProfileSave();    // Phase 15C
       psychosomSave();       // Phase 18E
+      pageMemorySave();      // Phase 46
+      narrativeSave();       // Phase 50
+      temporalSave();        // Phase 36
+      temperamentSave();     // Phase 37
     });
 
     // Phase 11B: Request persistent storage + detect data loss
