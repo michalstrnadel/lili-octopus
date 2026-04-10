@@ -3,6 +3,11 @@
  * Single-file IIFE, zero dependencies, Canvas 2D
  * Academic experiment in digital ontogenesis (10-year lifecycle)
  *
+ * @author Michal Strnadel <michal.strnadel@gmail.com>
+ * @license MIT
+ * @see https://michalstrnadel.com
+ * @see https://github.com/michalstrnadel/lili-octopus
+ *
  * See: AGENTS.md, docs/IMPLEMENTATION_PLAN.md, LILI_PRD_v1.md
  */
 ;(function () {
@@ -8008,7 +8013,8 @@
     // 12C: Init timing
     const bootMs = performance.now() - bootStart;
     console.info('[Lili] Boot complete in ' + bootMs.toFixed(1) + 'ms' +
-      (bootMs > CFG.maxInitMs ? ' ⚠ exceeds target ' + CFG.maxInitMs + 'ms' : ''));
+      (bootMs > CFG.maxInitMs ? ' \u26A0 exceeds target ' + CFG.maxInitMs + 'ms' : ''));
+    console.info('[Lili] Created by Michal Strnadel — michalstrnadel.com | github.com/michalstrnadel/lili-octopus');
 
     // Phase 14: Cloud sync — load remote state, then start periodic sync
     syncLoad(function () {

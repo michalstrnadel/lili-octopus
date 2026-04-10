@@ -255,6 +255,13 @@ Podporované entry pointy:
 ## Autor
 
 **Michal Strnadel** — koncept, PRD, research, vize
+- Web: [michalstrnadel.com](https://michalstrnadel.com)
+- GitHub: [github.com/michalstrnadel](https://github.com/michalstrnadel)
+- Email: michal.strnadel@gmail.com
+
+## Licence
+
+MIT — viz [LICENSE](LICENSE)
 
 ---
 
