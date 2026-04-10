@@ -46,7 +46,23 @@ Hotovo:
   9. **Ink trail enhancement** — mood-colored particles, stress-scaled (count/size/spread), persistent trail marks s 8s fade, 80 particle pool
   10. **Personality radar** — avg Q-value per mood normalizovaný 0..1, dominant trait v tooltip, text-based bar chart v debug, daily aggregate snapshot, console API `lili.personality()`
 
-**Další krok:** Testování, akademické baselines, journal entry pro Phase 17.
+- ✅ **Fáze 18:** "Alive" — 5 vizuálních/behavioral upgradů:
+  1. **Micro-expressions** — okamžité vizuální reakce na eventy: startle (pupil dilation + body shrink), joy (squint + glow flash), relief (body expand), curiosity tilt (asymmetric eye gaze)
+  2. **Sleep animation** — cirkadiánní vizuální stav: tentacle curl, slower/deeper breathing, REM twitch (random tentacle movement every 10-20s)
+  3. **Genesis body variation** — deterministic hash genesis timestampu → unikátní proporce: body X/Y scale ±5%, eye spacing ±8%, eye Y offset ±8%, tentacle width ±10%, head tilt ±2°, chromatophore cell placement
+  4. **Psychosomatic adaptation** — rolling average stresu/rewardu přes sessions → dlouhodobá morfologie: body scale, lightness, glow boost, tentacle spread, breath rate. Persistováno v localStorage + cloud sync
+  5. **Chromatophore cells** — viditelné pulsující barevné skvrny na těle, age-dependent count (0→3→5→6), genesis-seeded placement/phase/speed/hue
+
+- ✅ **Fáze 18.5:** "Polish" — 7 vizuálních/behavioral vylepšení:
+  1. **Pupil smoothing** — gaze lerp (0.15/frame) místo instant snap → plynulý organický pohled
+  2. **Saccades** — involuntární micro-jitter očí v idle (2.5px, interval 1-3s) → realistické zvířecí chování
+  3. **Blink easing** — ease-in-out-cubic místo lineární → přirozenější pohyb víček
+  4. **Bubble wobble** — eliptická deformace bublin při stoupání (±12% scaleX) → skutečné podmořské bubliny
+  5. **Tentacle tip glow** — radiální gradient na špičkách chapadel na tmavém bg → bioluminiscence
+  6. **Mood wander coherence** — playful=0.55 (erratický), calm=1.15 (hladký) → osobnost v pohybu
+  7. **Parameter tuning** — chromatophore alpha ×1.8, ink threshold 0.65, hull +37%, breathing +33%, genesis ±40%, blend speed ×1.5, psychosom ×1.6
+
+**Další krok:** Testování Phase 18.5, případně další tuning.
 
 ## Co číst a kdy
 
@@ -164,5 +180,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-04-10 (Fáze 1-17 implementovány, lili.js ~5324 řádků)*
+*Poslední aktualizace: 2026-04-10 (Fáze 1-18.5 implementovány, lili.js ~5959 řádků)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

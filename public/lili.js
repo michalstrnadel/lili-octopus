@@ -114,7 +114,7 @@
     eyeYOffset: -0.22,            // eye vertical offset (negative = upward)
 
     // --- Hull rendering ---
-    hullBaseWidth: { hatchling: 0.8, juvenile: 2.2, adult: 4.0, mature: 4.5, elder: 5.0 },
+    hullBaseWidth: { hatchling: 1.0, juvenile: 2.8, adult: 5.5, mature: 6.0, elder: 6.5 },
     hullTipAlpha: 0.3,            // opacity at tentacle tip
     hullNoiseAmplitude: 0.15,     // width noise ±15%
     hullCatmullTension: 6,        // Catmull-Rom to Bézier tension divisor
@@ -199,7 +199,7 @@
       idle:      { hueShift:  0,  satShift: -5, litShift: -6, hueDrift: 0,    satPulse: 0,    glowMod: 0.5 },
       exploring: { hueShift:  0,  satShift:  3, litShift:  2, hueDrift: 0.02, satPulse: 0,    glowMod: 1.3 },
     },
-    moodChromaBlendSpeed: 0.04, // lerp rate per frame (~2s to full transition)
+    moodChromaBlendSpeed: 0.06, // lerp rate per frame (~1.3s to full transition, was 0.04)
 
     // --- Phase 13B: Mood → eye expression ---
     moodEye: {
@@ -217,7 +217,7 @@
     // --- Phase 13C: Mood → body expression ---
     moodBody: {
       curious:   { breathMod: 1.1, bodyScale: 1.0,  glowPulseHz: 0.5 },
-      playful:   { breathMod: 1.3, bodyScale: 1.05, glowPulseHz: 0   },
+      playful:   { breathMod: 1.6, bodyScale: 1.05, glowPulseHz: 0   },
       shy:       { breathMod: 0.8, bodyScale: 0.92, glowPulseHz: 0   },
       calm:      { breathMod: 0.7, bodyScale: 1.0,  glowPulseHz: 0   },
       alert:     { breathMod: 1.5, bodyScale: 1.0,  glowPulseHz: 0   },
@@ -323,13 +323,13 @@
 
     // --- Phase 15/17: Ink Secretion (enhanced with mood color + trails) ---
     ink: {
-      poolSize: 80,              // max particles (was 50)
-      stressThreshold: 0.8,      // stress > this to trigger
-      cooldownMs: 6000,          // between emissions (was 8000)
-      particleLifeMs: 3500,      // alpha fade duration (was 2500)
-      emitCount: 12,             // particles per emission (was 8)
-      spreadSpeed: 2.5,          // initial spread velocity
-      particleRadius: { min: 2, max: 9 },  // wider range (was 3-7)
+      poolSize: 80,              // max particles
+      stressThreshold: 0.65,     // stress > this to trigger (lowered for earlier visual feedback)
+      cooldownMs: 6000,          // between emissions
+      particleLifeMs: 2500,      // alpha fade duration
+      emitCount: 8,              // particles per emission (subtler)
+      spreadSpeed: 1.8,          // initial spread velocity (slower drift)
+      particleRadius: { min: 1, max: 3.5 },  // much smaller — wispy, not blobs
       // Phase 17: Mood-dependent ink colors
       moodInkColors: {
         curious:   { r: 40,  g: 80,  b: 120 },  // deep blue
@@ -341,14 +341,14 @@
         exploring: { r: 30,  g: 70,  b: 50  },  // dark teal
       },
       // Phase 17: Stress-dependent scaling
-      stressParticleScale: 1.5,  // at stress=1, particles 1.5× larger
-      stressSpreadScale: 1.8,    // at stress=1, spread 1.8× wider
-      stressEmitMultiplier: 2.0, // at stress=1, emit 2× more particles
-      // Phase 17: Trail persistence (fading ink stains)
+      stressParticleScale: 1.2,  // at stress=1, particles slightly larger
+      stressSpreadScale: 1.4,    // at stress=1, spread slightly wider
+      stressEmitMultiplier: 1.5, // at stress=1, emit 50% more particles
+      // Phase 17: Trail persistence (fading ink wisps)
       trailEnabled: true,
-      trailMaxMarks: 30,
-      trailFadeDurationMs: 8000,
-      trailMarkRadius: { min: 5, max: 15 },
+      trailMaxMarks: 20,
+      trailFadeDurationMs: 6000,
+      trailMarkRadius: { min: 2, max: 5 },  // small subtle stains
     },
 
     // --- Phase 15: Enhanced DOM Interaction ---
@@ -367,16 +367,19 @@
       seenDecayMs: 3600000,      // 1h — forget seen elements after this (fresh novelty)
     },
 
-    // --- Phase 16: Bubble Communication ---
+    // --- Phase 16: Bubble Communication (real underwater bubbles) ---
     bubbles: {
-      poolSize: 12,              // max simultaneous bubbles
-      riseSpeed: 0.6,            // px/frame upward
-      swayAmplitude: 8,          // px horizontal sway
-      swaySpeed: 0.04,           // sway frequency
-      lifetimeMs: 2800,          // fade duration
-      cooldownMs: 5000,          // min ms between bubble emissions
-      fontSize: 16,              // symbol size
-      spawnRadius: 15,           // px offset from body center
+      poolSize: 20,              // max simultaneous bubbles
+      riseSpeed: 0.4,            // px/frame upward (slower = more natural)
+      swayAmplitude: 6,          // px horizontal sway
+      swaySpeed: 0.03,           // sway frequency
+      lifetimeMs: 2200,          // fade duration
+      cooldownMs: 2000,          // ms between emissions (more frequent, subtler)
+      burstCount: [1, 3],        // min/max bubbles per emission
+      radiusMin: 1.0,            // smallest bubble radius
+      radiusMax: 2.5,            // largest bubble radius (kept small)
+      spawnRadius: 12,           // px offset from body center
+      specularSize: 0.35,        // highlight size relative to bubble
     },
 
     // --- Phase 15: Visual Metamorphosis ---
@@ -388,6 +391,100 @@
       biolumPulseSpeed: 0.008,   // slow majestic pulsing
       biolumRadius: { min: 2, max: 5 },
       noiseTextureScale: 0.04,   // adult mood-reactive noise
+    },
+
+    // --- Phase 18: Genesis body variation ---
+    genesis: {
+      bodyXRange: 0.14,          // ±7% body X scale (was ±5%)
+      bodyYRange: 0.14,          // ±7% body Y scale
+      eyeSpacingRange: 0.20,     // ±10% eye spacing (was ±8%)
+      eyeYRange: 0.20,           // ±10% eye Y offset
+      tentacleWidthRange: 0.30,  // ±15% hull width (was ±10%)
+      headTiltRange: 0.09,       // ±2.6° heading asymmetry (was ±2°)
+    },
+
+    // --- Phase 18: Psychosomatic adaptation (long-term body morphology) ---
+    psychosomatic: {
+      blendAlpha: 0.08,          // session → long-term exponential blend rate (was 0.05, faster adaptation)
+      stressBodyScale: -0.06,    // high stress → 6% smaller body
+      stressLightness: -8,       // high stress → darker (points)
+      stressGlowBoost: 0.4,     // high stress → 40% more glow (defense)
+      stressTentSpread: -0.15,   // high stress → tighter tentacles
+      stressBreathRate: 0.3,     // high stress → faster breathing
+      rewardLightness: 4,        // positive reward → brighter
+      defaultStress: 0.3,        // initial assumption (neutral)
+    },
+
+    // --- Phase 18: Micro-expressions (instant visual reactions) ---
+    microExpr: {
+      startleDecay: 0.06,        // fast decay per frame
+      joyDecay: 0.04,
+      reliefDecay: 0.02,         // lingers longer (was 0.03, slowed for visible relief)
+      curiosityDecay: 0.04,
+      startlePupilScale: 1.6,    // pupils widen 60%
+      startleBodyShrink: 0.90,   // body shrinks 10%
+      joySquint: 0.35,           // squint intensity
+      joyGlowFlash: 1.6,        // glow boost 60%
+      reliefBodyExpand: 1.08,    // body expands 8%
+      startleCooldownMs: 800,    // min time between startles
+    },
+
+    // --- Phase 18: Sleep animation ---
+    sleepAnim: {
+      tentacleCurlFactor: 0.3,   // curl inward by 30%
+      breathSlowFactor: 0.4,     // 40% of normal breath rate
+      breathDeepFactor: 1.5,     // 50% deeper breaths
+      remIntervalMin: 600,       // frames between REM twitches (~10s)
+      remIntervalMax: 1200,      // (~20s)
+      remTwitchDuration: 18,     // frames per twitch
+      remTwitchAmplitude: 25,    // px offset
+    },
+
+    // --- Phase 18: Chromatophore cells (visible pulsing spots on body) ---
+    chromatophoreCells: {
+      countByAge: { hatchling: 0, juvenile: 3, adult: 5, mature: 6, elder: 6 },
+      minRadius: 1.5,
+      maxRadius: 4.0,
+      baseAlpha: 0.45,
+      pulseSpeedMin: 0.008,
+      pulseSpeedMax: 0.025,
+      hueVariance: 20,           // hue offset range from base
+    },
+
+    // --- Phase 18.5: Eye polish (pupil smoothing, saccades, blink easing) ---
+    eyePolish: {
+      gazeLerp: 0.15,              // pupil smoothing rate per frame (0=frozen, 1=instant)
+      saccadeAmplitude: 2.5,       // px — involuntary micro-jitter
+      saccadeIntervalMin: 60,      // frames (~1s)
+      saccadeIntervalMax: 180,     // frames (~3s)
+      saccadeDuration: 4,          // frames — quick snap
+    },
+
+    // --- Phase 18.5: Mood → wander coherence modifier ---
+    moodCoherence: {
+      curious:   1.0,
+      playful:   0.55,   // erratic, energetic
+      shy:       0.9,
+      calm:      1.15,   // very smooth
+      alert:     0.75,   // somewhat twitchy
+      idle:      1.1,    // smooth drift
+      exploring: 0.85,
+    },
+
+    // --- Phase 18G: Ambient Light Awareness (theme change reaction) ---
+    ambient: {
+      sampleIntervalFrames: 30,   // sample bg color every 0.5s
+      adaptSpeed: 0.02,           // lerp rate toward target (slow adaptation)
+      changeThreshold: 0.25,      // lightness delta to count as "theme change"
+      stressSpike: 0.6,           // raw stress injection on theme change
+      // Contrast adaptation: how Lili adjusts to background
+      darkBgLightnessBoost: 8,    // on dark pages, Lili gets lighter
+      darkBgGlowBoost: 1.4,      // on dark pages, glow increases (bioluminescence)
+      darkBgSatBoost: 8,          // on dark pages, slightly more saturated
+      lightBgLightnessShift: -6,  // on light pages, Lili gets darker
+      lightBgGlowDampen: 0.7,    // on light pages, glow decreases
+      lightBgSatShift: -5,        // on light pages, slightly desaturated
+      neutralLightness: 0.15,     // lightness value considered "neutral" (dark default)
     },
 
     // --- localStorage keys ---
@@ -403,6 +500,7 @@
       placeMemory: 'lili_placemem',
       visitProfile:'lili_visitprof',
       domLearning: 'lili_domlearn',
+      psychosom:   'lili_psychosom',
     },
 
     // --- Phase 14: Cloud sync ---
@@ -450,7 +548,7 @@
 
     // --- Breathing (Research #1: idle respiratory oscillation) ---
     breathingBpm: 18,          // 18 breaths per minute at rest
-    breathingAmplitude: 0.03,  // 3% of body radius
+    breathingAmplitude: 0.04,  // 4% of body radius (was 3%, boosted for visibility)
 
     // --- Seeds (Research #5: separate noise seed from RL seed) ---
     noiseSeed: 42,
@@ -757,6 +855,73 @@
     pupilScale: 1.0, blinkRate: 1.0, squint: 0, gazeDOM: false,
   };
 
+  // Phase 18.5: Smooth gaze tracking (pupil lerp instead of instant snap)
+  const _gaze = {
+    x: 0, y: 0,            // smoothed gaze target (world coords)
+    initialized: false,     // first frame skip
+    saccadeTimer: 0,        // frames until next saccade
+    saccadeX: 0,            // current saccade offset
+    saccadeY: 0,
+  };
+
+  // Phase 18: Genesis body variation (computed from genesis timestamp hash)
+  const _genesis = {
+    bodyXScale: 1.0,          // ±5%
+    bodyYScale: 1.0,          // ±5%
+    eyeSpacing: 1.0,          // ±8%
+    eyeYOffset: 1.0,          // ±8%
+    tentacleWidth: 1.0,       // ±10%
+    headTilt: 0,              // ±2° asymmetry
+    chromatophores: [],       // pre-computed cell data [{angle, phase, speed, hueOffset}]
+  };
+
+  // Phase 18: Micro-expressions (instant visual reactions, decay per frame)
+  const _microExpr = {
+    startle: 0,               // 0..1 intensity
+    joy: 0,
+    relief: 0,
+    curiosityTilt: 0,
+    lastStartleMs: 0,         // cooldown tracker
+  };
+
+  // Phase 18: Psychosomatic adaptation (long-term body morphology from stress/reward)
+  const _psychosom = {
+    stressAvg: 0.3,           // long-term average stress
+    rewardAvg: 0,             // long-term average reward per decision
+    sessionStressSum: 0,
+    sessionStressN: 0,
+    sessionRewardSum: 0,
+    sessionRewardN: 0,
+    // Derived modifiers (recomputed from averages)
+    bodyScale: 1.0,
+    lightness: 0,
+    glowBoost: 1.0,
+    tentSpread: 1.0,
+    breathRate: 1.0,
+  };
+
+  // Phase 18: Sleep animation (REM twitch state)
+  const _sleepAnim = {
+    remTimer: 300,            // frames until next twitch (start delayed)
+    remArm: -1,               // which tentacle is twitching (-1 = none)
+    remPhase: 0,              // frames remaining in current twitch
+    remOffsetX: 0,            // twitch target offset
+    remOffsetY: 0,
+  };
+
+  // Phase 18G: Ambient light awareness (background sampling + adaptation)
+  const _ambient = {
+    lightness: 0.1,            // current sampled bg lightness (0=black, 1=white)
+    targetLightness: 0.1,      // smoothed target
+    adapted: 0.1,              // slowly adapted value (what Lili "sees")
+    sampleTimer: 0,            // frame counter for sampling
+    lastSampleLightness: 0.1,  // previous sample (for change detection)
+    // Derived modifiers (applied in computeColors + renderBody)
+    lightnessShift: 0,
+    satShift: 0,
+    glowMul: 1.0,
+  };
+
   function onMoodChange(fn) { _moodListeners.push(fn); }
 
   // =========================================================================
@@ -927,6 +1092,222 @@
     var json = localStorage.getItem(CFG.storageKeys.visitProfile);
     if (json) return visitProfileDeserialize(json);
     return false;
+  }
+
+  // =========================================================================
+  // 18A — Genesis Body Variation (deterministic hash → unique proportions)
+  // =========================================================================
+
+  function _genesisHash(seed) {
+    var h = (seed ^ 0xDEADBEEF) >>> 0;
+    h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+    h = Math.imul(h ^ (h >>> 13), 0x45d9f3b);
+    return ((h ^ (h >>> 16)) >>> 0) / 0xFFFFFFFF; // 0..1
+  }
+
+  function computeGenesis(ms) {
+    var G = CFG.genesis;
+    _genesis.bodyXScale  = 1 + (_genesisHash(ms)     - 0.5) * G.bodyXRange;
+    _genesis.bodyYScale  = 1 + (_genesisHash(ms + 1)  - 0.5) * G.bodyYRange;
+    _genesis.eyeSpacing  = 1 + (_genesisHash(ms + 2)  - 0.5) * G.eyeSpacingRange;
+    _genesis.eyeYOffset  = 1 + (_genesisHash(ms + 3)  - 0.5) * G.eyeYRange;
+    _genesis.tentacleWidth = 1 + (_genesisHash(ms + 4) - 0.5) * G.tentacleWidthRange;
+    _genesis.headTilt    = (_genesisHash(ms + 5) - 0.5) * G.headTiltRange;
+
+    // Pre-compute chromatophore cell placement from genesis seed
+    var maxCells = 8; // upper bound
+    _genesis.chromatophores = [];
+    for (var i = 0; i < maxCells; i++) {
+      _genesis.chromatophores.push({
+        angle: _genesisHash(ms + 10 + i) * Math.PI * 2,
+        phase: _genesisHash(ms + 20 + i) * Math.PI * 2,
+        speed: CFG.chromatophoreCells.pulseSpeedMin +
+               _genesisHash(ms + 30 + i) * (CFG.chromatophoreCells.pulseSpeedMax - CFG.chromatophoreCells.pulseSpeedMin),
+        hueOffset: (_genesisHash(ms + 40 + i) - 0.5) * CFG.chromatophoreCells.hueVariance * 2,
+      });
+    }
+  }
+
+  // =========================================================================
+  // 18B — Psychosomatic Adaptation (long-term stress/reward → body morphology)
+  // =========================================================================
+
+  function psychosomRecompute() {
+    var P = CFG.psychosomatic;
+    var s = _psychosom.stressAvg;    // 0..1
+    var r = _psychosom.rewardAvg;    // typically -2..+2
+    // Stress-driven modifiers (centered on 0.3 = neutral)
+    var stressDelta = s - P.defaultStress;
+    _psychosom.bodyScale  = 1 + stressDelta * P.stressBodyScale;
+    _psychosom.lightness  = stressDelta * P.stressLightness + Math.max(r, 0) * P.rewardLightness;
+    _psychosom.glowBoost  = 1 + Math.max(stressDelta, 0) * P.stressGlowBoost;
+    _psychosom.tentSpread = 1 + stressDelta * P.stressTentSpread;
+    _psychosom.breathRate = 1 + Math.max(stressDelta, 0) * P.stressBreathRate;
+  }
+
+  function psychosomAccumulate(stressVal, reward) {
+    _psychosom.sessionStressSum += stressVal;
+    _psychosom.sessionStressN++;
+    if (reward !== undefined) {
+      _psychosom.sessionRewardSum += reward;
+      _psychosom.sessionRewardN++;
+    }
+  }
+
+  function psychosomSave() {
+    // Blend session averages into long-term with exponential smoothing
+    var alpha = CFG.psychosomatic.blendAlpha;
+    if (_psychosom.sessionStressN > 10) {
+      var sessStress = _psychosom.sessionStressSum / _psychosom.sessionStressN;
+      _psychosom.stressAvg += (sessStress - _psychosom.stressAvg) * alpha;
+    }
+    if (_psychosom.sessionRewardN > 5) {
+      var sessReward = _psychosom.sessionRewardSum / _psychosom.sessionRewardN;
+      _psychosom.rewardAvg += (sessReward - _psychosom.rewardAvg) * alpha;
+    }
+    try {
+      localStorage.setItem(CFG.storageKeys.psychosom, JSON.stringify({
+        s: +_psychosom.stressAvg.toFixed(4),
+        r: +_psychosom.rewardAvg.toFixed(4),
+      }));
+    } catch (e) { /* */ }
+  }
+
+  function psychosomLoad() {
+    try {
+      var json = localStorage.getItem(CFG.storageKeys.psychosom);
+      if (json) {
+        var data = JSON.parse(json);
+        _psychosom.stressAvg = data.s || CFG.psychosomatic.defaultStress;
+        _psychosom.rewardAvg = data.r || 0;
+      }
+    } catch (e) { /* */ }
+    psychosomRecompute();
+  }
+
+  // =========================================================================
+  // 18C — Micro-expressions (instant visual reactions to events)
+  // =========================================================================
+
+  function triggerMicroExpr(type) {
+    if (type === 'startle') {
+      var now = Date.now();
+      if (now - _microExpr.lastStartleMs < CFG.microExpr.startleCooldownMs) return;
+      _microExpr.lastStartleMs = now;
+    }
+    _microExpr[type] = 1.0;
+  }
+
+  function updateMicroExpr() {
+    var M = CFG.microExpr;
+    _microExpr.startle      *= (1 - M.startleDecay);
+    _microExpr.joy           *= (1 - M.joyDecay);
+    _microExpr.relief        *= (1 - M.reliefDecay);
+    _microExpr.curiosityTilt *= (1 - M.curiosityDecay);
+    if (_microExpr.startle < 0.01)      _microExpr.startle = 0;
+    if (_microExpr.joy < 0.01)          _microExpr.joy = 0;
+    if (_microExpr.relief < 0.01)       _microExpr.relief = 0;
+    if (_microExpr.curiosityTilt < 0.01) _microExpr.curiosityTilt = 0;
+  }
+
+  // =========================================================================
+  // 18D — Sleep Animation (REM twitch management)
+  // =========================================================================
+
+  function updateSleepAnim() {
+    if (!_circadian.isAsleep) {
+      _sleepAnim.remArm = -1;
+      _sleepAnim.remPhase = 0;
+      return;
+    }
+    var SA = CFG.sleepAnim;
+    // REM twitch timer
+    if (_sleepAnim.remPhase > 0) {
+      _sleepAnim.remPhase--;
+      if (_sleepAnim.remPhase <= 0) _sleepAnim.remArm = -1;
+    } else {
+      _sleepAnim.remTimer--;
+      if (_sleepAnim.remTimer <= 0) {
+        // Fire a twitch on a random tentacle
+        _sleepAnim.remArm = Math.floor(Math.random() * TENT_N);
+        _sleepAnim.remPhase = SA.remTwitchDuration;
+        var angle = Math.random() * Math.PI * 2;
+        _sleepAnim.remOffsetX = Math.cos(angle) * SA.remTwitchAmplitude;
+        _sleepAnim.remOffsetY = Math.sin(angle) * SA.remTwitchAmplitude;
+        _sleepAnim.remTimer = SA.remIntervalMin +
+          Math.floor(Math.random() * (SA.remIntervalMax - SA.remIntervalMin));
+      }
+    }
+  }
+
+  // =========================================================================
+  // 18G — Ambient Light Awareness (background color → adaptation)
+  // Real octopuses have photoreceptors in their skin — they react to light
+  // changes even without eyes. Lili samples the page background.
+  // =========================================================================
+
+  function _sampleBgLightness() {
+    // Sample background-color from body, fallback to html, fallback to dark
+    try {
+      var el = document.body;
+      var bg = getComputedStyle(el).backgroundColor;
+      if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') {
+        el = document.documentElement;
+        bg = getComputedStyle(el).backgroundColor;
+      }
+      if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') return 0.05;
+      // Parse rgb(r,g,b) or rgba(r,g,b,a)
+      var m = bg.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+      if (!m) return 0.05;
+      var r = parseInt(m[1]) / 255;
+      var g = parseInt(m[2]) / 255;
+      var b = parseInt(m[3]) / 255;
+      // Relative luminance (perceived brightness)
+      return 0.299 * r + 0.587 * g + 0.114 * b;
+    } catch (e) { return 0.05; }
+  }
+
+  function updateAmbient() {
+    var A = CFG.ambient;
+    _ambient.sampleTimer++;
+    if (_ambient.sampleTimer < A.sampleIntervalFrames) return;
+    _ambient.sampleTimer = 0;
+
+    // Sample current background
+    var sampled = _sampleBgLightness();
+    _ambient.targetLightness = sampled;
+
+    // Detect sudden theme change (big lightness jump)
+    var delta = Math.abs(sampled - _ambient.lastSampleLightness);
+    if (delta > A.changeThreshold) {
+      // Theme changed! Stress spike + startle
+      stress = Math.min(1, stress + A.stressSpike);
+      lili.stress = stress;
+      triggerMicroExpr('startle');
+      console.info('[Lili] Theme change detected: ' +
+        _ambient.lastSampleLightness.toFixed(2) + ' → ' + sampled.toFixed(2));
+    }
+    _ambient.lastSampleLightness = sampled;
+
+    // Slowly adapt to new ambient (chromatophore adaptation)
+    _ambient.adapted += (sampled - _ambient.adapted) * A.adaptSpeed;
+    _ambient.lightness = sampled;
+
+    // Compute contrast modifiers based on adapted lightness
+    var neutral = A.neutralLightness;
+    if (_ambient.adapted > 0.5) {
+      // Light background: darken Lili for contrast
+      var factor = (_ambient.adapted - 0.5) * 2; // 0..1
+      _ambient.lightnessShift = A.lightBgLightnessShift * factor;
+      _ambient.satShift = A.lightBgSatShift * factor;
+      _ambient.glowMul = 1 + (A.lightBgGlowDampen - 1) * factor;
+    } else {
+      // Dark background: brighten Lili, boost glow
+      var factor = (0.5 - _ambient.adapted) * 2; // 0..1
+      _ambient.lightnessShift = A.darkBgLightnessBoost * factor;
+      _ambient.satShift = A.darkBgSatBoost * factor;
+      _ambient.glowMul = 1 + (A.darkBgGlowBoost - 1) * factor;
+    }
   }
 
   // =========================================================================
@@ -1109,8 +1490,8 @@
       if (!p.active) continue;
       const elapsed = now - p.born;
       const t = elapsed / p.life;
-      // Quadratic alpha fade
-      const alpha = (1 - t) * (1 - t) * 0.7;
+      // Quadratic alpha fade (subtle, wispy)
+      const alpha = (1 - t) * (1 - t) * 0.4;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r * (1 + t * 0.5), 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',' + alpha.toFixed(3) + ')';
@@ -1202,6 +1583,7 @@
       if (dx * dx + dy * dy < r2) {
         // Consume this novelty (one-time reward)
         _novelty.pendingNewRects.splice(i, 1);
+        triggerMicroExpr('curiosityTilt'); // Phase 18C
         return NC.rewardBonus;
       }
     }
@@ -1209,7 +1591,8 @@
   }
 
   // =========================================================================
-  // 16B — Bubble Communication (symbol emissions based on internal state)
+  // 16B — Bubble Communication (real underwater bubbles, no emoji)
+  // State communicated via: count, size, color tint, rise speed
   // =========================================================================
 
   const _bubbles = {
@@ -1223,62 +1606,70 @@
     for (let i = 0; i < CFG.bubbles.poolSize; i++) {
       _bubbles.pool.push({
         active: false,
-        symbol: '',
         x: 0, y: 0,
         born: 0,
-        phase: 0, // sway phase offset
+        radius: 2,
+        phase: 0,          // sway phase offset
+        riseSpeedMul: 1,   // per-bubble rise speed variation
+        hueShift: 0,       // mood-tinted color shift
       });
     }
   })();
 
-  // Determine which symbol to emit based on Lili's internal state
-  function chooseBubbleSymbol() {
-    if (_circadian.isAsleep) return '💤';
-    if (_visitProfile.trustLevel > 0.7 && sensors.cursorProximity === 'near') return '♥';
-    if (lili.mood === 'curious' && sensors.domDensity !== 'sparse') return '?';
-    if (stress > 0.7) return '!';
-    if (lili.mood === 'playful') return '~';
-    if (_novelty.pendingNewRects.length > 0) return '✦';
-    if (lili.mood === 'calm' && _visitProfile.trustLevel > 0.4) return '◦';
-    return null; // no bubble
+  // Determine bubble visual properties from internal state
+  function chooseBubbleStyle() {
+    // Returns {count, sizeScale, hueShift} or null if no bubble
+    if (_circadian.isAsleep) return { count: 1, sizeScale: 0.5, hueShift: -20 }; // tiny slow sleep bubbles
+    if (stress > 0.7) return { count: 3, sizeScale: 0.9, hueShift: -40 }; // stressed: more, reddish
+    if (lili.mood === 'playful') return { count: 2, sizeScale: 0.8, hueShift: 10 };
+    if (lili.mood === 'curious' && sensors.domDensity !== 'sparse') return { count: 2, sizeScale: 0.7, hueShift: 15 };
+    if (lili.mood === 'calm' && _visitProfile.trustLevel > 0.4) return { count: 1, sizeScale: 0.6, hueShift: 5 };
+    if (_novelty.pendingNewRects.length > 0) return { count: 2, sizeScale: 0.7, hueShift: 20 };
+    return null;
   }
 
   function emitBubble() {
-    const now = Date.now();
+    var now = Date.now();
     if (now - _bubbles.lastEmitMs < CFG.bubbles.cooldownMs) return;
-    const symbol = chooseBubbleSymbol();
-    if (!symbol) return;
+    var style = chooseBubbleStyle();
+    if (!style) return;
 
-    // Find inactive slot
-    for (let i = 0; i < CFG.bubbles.poolSize; i++) {
+    var BC = CFG.bubbles;
+    var emitted = 0;
+    for (var i = 0; i < BC.poolSize && emitted < style.count; i++) {
       var b = _bubbles.pool[i];
       if (b.active) continue;
       b.active = true;
-      b.symbol = symbol;
-      b.x = lili.pos.x + (noiseRng() - 0.5) * CFG.bubbles.spawnRadius * 2;
-      b.y = lili.pos.y - lili.bodyR * 0.8;
-      b.born = now;
+      b.x = lili.pos.x + (noiseRng() - 0.5) * BC.spawnRadius * 2;
+      b.y = lili.pos.y - lili.bodyR * 0.6;
+      b.born = now + emitted * 120; // stagger births slightly
+      b.radius = BC.radiusMin + noiseRng() * (BC.radiusMax - BC.radiusMin) * style.sizeScale;
       b.phase = noiseRng() * Math.PI * 2;
+      b.riseSpeedMul = 0.7 + noiseRng() * 0.6; // 0.7..1.3 variation
+      b.hueShift = style.hueShift;
+      emitted++;
       _bubbles.activeCount++;
-      _bubbles.lastEmitMs = now;
-      return;
     }
+    if (emitted > 0) _bubbles.lastEmitMs = now;
   }
 
   function updateBubbles() {
     if (_bubbles.activeCount === 0) return;
-    const now = Date.now();
-    const BC = CFG.bubbles;
-    let active = 0;
-    for (let i = 0; i < BC.poolSize; i++) {
+    var now = Date.now();
+    var BC = CFG.bubbles;
+    var active = 0;
+    for (var i = 0; i < BC.poolSize; i++) {
       var b = _bubbles.pool[i];
       if (!b.active) continue;
-      const elapsed = now - b.born;
+      var elapsed = now - b.born;
+      if (elapsed < 0) { active++; continue; } // staggered, not born yet
       if (elapsed >= BC.lifetimeMs) { b.active = false; continue; }
-      // Rise upward
-      b.y -= BC.riseSpeed;
-      // Sway
-      b.x += Math.sin(b.phase + elapsed * BC.swaySpeed) * BC.swayAmplitude * 0.02;
+      // Rise upward with per-bubble speed
+      b.y -= BC.riseSpeed * b.riseSpeedMul;
+      // Gentle sway (sinusoidal)
+      b.x += Math.sin(b.phase + elapsed * BC.swaySpeed) * BC.swayAmplitude * 0.015;
+      // Bubbles grow slightly as they rise (pressure decrease)
+      b.radius *= 1.0003;
       active++;
     }
     _bubbles.activeCount = active;
@@ -1286,20 +1677,44 @@
 
   function renderBubbles() {
     if (_bubbles.activeCount === 0) return;
-    const now = Date.now();
-    const BC = CFG.bubbles;
-    ctx.font = BC.fontSize + 'px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    for (let i = 0; i < BC.poolSize; i++) {
+    var now = Date.now();
+    var BC = CFG.bubbles;
+    for (var i = 0; i < BC.poolSize; i++) {
       var b = _bubbles.pool[i];
       if (!b.active) continue;
-      const t = (now - b.born) / BC.lifetimeMs; // 0..1
-      const alpha = t < 0.1 ? t / 0.1 : (1 - t); // fade in briefly, then fade out
-      ctx.globalAlpha = Math.max(0, alpha);
-      ctx.fillText(b.symbol, b.x, b.y);
+      var elapsed = now - b.born;
+      if (elapsed < 0) continue; // staggered, not visible yet
+      var t = elapsed / BC.lifetimeMs; // 0..1
+      // Fade: quick appear, slow dissolve
+      var alpha = t < 0.08 ? t / 0.08 : Math.max(0, 1 - t * t);
+
+      var r = b.radius;
+      var bx = b.x, by = b.y;
+
+      // Phase 18.5: Bubble wobble — elliptical deformation while rising
+      var wobblePhase = elapsed * 0.004 + b.phase;
+      var wobbleX = 1 + Math.sin(wobblePhase) * 0.12; // ±12% scaleX
+      var wobbleY = 1 - Math.sin(wobblePhase) * 0.08; // inverse, ±8% scaleY
+
+      // Bubble body: translucent ellipse with mood-tinted color
+      var h = (computeColors().h || 190) + b.hueShift;
+      ctx.beginPath();
+      ctx.ellipse(bx, by, r * wobbleX, r * wobbleY, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'hsla(' + h + ', 40%, 70%, ' + (alpha * 0.18) + ')';
+      ctx.fill();
+
+      // Bubble rim: thin bright ring
+      ctx.strokeStyle = 'hsla(' + h + ', 50%, 85%, ' + (alpha * 0.35) + ')';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+
+      // Specular highlight: small bright dot (top-left)
+      var specR = r * BC.specularSize;
+      ctx.beginPath();
+      ctx.arc(bx - r * 0.25, by - r * 0.25, specR, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, ' + (alpha * 0.55) + ')';
+      ctx.fill();
     }
-    ctx.globalAlpha = 1;
   }
 
   // =========================================================================
@@ -1732,9 +2147,15 @@
     // Clamp raw input
     raw = Math.min(raw, 1);
 
+    // Phase 18C: Startle micro-expression — sudden stress spike from cursor
+    if (raw > 0.7 && stress < 0.3) triggerMicroExpr('startle');
+
     // Exponential smoothing
     stress += (raw - stress) * CFG.stressSmoothing;
     lili.stress = stress; // sync with lili object
+
+    // Phase 18E: Accumulate stress for psychosomatic adaptation
+    psychosomAccumulate(stress);
   }
 
   // =========================================================================
@@ -1991,6 +2412,7 @@
         sensors.cursorProximity === 'far' &&
         (mood === 'shy' || mood === 'alert')) {
       reward += R.fleeSuccess;
+      triggerMicroExpr('relief'); // Phase 18C
     }
 
     // +0.5: near DOM, low stress, curious mood
@@ -2107,6 +2529,7 @@
       journalLogDecision(currentState, reward);
 
       _decision.totalReward += reward;
+      psychosomAccumulate(stress, reward); // Phase 18E
     }
 
     // Phase 17: Mood plan management
@@ -2978,6 +3401,13 @@
       'stateVis: ' + _stateVisitCounts.size + ' states\n' +
       'plan:     ' + (_activePlan.planIndex >= 0 ? CFG.moodPlans.plans[_activePlan.planIndex].name + ' [' + _activePlan.stepIndex + '/' + CFG.moodPlans.plans[_activePlan.planIndex].sequence.length + ']' : 'none') + '\n' +
       'momentum: ' + sensors.momentum + '  trust:' + sensors.trust + '\n' +
+      '── Phase 18 (Alive) ────\n' +
+      'microExpr:S=' + _microExpr.startle.toFixed(2) + ' J=' + _microExpr.joy.toFixed(2) + ' R=' + _microExpr.relief.toFixed(2) + ' C=' + _microExpr.curiosityTilt.toFixed(2) + '\n' +
+      'psychosom:stress=' + _psychosom.stressAvg.toFixed(2) + ' reward=' + _psychosom.rewardAvg.toFixed(2) + '\n' +
+      'genesis:  bX=' + _genesis.bodyXScale.toFixed(2) + ' bY=' + _genesis.bodyYScale.toFixed(2) + ' tW=' + _genesis.tentacleWidth.toFixed(2) + '\n' +
+      'sleep:    ' + (_circadian.isAsleep ? 'REM:' + (_sleepAnim.remArm >= 0 ? 'arm' + _sleepAnim.remArm : 'off') : 'awake') + '\n' +
+      'chromato: ' + Math.round(ageVal(CFG.chromatophoreCells.countByAge) || 0) + ' cells\n' +
+      'ambient:  bg=' + _ambient.lightness.toFixed(2) + ' adapted=' + _ambient.adapted.toFixed(2) + ' L' + (_ambient.lightnessShift >= 0 ? '+' : '') + _ambient.lightnessShift.toFixed(1) + ' glow×' + _ambient.glowMul.toFixed(2) + '\n' +
       (function () {
         var pers = computePersonalityProfile();
         var s = '── Personality ─────────\n';
@@ -3019,6 +3449,8 @@
           '  Daily aggregates: ' + _journal.dailyAggregates.length + '\n' +
           '  Trust: ' + _visitProfile.trustLevel.toFixed(2) + '\n' +
           '  Circadian: ' + (_circadian.isAsleep ? 'sleeping' : 'awake') + '\n' +
+          '  Psychosom: stress=' + _psychosom.stressAvg.toFixed(2) + ' reward=' + _psychosom.rewardAvg.toFixed(2) + '\n' +
+          '  Genesis: bodyX=' + _genesis.bodyXScale.toFixed(3) + ' bodyY=' + _genesis.bodyYScale.toFixed(3) + ' tilt=' + (_genesis.headTilt * 180 / Math.PI).toFixed(1) + '°\n' +
           '  Place memory: ' + _placeMemory.grid.size + ' cells\n' +
           '  Cloud sync: ' + syncAge + (_sync.dirty ? ' (dirty)' : '')
         );
@@ -3197,6 +3629,7 @@
         phase: age.phase,
         phaseProgress: age.phaseProgress,
         mood: lili.mood,
+        psychosom: { s: +_psychosom.stressAvg.toFixed(4), r: +_psychosom.rewardAvg.toFixed(4) }, // Phase 18E
       },
       brain: JSON.parse(brainSerialize()),
       journal: {
@@ -3223,6 +3656,15 @@
         localStorage.setItem(CFG.storageKeys.genesis, String(age.genesisMs));
         updateAge();
       }
+    }
+
+    // Phase 18E: Merge psychosomatic data from remote (average both sides)
+    if (remote.metadata && remote.metadata.psychosom) {
+      var rp = remote.metadata.psychosom;
+      _psychosom.stressAvg = (_psychosom.stressAvg + (rp.s || 0.3)) * 0.5;
+      _psychosom.rewardAvg = (_psychosom.rewardAvg + (rp.r || 0)) * 0.5;
+      psychosomRecompute();
+      psychosomSave();
     }
 
     // Brain: remote wins if it has more lifetime decisions
@@ -3481,7 +3923,9 @@
   // The FEEL must change dramatically across life phases
   function steerWander(out) {
     const t = frameCount * 0.01;
-    const coherence = ageVal(CFG.movementCoherence);
+    // Phase 18.5: Mood modulates coherence (playful=erratic, calm=smooth)
+    const moodCoh = CFG.moodCoherence[lili.mood] || 1.0;
+    const coherence = Math.min(ageVal(CFG.movementCoherence) * moodCoh, 0.99);
     const bobbing = ageVal(CFG.verticalBobbing);
     const dirNoise = ageVal(CFG.directionalNoise);
     const wDist = ageVal(CFG.wanderDistance);
@@ -4108,7 +4552,8 @@
 
     // Base reach — modulated by mood spread (13D: shy=tighter, playful=wider)
     const waveVal = Math.sin(asyncTime + phaseShift);
-    const baseReach = arm.totalLen * (0.55 + 0.3 * waveVal) * _tentBlend.spreadMod;
+    // Phase 18E: Psychosomatic long-term tentacle spread modulation
+    const baseReach = arm.totalLen * (0.55 + 0.3 * waveVal) * _tentBlend.spreadMod * _psychosom.tentSpread;
 
     // Lateral sway perpendicular to tentacle direction
     const swayVal = Math.cos(asyncTime * 0.7 + phaseShift);
@@ -4144,6 +4589,22 @@
     if (speedRatio < 0.15) {
       const idleFactor = 1 - speedRatio / 0.15;
       arm.idealY += CFG.tentacleRelaxGravity * _tentBlend.gravMod * arm.totalLen * 0.3 * idleFactor;
+    }
+
+    // Phase 18D: Sleep animation — curl tentacles inward, add REM twitch
+    if (_circadian.isAsleep) {
+      var curl = CFG.sleepAnim.tentacleCurlFactor;
+      // Pull tentacle tips toward body center (curl in)
+      arm.idealX += (bodyX - arm.idealX) * curl;
+      arm.idealY += (bodyY - arm.idealY) * curl;
+      // Gentle downward drape (sleeping posture)
+      arm.idealY += arm.totalLen * 0.15;
+      // REM twitch: one tentacle gets a sudden offset
+      if (_sleepAnim.remArm === idx && _sleepAnim.remPhase > 0) {
+        var twitchFade = _sleepAnim.remPhase / CFG.sleepAnim.remTwitchDuration;
+        arm.idealX += _sleepAnim.remOffsetX * twitchFade;
+        arm.idealY += _sleepAnim.remOffsetY * twitchFade;
+      }
     }
   }
 
@@ -4542,6 +5003,7 @@
             arm.interactionTarget) {
           _domGrab(arm);
           arm.interactionState = 'grabbing';
+          triggerMicroExpr('joy'); // Phase 18C
           break;
         }
         // Lose interest if mood shifts
@@ -4681,8 +5143,10 @@
       ? Math.sin(frameCount * 0.08) * _chromaBlend.satPulse * 100 : 0;
 
     const h = baseHue + circadianHue + stressHue + moodHue + driftHue;
-    const s = Math.min(Math.max(baseSat + stressSat + moodSat + satPulse, 20), 100);
-    const l = Math.min(Math.max(baseLit + circadianLit + moodLit, 15), 85);
+    // Phase 18G: Ambient light adaptation (saturation shift for contrast)
+    const s = Math.min(Math.max(baseSat + stressSat + moodSat + satPulse + _ambient.satShift, 20), 100);
+    // Phase 18E+18G: Psychosomatic + ambient lightness shift
+    const l = Math.min(Math.max(baseLit + circadianLit + moodLit + _psychosom.lightness + _ambient.lightnessShift, 15), 85);
 
     return {
       bodyHsl: `hsl(${h}, ${s}%, ${l}%)`,
@@ -4757,7 +5221,8 @@
   }
 
   function renderTentaclesHull(colors) {
-    const baseW = ageVal(CFG.hullBaseWidth);
+    // Phase 18A: Genesis tentacle width variation
+    const baseW = ageVal(CFG.hullBaseWidth) * _genesis.tentacleWidth;
     const noiseAmp = CFG.hullNoiseAmplitude;
     const tipAlpha = CFG.hullTipAlpha;
     const t60 = frameCount * 0.01; // slow noise evolution
@@ -4802,7 +5267,8 @@
     ctx.fillStyle = colors.tentHslAlpha(0.75);
     ctx.fill();
 
-    // Second pass: translucent tip highlights for depth
+    // Second pass: tip highlights — radial glow on dark bg (bioluminescence)
+    var darkBg = _ambient.adapted < 0.4;
     for (let t = 0; t < TENT_N; t++) {
       const arm = tentacles[t];
       const tipX = arm.x[JOINTS - 1];
@@ -4810,13 +5276,19 @@
       const tipR = baseW * 0.4;
 
       if (arm.recoilTimer > 0) {
-        // Recoil: reddish flash
         ctx.fillStyle = 'rgba(255, 120, 100, 0.5)';
+      } else if (darkBg) {
+        // Phase 18.5: Bioluminescent tip glow on dark backgrounds
+        var tipGlow = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, tipR * 2.5);
+        tipGlow.addColorStop(0, colors.tentHslAlpha(tipAlpha * 1.8));
+        tipGlow.addColorStop(0.4, colors.tentHslAlpha(tipAlpha * 0.8));
+        tipGlow.addColorStop(1, colors.tentHslAlpha(0));
+        ctx.fillStyle = tipGlow;
       } else {
         ctx.fillStyle = colors.tentHslAlpha(tipAlpha);
       }
       ctx.beginPath();
-      ctx.arc(tipX, tipY, tipR, 0, Math.PI * 2);
+      ctx.arc(tipX, tipY, darkBg ? tipR * 2.5 : tipR, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -4826,14 +5298,23 @@
     const x = lili.pos.x;
     const y = lili.pos.y;
     const r = lili.bodyR;
-    const rx = r * CFG.bodyRadiusXScale;
-    const ry = r * CFG.bodyRadiusYScale;
+    // Phase 18A: Genesis body variation (unique proportions per instance)
+    const rx = r * CFG.bodyRadiusXScale * _genesis.bodyXScale;
+    const ry = r * CFG.bodyRadiusYScale * _genesis.bodyYScale;
 
     // Breathing modulation (Research #1: 18 bpm sine, 3% amplitude)
     // Phase 13C: mood modulates breathing rate and depth
+    // Phase 18D: Sleep → slower, deeper breathing
+    // Phase 18E: Psychosomatic → long-term breath rate shift
     const breathT = frameCount / 60;
-    const breathFreq = (CFG.breathingBpm / 60) * _bodyBlend.breathMod;
-    const breathAmp = CFG.breathingAmplitude * (0.7 + _bodyBlend.breathMod * 0.5);
+    var breathRateMod = _bodyBlend.breathMod * _psychosom.breathRate;
+    var breathDepthMod = 0.7 + _bodyBlend.breathMod * 0.5;
+    if (_circadian.isAsleep) {
+      breathRateMod *= CFG.sleepAnim.breathSlowFactor;
+      breathDepthMod *= CFG.sleepAnim.breathDeepFactor;
+    }
+    const breathFreq = (CFG.breathingBpm / 60) * breathRateMod;
+    const breathAmp = CFG.breathingAmplitude * breathDepthMod;
     const breathMod = 1 + Math.sin(breathT * breathFreq * Math.PI * 2) * breathAmp;
 
     // Pulse-glide mantle deformation
@@ -4849,21 +5330,30 @@
     }
 
     // Phase 13C: mood body scale (shy=shrink, playful=expand)
-    const moodScale = _bodyBlend.bodyScale;
+    // Phase 18E: Psychosomatic long-term body scale
+    // Phase 18C: Micro-expression body scale (startle=shrink, relief=expand)
+    var microScale = 1.0;
+    if (_microExpr.startle > 0) microScale *= 1 + (_microExpr.startle * (CFG.microExpr.startleBodyShrink - 1));
+    if (_microExpr.relief > 0) microScale *= 1 + (_microExpr.relief * (CFG.microExpr.reliefBodyExpand - 1));
+    const moodScale = _bodyBlend.bodyScale * _psychosom.bodyScale * microScale;
     const finalRx = rx * breathMod * pulseMod * moodScale;
     const finalRy = ry * breathMod * pulseMod * moodScale;
 
     ctx.save();
     ctx.translate(x, y);
-    ctx.rotate(lili.heading);
+    ctx.rotate(lili.heading + _genesis.headTilt);
 
     // Glow (bioluminescence — age-dependent intensity, visible on dark bg)
     // Phase 13C: mood glow pulsation (curious/exploring pulse at ~0.5Hz)
+    // Phase 18E: Psychosomatic glow boost (stressed → defense glow)
+    // Phase 18C: Joy micro-expression → glow flash
     const glowR = r * 3.0;
-    let glowIntensity = ageVal(CFG.glowIntensity) * _chromaBlend.glowMod;
+    // Phase 18G: Ambient glow adaptation (dark bg → more glow, light bg → less)
+    let glowIntensity = ageVal(CFG.glowIntensity) * _chromaBlend.glowMod * _psychosom.glowBoost * _ambient.glowMul;
     if (_bodyBlend.glowPulseHz > 0) {
       glowIntensity *= 1 + Math.sin(frameCount / 60 * _bodyBlend.glowPulseHz * Math.PI * 2) * 0.25;
     }
+    if (_microExpr.joy > 0) glowIntensity *= 1 + _microExpr.joy * (CFG.microExpr.joyGlowFlash - 1);
     const glow = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, glowR);
     glow.addColorStop(0, colors.bodyHslAlpha(glowIntensity * 0.18));
     glow.addColorStop(0.4, colors.bodyHslAlpha(glowIntensity * 0.08));
@@ -4904,6 +5394,30 @@
     ctx.fillStyle = bodyGrad;
     ctx.fill();
 
+    // Phase 18F: Chromatophore cells (visible pulsing spots on body surface)
+    var cellCount = Math.round(ageVal(CFG.chromatophoreCells.countByAge) || 0);
+    if (cellCount > 0) {
+      var CC = CFG.chromatophoreCells;
+      for (var ci = 0; ci < cellCount; ci++) {
+        var cell = _genesis.chromatophores[ci];
+        if (!cell) continue;
+        // Position inside body perimeter (~65% radius for visibility)
+        var cAngle = cell.angle;
+        var cx = Math.cos(cAngle) * finalRx * 0.65;
+        var cy = Math.sin(cAngle) * finalRy * 0.65;
+        // Pulsing: each cell has its own rhythm
+        var pulse = 0.5 + 0.5 * Math.sin(frameCount * cell.speed + cell.phase);
+        var cr = CC.minRadius + (CC.maxRadius - CC.minRadius) * pulse;
+        var cellAlpha = CC.baseAlpha * (0.4 + pulse * 0.6);
+        // Color: base hue + cell-specific offset
+        ctx.fillStyle = 'hsla(' + (colors.h + cell.hueOffset) + ',' +
+          Math.min(colors.s + 15, 100) + '%,' + Math.max(colors.l - 5, 10) + '%,' + cellAlpha + ')';
+        ctx.beginPath();
+        ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
     ctx.restore();
   }
 
@@ -4916,12 +5430,13 @@
 
     const eyeR = r * ageVal(CFG.eyeRadiusFactor);
     const pupilR = eyeR * CFG.pupilRadiusFactor;
-    const spacing = r * CFG.eyeSpacing;
-    const yOff = r * CFG.eyeYOffset;
+    // Phase 18A: Genesis eye variation (unique per instance)
+    const spacing = r * CFG.eyeSpacing * _genesis.eyeSpacing;
+    const yOff = r * CFG.eyeYOffset * _genesis.eyeYOffset;
 
     // Compute eye positions in world space (rotated by heading)
-    const cosH = Math.cos(lili.heading);
-    const sinH = Math.sin(lili.heading);
+    const cosH = Math.cos(lili.heading + _genesis.headTilt);
+    const sinH = Math.sin(lili.heading + _genesis.headTilt);
 
     // Eyes are perpendicular to heading, offset forward
     const fwdX = cosH * yOff;
@@ -4937,25 +5452,65 @@
     // Pupil offset: track mouse position (or DOM element for curious/exploring)
     const maxOff = eyeR * CFG.eyePupilMaxOffset;
 
+    // Phase 18.5: Smooth gaze tracking (lerp toward target each frame)
+    var rawGazeX = mouse.pos.x;
+    var rawGazeY = mouse.pos.y;
+    if (_eyeBlend.gazeDOM) {
+      var nearbyGaze = getNearby(lili.pos.x, lili.pos.y);
+      if (nearbyGaze.length > 0) {
+        rawGazeX = nearbyGaze[0].x + nearbyGaze[0].w * 0.5;
+        rawGazeY = nearbyGaze[0].y + nearbyGaze[0].h * 0.5;
+      }
+    }
+    if (!_gaze.initialized) {
+      _gaze.x = rawGazeX; _gaze.y = rawGazeY;
+      _gaze.initialized = true;
+    } else {
+      var gl = CFG.eyePolish.gazeLerp;
+      _gaze.x += (rawGazeX - _gaze.x) * gl;
+      _gaze.y += (rawGazeY - _gaze.y) * gl;
+    }
+
+    // Phase 18.5: Saccades — involuntary micro-jitter when idle
+    var EP = CFG.eyePolish;
+    _gaze.saccadeTimer--;
+    if (_gaze.saccadeTimer <= 0) {
+      var sa = EP.saccadeAmplitude;
+      _gaze.saccadeX = (Math.random() - 0.5) * 2 * sa;
+      _gaze.saccadeY = (Math.random() - 0.5) * 2 * sa;
+      _gaze.saccadeTimer = EP.saccadeIntervalMin +
+        Math.floor(Math.random() * (EP.saccadeIntervalMax - EP.saccadeIntervalMin));
+    }
+    // Decay saccade offset quickly
+    _gaze.saccadeX *= 0.75;
+    _gaze.saccadeY *= 0.75;
+
     // Phase 13B: Blink eyelid factor (0=open, 1=closed)
+    // Phase 18.5: Ease-in-out-cubic for natural eyelid motion
     const blinkDur = CFG.blinkDurationFrames;
     let lidClose = 0;
     if (_blink.phase > 0) {
       const half = blinkDur * 0.5;
       const remaining = _blink.phase;
-      // Ease in/out: close then open
+      var rawLid;
       if (remaining > half) {
-        lidClose = (blinkDur - remaining) / half; // closing
+        rawLid = (blinkDur - remaining) / half; // closing 0→1
       } else {
-        lidClose = remaining / half; // opening
+        rawLid = remaining / half; // opening 1→0
       }
+      // Ease-in-out-cubic: fast close, slow open feel
+      lidClose = rawLid < 0.5
+        ? 4 * rawLid * rawLid * rawLid
+        : 1 - Math.pow(-2 * rawLid + 2, 3) / 2;
     }
 
     // Phase 13B: Squint from mood (playful = slight squint)
     // Phase 15B: Circadian eye closure (sleeping = eyes nearly closed)
-    const squintAmount = _eyeBlend.squint + (1 - _circadian.eyeOpenness) * 0.9;
+    // Phase 18C: Joy micro-expression adds squint (happy eyes)
+    const squintAmount = _eyeBlend.squint + (1 - _circadian.eyeOpenness) * 0.9
+      + _microExpr.joy * CFG.microExpr.joySquint;
 
-    function drawEye(ex, ey) {
+    function drawEye(ex, ey, isLeft) {
       // Soft eye shadow (subtle depth)
       ctx.fillStyle = colors.bodyHslAlpha(0.3);
       ctx.beginPath();
@@ -4984,21 +5539,9 @@
       ctx.arc(ex, ey, eyeR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Pupil gaze target: mouse by default, nearby DOM for curious/exploring
-      let gazeX = mouse.pos.x;
-      let gazeY = mouse.pos.y;
-      if (_eyeBlend.gazeDOM) {
-        // Look at nearest spatial hash element if close enough
-        const nearby = getNearby(lili.pos.x, lili.pos.y);
-        if (nearby.length > 0) {
-          const el = nearby[0];
-          gazeX = el.x + el.w * 0.5;
-          gazeY = el.y + el.h * 0.5;
-        }
-      }
-
-      let dx = gazeX - ex;
-      let dy = gazeY - ey;
+      // Pupil gaze target: smoothed + saccade micro-jitter (Phase 18.5)
+      let dx = (_gaze.x + _gaze.saccadeX) - ex;
+      let dy = (_gaze.y + _gaze.saccadeY) - ey;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
 
       // Idle: gaze drifts to center (looking "into the void")
@@ -5008,13 +5551,29 @@
         dy *= (1 - blend * 0.7);
       }
 
+      // Phase 18C: Curiosity tilt — one eye drifts toward DOM, other stays
+      if (_microExpr.curiosityTilt > 0 && isLeft) {
+        // Left eye: look at nearby DOM element (head tilt effect)
+        var nearby2 = getNearby(lili.pos.x, lili.pos.y);
+        if (nearby2.length > 0) {
+          var nel = nearby2[0];
+          var ndx = (nel.x + nel.w * 0.5) - ex;
+          var ndy = (nel.y + nel.h * 0.5) - ey;
+          dx += (ndx - dx) * _microExpr.curiosityTilt * 0.6;
+          dy += (ndy - dy) * _microExpr.curiosityTilt * 0.6;
+        }
+      }
+
       const off = Math.min(dist * 0.01, maxOff);
       const px = ex + (dx / dist) * off;
       const py = ey + (dy / dist) * off;
 
       // Pupil size: base stress dilation + Phase 13B mood modulation
+      // Phase 18C: Startle → pupils dilate wide
+      var microPupil = 1.0;
+      if (_microExpr.startle > 0) microPupil *= 1 + _microExpr.startle * (CFG.microExpr.startlePupilScale - 1);
       const pupilScale = (0.85 + stress * 0.35 + Math.min(lili.vel.mag() * 0.03, 0.2))
-        * _eyeBlend.pupilScale;
+        * _eyeBlend.pupilScale * microPupil;
 
       // Pupil with subtle radial gradient (depth)
       const pupilGrad = ctx.createRadialGradient(
@@ -5056,8 +5615,8 @@
       ctx.fill();
     }
 
-    drawEye(leftEyeX, leftEyeY);
-    drawEye(rightEyeX, rightEyeY);
+    drawEye(leftEyeX, leftEyeY, true);
+    drawEye(rightEyeX, rightEyeY, false);
   }
 
   // 15F — Enhanced DOM: render grabbed text on canvas near tentacle tips
@@ -5179,11 +5738,14 @@
     updateAge();
     lili.bodyR = ageVal(CFG.bodyRadius); // grow with age
     updateCircadian();                   // Phase 15B: day/night rhythm
+    updateSleepAnim();                   // Phase 18D: REM twitch management
+    updateAmbient();                     // Phase 18G: background light awareness
     updateMouse();
     updateSensors();
     updateStress();
     brainDecisionCycle(); // Phase 8: RL mood selection before physics
     updateMoodBlend();   // Phase 13: smooth mood expression blending
+    updateMicroExpr();   // Phase 18C: decay micro-expression intensities
     updatePhysics(frameDt);
     updateTentacles(frameDt);
 
@@ -5268,6 +5830,12 @@
     }
     age.genesisMs = parseInt(localStorage.getItem(CFG.storageKeys.genesis), 10);
 
+    // Phase 18A: Compute genesis body variation (unique per instance)
+    computeGenesis(age.genesisMs);
+
+    // Phase 18B: Load psychosomatic long-term adaptation
+    psychosomLoad();
+
     // Register phase transition listeners
     onPhaseTransition(function (from, to, atMs) {
       const days = (atMs / 86400000).toFixed(1);
@@ -5351,6 +5919,7 @@
       placeMemorySave();     // Phase 15A
       domLearningSave();     // Phase 15D
       visitProfileSave();    // Phase 15C
+      psychosomSave();       // Phase 18E
     });
 
     // Phase 11B: Request persistent storage + detect data loss

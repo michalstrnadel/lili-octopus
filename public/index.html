@@ -50,7 +50,10 @@
   <p>Vestibulum id ligula porta felis euismod semper. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Donec sed odio dui.</p>
   <p>Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Cras justo odio, dapibus ut facilisis in.</p>
 
-  <p><button onclick="localStorage.removeItem('lili_genesis');location.reload()">Reset Genesis (hatchling)</button></p>
+  <p>
+    <button onclick="localStorage.removeItem('lili_genesis');location.reload()">Reset Genesis (hatchling)</button>
+    <button onclick="var b=document.body;var isDark=b.style.background!=='#f5f2eb';b.style.background=isDark?'#f5f2eb':'#0a0a0f';b.style.color=isDark?'#333':'#d0d0d0'">Toggle Light/Dark</button>
+  </p>
   <script src="lili.js" defer></script>
 </body>
 </html>
