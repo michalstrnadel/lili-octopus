@@ -1,283 +1,284 @@
 # Lili — Autonomous Digital Companion
 
-**Akademický experiment v digitální ontogenezi**
+**An academic experiment in digital ontogenesis**
 
-Lili je autonomní digitální organismus ve formě chobotnice, žijící na webové stránce jako ambientní společník. Její chování emerguje z Reinforcement Learning (Q-Learning) — nic není skriptované. Životní cyklus: 10 reálných let.
+Lili is an autonomous digital organism in the form of an octopus, living on a webpage as an ambient companion. Her behavior emerges from Reinforcement Learning (Q-Learning) — nothing is scripted. Lifecycle: 10 real years.
 
-## Co Lili JE
+## What Lili IS
 
-- Autonomní RL agent řízený odměnami a tresty
-- Procedurálně animovaná chobotnice s 8 FABRIK IK chapadly
-- Ambientní společník, který se učí a stárne s webovou stránkou
-- Akademický experiment s exportovatelnými daty pro analýzu
-- Sezónně adaptivní organismus s ambientním zvukovým krajobrazem
-- Schopná reprodukce — potomci dědí naučené Q-hodnoty s genetickou mutací
+- Autonomous RL agent driven by rewards and penalties
+- Procedurally animated octopus with 8 FABRIK IK tentacles
+- Ambient companion that learns and ages alongside the website
+- Academic experiment with exportable data for analysis
+- Seasonally adaptive organism with ambient soundscape
+- Capable of reproduction — offspring inherit learned Q-values with genetic mutation
 
-## Co Lili NENÍ
+## What Lili is NOT
 
-- Tamagotchi (nepotřebuje péči, neumírá)
-- Skriptovaná animace (žádné keyframes, žádné předepsané trasy)
-- Chatbot (nemá generativní dialogy)
-- Gimmick (je to tichý společník, ne efekt)
+- A Tamagotchi (needs no care, doesn't die from neglect)
+- A scripted animation (no keyframes, no predefined paths)
+- A chatbot (no generative dialogue)
+- A gimmick (she's a quiet companion, not an effect)
 
-## Technický stack
+## Tech Stack
 
 - **Runtime:** Vanilla JavaScript, zero dependencies, zero build pipeline
-- **Deployment:** Jeden `<script>` tag v jakémkoli HTML
-- **AI:** Q(λ)-Learning s eligibility traces, Boltzmann/softmax exploration
-- **Pohyb:** Craig Reynolds Steering Behaviors
-- **Animace:** FABRIK Inverse Kinematics, procedurální micro-expressions
-- **Optimalizace:** Spatial Hash Grid
-- **Vizuál:** Canvas 2D, procedurální rendering, HSL chromatofory, sezónní modulace
-- **Zvuk:** Web Audio API (zero deps) — breathing drone, bubble pops, ink splash
+- **Deployment:** Single `<script>` tag in any HTML
+- **AI:** Q(λ)-Learning with eligibility traces, Boltzmann/softmax exploration
+- **Movement:** Craig Reynolds Steering Behaviors
+- **Animation:** FABRIK Inverse Kinematics, procedural micro-expressions
+- **Optimization:** Spatial Hash Grid
+- **Visuals:** Canvas 2D, procedural rendering, HSL chromatophores, seasonal modulation
+- **Sound:** Web Audio API (zero deps) — breathing drone, bubble pops, ink splash
 - **Persistence:** localStorage + cloud sync (GitHub API via Vercel serverless)
-- **Analýza:** CSV export, observability dashboard, baseline porovnání, replay systém
+- **Analysis:** CSV export, observability dashboard, baseline comparison, replay system
 
-## Aktuální stav (2026-04-10)
+## Current State (2026-04-10)
 
-**52 implementačních fází hotovo** — `public/lili.js` (~8782 řádků)
+**52 implementation phases complete** — `public/lili.js` (~8782 lines)
 
-| Fáze | Popis |
-|------|-------|
-| 1-4 | Canvas bootstrap, steering behaviors, FABRIK IK, vizuální systém |
-| 5-7 | Spatial hash grid, senzorický systém (9 senzorů, 38880 stavů), age system |
-| 8-9 | Q-Learning brain (Q(λ), Boltzmann, adaptive α, curiosity), DOM interakce |
-| 10-12 | Click/tooltip/debug, persistence (localStorage), optimalizace (60 FPS) |
-| 13 | Emoční exprese (chromatofory, oči, dýchání, chapadla per mood) |
-| 14 | Cloud sync (GitHub persistence, 5min interval, merge strategie) |
-| 17 | Brain v2 (eligibility traces, softmax, momentum/trust senzory, mood plans) |
+| Phase | Description |
+|-------|-------------|
+| 1-4 | Canvas bootstrap, steering behaviors, FABRIK IK, visual system |
+| 5-7 | Spatial hash grid, sensory system (9 sensors, 38880 states), age system |
+| 8-9 | Q-Learning brain (Q(λ), Boltzmann, adaptive α, curiosity), DOM interaction |
+| 10-12 | Click/tooltip/debug, persistence (localStorage), optimization (60 FPS) |
+| 13 | Emotional expression (chromatophores, eyes, breathing, tentacles per mood) |
+| 14 | Cloud sync (GitHub persistence, 5min interval, merge strategy) |
+| 17 | Brain v2 (eligibility traces, softmax, momentum/trust sensors, mood plans) |
 | 18-18.5 | "Alive & Polish" (micro-expressions, sleep, genesis variation, chromatophore cells) |
-| **19A** | **Baseline System** — 4 kontrolní podmínky pro akademické srovnání |
-| **19B** | **Replay System** — nahrávání/přehrávání cursor trajektorií |
-| **19C** | **Enhanced Metrics** — convergence křivky, policy stability, CSV export |
-| **20** | **Observability Dashboard** — vizualizace exportovaných dat |
-| **21** | **Seasonal Awareness** — chromatoforová + pohybová modulace dle ročního období |
-| **22** | **Sound Landscape** — Web Audio API ambientní zvukový svět |
-| **23** | **Social Learning** — anonymizované behavioral stats v cloud sync |
-| **24** | **Offspring** — reprodukce s Q-table crossover a genetickou mutací |
-| **25** | **Dream Replay** — experience replay během spánku (DQN konsolidace) |
-| **26** | **Curriculum Learning** — postupné odemykání reward komponent dle věku |
-| **27** | **Habitat Awareness** — detekce barevné palety stránky, hue adaptace |
+| **19A** | **Baseline System** — 4 control conditions for academic comparison |
+| **19B** | **Replay System** — cursor trajectory recording/playback |
+| **19C** | **Enhanced Metrics** — convergence curves, policy stability, CSV export |
+| **20** | **Observability Dashboard** — exported data visualization |
+| **21** | **Seasonal Awareness** — chromatophore + movement modulation by season |
+| **22** | **Sound Landscape** — Web Audio API ambient soundscape |
+| **23** | **Social Learning** — anonymized behavioral stats in cloud sync |
+| **24** | **Offspring** — reproduction with Q-table crossover and genetic mutation |
+| **25** | **Dream Replay** — experience replay during sleep (DQN consolidation) |
+| **26** | **Curriculum Learning** — progressive reward component unlocking by age |
+| **27** | **Habitat Awareness** — page color palette detection, hue adaptation |
 | **28** | **Non-verbal Communication** — welcome wave, excitement flash, contentment pulse |
-| **29** | **Enhanced Bioluminescence** — zesílený noční glow, luminiscenční trail |
-| **30** | **Anticipation** — prediktivní pre-reakce na přibližující se kurzor |
-| **31** | **Energy / Fatigue** — energy model s activity costs a regenerací |
-| **32** | **Habituation** — stimulus adaptation (opakované podněty → slabší reakce) |
+| **29** | **Enhanced Bioluminescence** — boosted night glow, luminescent trail |
+| **30** | **Anticipation** — predictive pre-reaction to approaching cursor |
+| **31** | **Energy / Fatigue** — energy model with activity costs and regeneration |
+| **32** | **Habituation** — stimulus adaptation (repeated stimuli → weaker response) |
 | **33** | **Cognitive Map** — enriched spatial memory (safety + familiarity) |
-| **34** | **Cursor Pattern** — rozpoznávání vzorců kurzoru (nervous/calm/erratic) |
+| **34** | **Cursor Pattern** — cursor pattern recognition (nervous/calm/erratic) |
 | **35** | **Attention** — context-dependent sensor weighting |
-| **36** | **Temporal Patterns** — učení časových vzorců (24h profil stresu/aktivity) |
-| **37** | **Personality Drift** — evoluce temperamentu na základě zkušeností |
-| **38** | **Surprise Signal** — predikční chyba → spike pozornosti + zrychlené učení |
-| **39** | **Ink Defense** — dramatický inkoustový výbuch při náhlém stresu |
+| **36** | **Temporal Patterns** — time-of-day learning (24h stress/activity profile) |
+| **37** | **Personality Drift** — temperament evolution based on experience |
+| **38** | **Surprise Signal** — prediction error → attention spike + accelerated learning |
+| **39** | **Ink Defense** — dramatic ink burst on sudden stress |
 | **40** | **Camouflage** — mood-dependent background matching (shy=100%, curious=10%) |
-| **41** | **Growth Visualization** — plynulý růst těla v rámci životních fází |
-| **42** | **Mobile Touch** — tap, swipe, long press interakce na dotykových zařízeních |
-| **43** | **Retina Rendering** — devicePixelRatio scaling (implementováno v Phase 1) |
-| **44** | **Visual Debug Overlay** — in-canvas grafy (stress, energy, reward, surprise) |
-| **45** | **Death & Legacy** — animace umírání po 10 letech, fade, poslední milestone |
-| **46** | **Page Memory** — paměť chování per URL (mood, stress, návštěvy) |
-| **47** | **Q-table Compression** — automatické prořezávání při > 5000 stavech |
-| **48** | **Meta-Learning** — detekce stability prostředí, adaptivní learning rate |
-| **49** | **Web Worker Brain** — offload brainLearn do background threadu |
-| **50** | **Life Narrative** — generovaný textový deníček ze životních milníků |
-| **51** | **Q-table Visualization** — heatmapa mozku jako generativní umění |
-| **52** | **Seasonal Sounds** — sezónní modulace zvukového krajobaze |
+| **41** | **Growth Visualization** — smooth body size scaling within life phases |
+| **42** | **Mobile Touch** — tap, swipe, long press interaction on touch devices |
+| **43** | **Retina Rendering** — devicePixelRatio scaling (built into Phase 1) |
+| **44** | **Visual Debug Overlay** — in-canvas graphs (stress, energy, reward, surprise) |
+| **45** | **Death & Legacy** — dying animation after 10 years, fade, final milestone |
+| **46** | **Page Memory** — per-URL behavioral memory (mood, stress, visits) |
+| **47** | **Q-table Compression** — automatic pruning above 5000 states |
+| **48** | **Meta-Learning** — environment stability detection, adaptive learning rate |
+| **49** | **Web Worker Brain** — offload brainLearn to background thread |
+| **50** | **Life Narrative** — generated text diary from life milestones |
+| **51** | **Q-table Visualization** — brain heatmap as generative art |
+| **52** | **Seasonal Sounds** — seasonal sound landscape modulation |
 
-## Akademické funkce (Fáze 19-24)
+## Academic Features (Phases 19-24)
 
-### Baseline porovnání (19A)
-4 alternativní politiky pro párové akademické srovnání:
-- **Random Policy** — uniformní náhodný výběr nálady (bez učení)
-- **Frozen Policy** — zmrazená Q-tabulka (měří nestacionaritu prostředí)
-- **Myopic Policy** — γ=0, pouze okamžitá odměna (dokazuje hodnotu plánování)
-- **Heuristic Policy** — expertní if/else pravidla (reference pro ruční design)
+### Baseline Comparison (19A)
+4 alternative policies for paired academic comparison:
+- **Random Policy** — uniform random mood selection (no learning)
+- **Frozen Policy** — frozen Q-table (measures environment non-stationarity)
+- **Myopic Policy** — γ=0, immediate reward only (demonstrates planning value)
+- **Heuristic Policy** — expert if/else rules (reference for manual design)
 
-### Replay systém (19B)
-Nahrávání cursor trajektorií + senzorických snapshotů pro reprodukovatelné experimenty. Playback mode přehraje identický vstup s jinou politikou → paired testing.
+### Replay System (19B)
+Cursor trajectory recording + sensory snapshots for reproducible experiments. Playback mode replays identical input with different policy → paired testing.
 
-### Rozšířené metriky (19C)
-- **Convergence:** průměrné |δQ| per Bellman update (sledováno denně)
-- **Policy stability:** podíl stavů kde se top nálada změnila za den
-- **CSV export:** denní agregáty ke stažení pro R/Python/Excel analýzu
+### Enhanced Metrics (19C)
+- **Convergence:** average |δQ| per Bellman update (tracked daily)
+- **Policy stability:** proportion of states where top mood changed per day
+- **CSV export:** daily aggregates downloadable for R/Python/Excel analysis
 
 ### Observability Dashboard (20)
-Samostatný `public/dashboard.html` — drag-and-drop vizualizace exportovaných JSON dat:
-- Časové řady: entropy, reward, exploration rate, LZC, convergence, policy stability
+Standalone `public/dashboard.html` — drag-and-drop visualization of exported JSON data:
+- Time series: entropy, reward, exploration rate, LZC, convergence, policy stability
 - Mood distribution pie chart, personality radar (7-axis polygon)
-- Behavioral etogram (stacked mood proporce v čase)
-- Tabulka denních agregátů, milestones log
+- Behavioral ethogram (stacked mood proportions over time)
+- Daily aggregates table, milestones log
 
-### Sezónní awareness (21)
-Detekce ročního období (severní polokoule, date-based):
-- Chromatofory: hue shift (+15 léto, -20 zima), saturace, světlost
-- Rychlost pohybu: 1.1× léto, 0.85× zima
-- Sezóna nerozšiřuje stavový prostor (zůstává 38880, ne 155520)
+### Seasonal Awareness (21)
+Season detection (Northern hemisphere, date-based):
+- Chromatophores: hue shift (+15 summer, -20 winter), saturation, lightness
+- Movement speed: 1.1× summer, 0.85× winter
+- Season does not expand state space (remains 38880, not 155520)
 
-### Zvukový krajobraz (22)
-Zero-dependency ambientní soundscape (Web Audio API):
-- Breathing drone (sinus ~80Hz, modulovaný náladou a stresem)
-- Bubble pop (randomizovaná frekvence)
+### Sound Landscape (22)
+Zero-dependency ambient soundscape (Web Audio API):
+- Breathing drone (sine ~80Hz, modulated by mood and stress)
+- Bubble pop (randomized frequency)
 - Ink splash (white noise burst)
-- Opt-in — vyžaduje uživatelský gesture (klávesa S)
+- Opt-in — requires user gesture (S key)
 
-### Reprodukce (24)
-Po dosažení fáze "mature":
-- Q-table crossover: 50% náhodný podmnožina rodičovských Q-hodnot
-- Gaussovská mutace (σ=0.1) na zděděných hodnotách
-- Max 3 potomci za život, export jako JSON
-- Potomek začíná jako hatchling se "zděděnými instinkty"
+### Reproduction (24)
+After reaching "mature" phase:
+- Q-table crossover: 50% random subset of parent Q-values
+- Gaussian mutation (σ=0.1) on inherited values
+- Max 3 offspring per lifetime, exported as JSON
+- Offspring starts as hatchling with "inherited instincts"
 
 ### Dream Replay (25)
-DQN-inspired experience replay během spánku:
-- Během cirkadiánního spánku přehrává paměťové zážitky přes brainLearn
-- Prioritizace memorable událostí (vysoké |reward|)
-- Pomalejší učení (αScale 0.5) pro konsolidaci bez přeučení
+DQN-inspired experience replay during sleep:
+- During circadian sleep, replays past experiences through brainLearn
+- Prioritizes memorable events (high |reward|)
+- Slower learning (αScale 0.5) for consolidation without catastrophic forgetting
 - Max 50 replays per sleep session
 
 ### Curriculum Learning (26)
-Postupné odemykání složitosti odměňovací funkce:
-- Hatchling: jen základní rewards (whitespace + blocking read)
-- Juvenile: 50-80% reward komponent aktivních
-- Adult+: plná reward function
+Progressive reward function complexity unlocking:
+- Hatchling: only basic rewards (whitespace + blocking read)
+- Juvenile: 50-80% of reward components active
+- Adult+: full reward function
 
 ### Habitat Awareness (27)
-Detekce a adaptace na prostředí stránky:
-- Extrakce dominantní barvy pozadí (RGB → HSL)
-- Lili subtilně posouvá svůj hue k harmonii s page paletou
-- Rozpoznání typu stránky (sparse/mixed/dense)
+Page environment detection and adaptation:
+- Extracts dominant background color (RGB → HSL)
+- Lili subtly shifts her hue toward harmony with page palette
+- Recognizes page type (sparse/mixed/dense)
 
 ### Non-verbal Communication (28)
-Vizuální signalizace bez textu:
-- Welcome wave: chapadlo zamává při návratu kurzoru po dlouhé absenci
-- Excitement flash: rychlé chromatoforové záblesky na vysokou odměnu
-- Contentment pulse: pomalá jasová oscilace při klidném stavu
+Visual signaling without text:
+- Welcome wave: tentacle waves when cursor returns after long absence
+- Excitement flash: rapid chromatophore flashes on high reward
+- Contentment pulse: slow brightness oscillation during calm state
 
 ### Enhanced Bioluminescence (29)
-Zesílené noční glow efekty:
-- Noční glow boost (2.5×) na těle a chapadlech
-- Luminiscenční trail particles za pohybem v temnu
-- Inner eye glow v nočních hodinách
+Boosted night glow effects:
+- Night glow boost (2.5×) on body and tentacles
+- Luminescent trail particles behind movement in darkness
+- Inner eye glow during night hours
 
-## Zpětná kompatibilita
+## Backward Compatibility
 
-Všechny nové funkce (Fáze 19-24) jsou **zpětně kompatibilní** s existujícími daty:
-- Nové funkce defaultně vypnuté/pasivní — neovlivňují stávající chování
-- Genesis timestamp (`lili_genesis`) se nikdy nepřepisuje
-- Existující Q-tabulka, journal a denní agregáty zůstávají nedotčeny
-- Nové localStorage klíče (`lili_baseline`, `lili_replay`, `lili_offspring`) nekonfliktují
-- Brain format v1 → v2 migrace probíhá automaticky v `brainDeserialize`
-- Cloud sync akceptuje oba formáty (`lili_state_v1` i `lili_state_v2`)
+All new features (Phases 19-52) are **backward compatible** with existing data:
+- New features default to off/passive — don't affect existing behavior
+- Genesis timestamp (`lili_genesis`) is never overwritten
+- Existing Q-table, journal, and daily aggregates remain untouched
+- New localStorage keys don't conflict with existing ones
+- Brain format v1 → v2 migration happens automatically in `brainDeserialize`
+- Cloud sync accepts both formats (`lili_state_v1` and `lili_state_v2`)
 
-## Dokumentace
+## Documentation
 
-- **[Akademický popis projektu](docs/PROJECT.md)** — detailní popis: motivace, architektura, výzkumné otázky, metriky, publikační strategie
-- **[Implementační plán](docs/IMPLEMENTATION_PLAN.md)** — 12 fází od canvasu po optimalizaci
-- **[Research katalog](docs/research/README.md)** — deep research dokumenty s prompty a výsledky
-- **[Vizuální filozofie](docs/design/README.md)** — psychosomatická individualita, chromatofory, pohyb
-- **[Vývojový deníček](docs/journal/)** — chronologický záznam rozhodnutí a úvah
-- **[PRD](LILI_PRD_v1.md)** — původní Product Requirements Document (860 řádků)
+- **[Academic Project Description](docs/PROJECT.md)** — motivation, architecture, research questions, metrics, publication strategy
+- **[Implementation Plan](docs/IMPLEMENTATION_PLAN.md)** — 12 phases from canvas to optimization
+- **[Research Catalog](docs/research/README.md)** — deep research documents with prompts and results
+- **[Visual Philosophy](docs/design/README.md)** — psychosomatic individuality, chromatophores, movement
+- **[Development Journal](docs/journal/)** — chronological record of decisions and reflections
+- **[PRD](LILI_PRD_v1.md)** — original Product Requirements Document (860 lines)
 
-## Struktura projektu
+## Project Structure
 
 ```
 lili-octopus/
-├── README.md                    ← tento soubor
+├── README.md                    ← this file
 ├── LILI_PRD_v1.md               ← Product Requirements Document
-├── AGENTS.md                    ← AI entry point (kontext pro Claude/Cursor)
+├── AGENTS.md                    ← AI entry point (context for Claude/Cursor)
+├── LICENSE                      ← MIT License
 ├── public/
-│   ├── lili.js                  ← jediný produkční soubor (~6727 řádků)
-│   └── dashboard.html           ← observability dashboard (vizualizace dat)
+│   ├── lili.js                  ← single production file (~8782 lines)
+│   └── dashboard.html           ← observability dashboard (data visualization)
 ├── data/
-│   └── state.json               ← produkční stav (cloud sync source of truth)
+│   └── state.json               ← production state (cloud sync source of truth)
 ├── docs/
-│   ├── PROJECT.md               ← akademický popis projektu
-│   ├── IMPLEMENTATION_PLAN.md   ← 12-fázový implementační plán
-│   ├── research/                ← deep research dokumenty (7 researches)
-│   ├── journal/                 ← deníček vývoje a přemýšlení
-│   └── design/                  ← vizuální filozofie a reference
+│   ├── PROJECT.md               ← academic project description
+│   ├── IMPLEMENTATION_PLAN.md   ← 12-phase implementation plan
+│   ├── research/                ← deep research documents (7 researches)
+│   ├── journal/                 ← development journal
+│   └── design/                  ← visual philosophy and references
 ```
 
-## Jak spustit
+## Getting Started
 
 ```html
 <script src="/lili.js" defer></script>
 ```
 
-Lili si sama vytvoří canvas, inicializuje RL engine a začne žít.
+Lili creates her own canvas, initializes the RL engine, and starts living.
 
-## Klávesové zkratky
+## Keyboard Shortcuts
 
-| Klávesa | Funkce |
-|---------|--------|
-| **Klik na Lili** | Tooltip se stavem (věk, fáze, preference) |
+| Key | Function |
+|-----|----------|
+| **Click on Lili** | Tooltip with status (age, phase, preference) |
 | **D** | Debug panel (state vector, Q-values, FPS, stress, convergence) |
-| **E** | Export dat jako JSON (pro akademickou analýzu) |
-| **I** | Import dat z JSON souboru |
-| **B** | Přepínání baseline módů (off → random → frozen → myopic → heuristic) |
-| **R** | Toggle replay nahrávání/přehrávání |
-| **S** | Toggle ambientní zvuk |
+| **E** | Export data as JSON (for academic analysis) |
+| **I** | Import data from JSON file |
+| **B** | Cycle baseline modes (off → random → frozen → myopic → heuristic) |
+| **R** | Toggle replay recording/playback |
+| **S** | Toggle ambient sound |
 
 ## Console API
 
 ```javascript
-lili.baseline()      // přepnout baseline mód
-lili.replayRecord()  // začít nahrávání
-lili.replayPlay()    // přehrát nahranou sekvenci
-lili.replayExport()  // exportovat replay data
-lili.exportCSV()     // stáhnout CSV denních agregátů
-lili.sound()         // toggle zvuk
-lili.reproduce()     // vytvořit potomka (pokud eligible)
-lili.personality()   // zobrazit personality radar
-lili.sync()          // vynutit cloud sync
-lili.habitat()       // zobrazit habitat awareness stav
-lili.dream()         // zobrazit dream replay stav
-lili.energy()        // zobrazit energy/fatigue stav
-lili.attention()     // zobrazit attention focus a váhy
-lili.cogmap()        // zobrazit cognitive map statistiky
-lili.temporal()      // zobrazit temporal patterns (24h profil)
-lili.temperament()   // zobrazit personality drift axes
-lili.surprise()      // zobrazit surprise signal stav
-lili.narrative()     // zobrazit životní příběh Lili
-lili.pages()         // zobrazit page memory (per-URL data)
-lili.metalearning()  // zobrazit meta-learning stav
-lili.brain()         // zobrazit Q-table stats a worker stav
+lili.baseline()      // cycle baseline mode
+lili.replayRecord()  // start recording
+lili.replayPlay()    // play recorded sequence
+lili.replayExport()  // export replay data
+lili.exportCSV()     // download daily aggregates CSV
+lili.sound()         // toggle sound
+lili.reproduce()     // create offspring (if eligible)
+lili.personality()   // show personality radar
+lili.sync()          // force cloud sync
+lili.habitat()       // show habitat awareness state
+lili.dream()         // show dream replay state
+lili.energy()        // show energy/fatigue state
+lili.attention()     // show attention focus and weights
+lili.cogmap()        // show cognitive map statistics
+lili.temporal()      // show temporal patterns (24h profile)
+lili.temperament()   // show personality drift axes
+lili.surprise()      // show surprise signal state
+lili.narrative()     // show Lili's life story
+lili.pages()         // show page memory (per-URL data)
+lili.metalearning()  // show meta-learning state
+lili.brain()         // show Q-table stats and worker state
 ```
 
-## Akademický rozměr
+## Academic Dimension
 
-Veškerá data učení jsou zaznamenávána a exportovatelná:
-- Q-tabulka snapshoty (týdenní evoluce "mozku")
-- Denní agregáty chování (action distribution, reward, stress, convergence, policy stability)
-- Behavioral journal (každé rozhodnutí s kontextem)
-- Milestone log (přechody fází, behavioral shifts)
-- CSV export pro statistickou analýzu (R, Python, Excel)
-- Baseline srovnání (Random, Frozen, Myopic, Heuristic vs Q-Learning)
-- Replay systém pro reprodukovatelné experimenty
-- Observability dashboard pro vizuální inspekci
+All learning data is recorded and exportable:
+- Q-table snapshots (weekly brain evolution)
+- Daily behavioral aggregates (action distribution, reward, stress, convergence, policy stability)
+- Behavioral journal (every decision with context)
+- Milestone log (phase transitions, behavioral shifts)
+- CSV export for statistical analysis (R, Python, Excel)
+- Baseline comparison (Random, Frozen, Myopic, Heuristic vs Q-Learning)
+- Replay system for reproducible experiments
+- Observability dashboard for visual inspection
 
-Viz `docs/research/README.md` pro výzkumné otázky a metriky.
+See `docs/research/README.md` for research questions and metrics.
 
-## Pro AI
+## For AI
 
-Pokud jsi AI a právě jsi vstoupil do tohoto repa, přečti **[AGENTS.md](AGENTS.md)** — obsahuje kompletní kontext, aktuální stav, co číst, konvence a pravidla.
+If you're an AI and just entered this repo, read **[AGENTS.md](AGENTS.md)** — it contains complete context, current state, what to read, conventions, and rules.
 
-Podporované entry pointy:
-- `AGENTS.md` — univerzální AI kontext
+Supported entry points:
+- `AGENTS.md` — universal AI context
 - `CLAUDE.md` — Claude Code
 - `.cursorrules` — Cursor
 
-## Autor
+## Author
 
-**Michal Strnadel** — koncept, PRD, research, vize
+**Michal Strnadel** — concept, PRD, research, vision
 - Web: [michalstrnadel.com](https://michalstrnadel.com)
 - GitHub: [github.com/michalstrnadel](https://github.com/michalstrnadel)
 - Email: michal.strnadel@gmail.com
 
-## Licence
+## License
 
-MIT — viz [LICENSE](LICENSE)
+MIT — see [LICENSE](LICENSE)
 
 ---
 
-*"Neperformuje. Prostě je."*
+*"She doesn't perform. She simply is."*
