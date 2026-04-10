@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-24 hotovy, akademická + technologická expanze**
+**Fáze: Implementace — Fáze 1-29 hotovy, akademická + technologická expanze**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -71,6 +71,12 @@ Hotovo:
 - ✅ **Fáze 23:** Social Learning — rozšíření cloud sync o anonymizované behavioral stats (avgStress, dominantMood, personality, entropy, season, offspring count), připraveno pro multi-visitor agregaci
 - ✅ **Fáze 24:** Offspring / Generational Learning — reprodukce po dosažení mature fáze, Q-table crossover (50% náhodný výběr entries), gaussian mutace na zděděných Q-hodnotách, max 3 potomci, export jako JSON, journal milestone
 
+- ✅ **Fáze 25:** Dream Replay — experience replay během spánku (DQN-inspired), prioritizace memorable zážitků (vysoké |reward|), αScale 0.5 pro pomalou konsolidaci, max 50 replays per sleep session
+- ✅ **Fáze 26:** Curriculum Learning — reward components postupně odemykány dle life phase (hatchling: jen whitespaceCalm+blockingRead, juvenile: 50-80% rewards, adult+: full reward set)
+- ✅ **Fáze 27:** Habitat Awareness — detekce dominantní barvy stránky (HSL extraction), hue adaptation k harmonii s page palette, rozpoznání page type (sparse/mixed/dense)
+- ✅ **Fáze 28:** Non-verbal Communication — welcome wave (chapadlo mávne při návratu kurzoru), excitement flash (chromatoforový záblesk na vysokou odměnu), contentment pulse (pomalá jasová oscilace při klidném stavu)
+- ✅ **Fáze 29:** Enhanced Bioluminescence — zesílený glow v noci (nightGlowBoost 2.5×), luminiscenční trail particles za pohybem, inner eye glow, body outline luminescence
+
 **Další krok:** Testování všech nových fází, tuning parametrů, příprava akademického paperu.
 
 **Keyboard shortcuts:**
@@ -111,7 +117,7 @@ lili-octopus/
 ├── LILI_PRD_v1.md           ← Product Requirements Document (ZDROJ PRAVDY)
 │
 ├── public/
-│   ├── lili.js              ← JEDINÝ produkční soubor (~6727 řádků)
+│   ├── lili.js              ← JEDINÝ produkční soubor (~7117 řádků)
 │   └── dashboard.html       ← Observability dashboard (vizualizace exportovaných dat)
 │
 ├── docs/
@@ -198,5 +204,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-04-10 (Fáze 1-24 implementovány, lili.js ~6727 řádků, dashboard.html)*
+*Poslední aktualizace: 2026-04-10 (Fáze 1-29 implementovány, lili.js ~7117 řádků, dashboard.html)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

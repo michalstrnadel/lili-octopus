@@ -530,6 +530,52 @@
       storageKey: 'lili_offspring',
     },
 
+    // --- Phase 25: Dream Replay (experience replay during sleep) ---
+    dream: {
+      replayInterval: 180,       // frames between dream replays (3s at 60fps)
+      batchSize: 5,              // experiences replayed per dream batch
+      maxPerSleep: 50,           // cap per sleep session
+      alphaScale: 0.5,           // learning rate scale during dreams (slower consolidation)
+    },
+
+    // --- Phase 26: Curriculum Learning ---
+    curriculum: {
+      // Reward component multipliers per life phase (gradual unlock)
+      gates: {
+        hatchling: { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 0.3, playfulInteraction: 0, fleeSuccess: 0.2, edgeRespect: 0, moodRepetition: 0.5, idleTooLong: 0.3, unnecessaryFlee: 0, heldBlocksRead: 0.3 },
+        juvenile:  { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 0.7, playfulInteraction: 0.5, fleeSuccess: 0.7, edgeRespect: 0.3, moodRepetition: 0.8, idleTooLong: 0.7, unnecessaryFlee: 0.5, heldBlocksRead: 0.7 },
+        adult:     { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 1, playfulInteraction: 1, fleeSuccess: 1, edgeRespect: 1, moodRepetition: 1, idleTooLong: 1, unnecessaryFlee: 1, heldBlocksRead: 1 },
+        mature:    { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 1, playfulInteraction: 1, fleeSuccess: 1, edgeRespect: 1, moodRepetition: 1, idleTooLong: 1, unnecessaryFlee: 1, heldBlocksRead: 1 },
+        elder:     { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 1, playfulInteraction: 1, fleeSuccess: 1, edgeRespect: 1, moodRepetition: 1, idleTooLong: 1, unnecessaryFlee: 1, heldBlocksRead: 1 },
+      },
+    },
+
+    // --- Phase 27: Habitat Awareness (page color adaptation) ---
+    habitat: {
+      sampleIntervalFrames: 300, // sample page palette every 5s at 60fps
+      hueAdaptSpeed: 0.02,       // lerp speed toward page hue
+      maxHueShift: 25,           // max degrees of habitat-driven hue shift
+    },
+
+    // --- Phase 28: Non-verbal Communication (chromatophore signals) ---
+    signals: {
+      welcomeWaveDuration: 120,  // frames for tentacle welcome wave
+      welcomeWaveDelay: 5000,    // ms cursor absent before wave triggers
+      excitementFlashDuration: 30, // frames for reward flash
+      excitementThreshold: 1.5,  // cumulative reward to trigger excitement
+      contentmentPulseSpeed: 0.03, // body brightness oscillation
+      contentmentMinCalm: 60,    // frames of calm before contentment triggers
+    },
+
+    // --- Phase 29: Enhanced Bioluminescence ---
+    biolum: {
+      nightGlowBoost: 2.5,      // glow multiplier at night
+      trailMaxParticles: 20,     // luminescent trail pool
+      trailLifespan: 90,         // frames per trail particle
+      trailSpawnInterval: 6,     // frames between trail spawns (when moving)
+      eyeGlowAlpha: 0.3,        // inner eye glow at night
+    },
+
     // --- localStorage keys ---
     storageKeys: {
       genesis:     'lili_genesis',
@@ -966,6 +1012,44 @@
     lightnessShift: 0,
     satShift: 0,
     glowMul: 1.0,
+  };
+
+  // Phase 25: Dream replay state
+  const _dream = {
+    timer: 0,                  // frames until next replay batch
+    replaysThisSleep: 0,       // counter per sleep session
+    sleeping: false,           // track sleep transitions
+  };
+
+  // Phase 27: Habitat awareness state
+  const _habitat = {
+    sampleTimer: 0,
+    dominantHue: 0,            // detected page hue (0-360)
+    hueShift: 0,               // current adaptation shift
+    targetHueShift: 0,         // target shift (lerps toward this)
+    pageType: 'unknown',       // text-heavy / image-heavy / sparse / mixed
+  };
+
+  // Phase 28: Non-verbal communication state
+  const _signals = {
+    // Welcome wave
+    welcomeActive: false,
+    welcomeFrame: 0,
+    welcomeArm: 0,             // which tentacle waves
+    lastCursorSeen: 0,         // timestamp when cursor was last active
+    // Excitement flash
+    excitementActive: false,
+    excitementFrame: 0,
+    excitementHueShift: 0,
+    // Contentment pulse
+    contentmentPhase: 0,
+    calmFrames: 0,             // consecutive calm+low-stress frames
+  };
+
+  // Phase 29: Bioluminescence trail particles
+  const _bioTrail = {
+    particles: [],             // {x, y, life, maxLife, hue, size}
+    spawnTimer: 0,
   };
 
   function onMoodChange(fn) { _moodListeners.push(fn); }
@@ -1495,6 +1579,74 @@
   }
 
   // =========================================================================
+  // 25 — Dream Replay (experience replay during sleep consolidation)
+  // DQN-inspired: replay significant past experiences through brainLearn
+  // during circadian sleep to consolidate learning.
+  // =========================================================================
+
+  function dreamReplay() {
+    if (!_circadian.isAsleep) {
+      if (_dream.sleeping) {
+        // Just woke up — reset counter
+        _dream.sleeping = false;
+        if (_dream.replaysThisSleep > 0) {
+          console.info('[Lili] Dream session ended: ' + _dream.replaysThisSleep + ' experiences replayed');
+        }
+      }
+      return;
+    }
+
+    if (!_dream.sleeping) {
+      // Just fell asleep
+      _dream.sleeping = true;
+      _dream.replaysThisSleep = 0;
+      _dream.timer = CFG.dream.replayInterval;
+    }
+
+    if (_dream.replaysThisSleep >= CFG.dream.maxPerSleep) return;
+
+    _dream.timer--;
+    if (_dream.timer > 0) return;
+    _dream.timer = CFG.dream.replayInterval;
+
+    // Sample random experiences from ring buffer
+    var buf = _journal.ringBuffer;
+    if (buf.length < 20) return; // not enough memories to dream
+
+    var batch = Math.min(CFG.dream.batchSize, buf.length - 1);
+    var savedAlpha = CFG.rl.alpha;
+    CFG.rl.alpha *= CFG.dream.alphaScale; // slower learning during dreams
+
+    for (var i = 0; i < batch; i++) {
+      // Prioritize high-magnitude reward experiences (memorable events)
+      var idx;
+      if (Math.random() < 0.6) {
+        // Weighted toward high |reward| experiences
+        var best = 0, bestR = 0;
+        for (var tries = 0; tries < 10; tries++) {
+          var cand = Math.floor(Math.random() * (buf.length - 1));
+          if (Math.abs(buf[cand].reward) > bestR) {
+            bestR = Math.abs(buf[cand].reward);
+            best = cand;
+          }
+        }
+        idx = best;
+      } else {
+        idx = Math.floor(Math.random() * (buf.length - 1));
+      }
+
+      var exp = buf[idx];
+      var nextExp = buf[Math.min(idx + 1, buf.length - 1)];
+      if (exp.state >= 0 && nextExp.state >= 0) {
+        brainLearn(exp.state, exp.mood, exp.reward, nextExp.state);
+      }
+    }
+
+    CFG.rl.alpha = savedAlpha;
+    _dream.replaysThisSleep += batch;
+  }
+
+  // =========================================================================
   // 18C — Micro-expressions (instant visual reactions to events)
   // =========================================================================
 
@@ -1616,6 +1768,177 @@
       _ambient.lightnessShift = A.darkBgLightnessBoost * factor;
       _ambient.satShift = A.darkBgSatBoost * factor;
       _ambient.glowMul = 1 + (A.darkBgGlowBoost - 1) * factor;
+    }
+  }
+
+  // =========================================================================
+  // 27 — Habitat Awareness (page color palette adaptation)
+  // Lili detects the dominant color of her page and subtly adapts her hue.
+  // =========================================================================
+
+  function _samplePageHue() {
+    try {
+      var el = document.body;
+      var bg = getComputedStyle(el).backgroundColor;
+      if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') {
+        el = document.documentElement;
+        bg = getComputedStyle(el).backgroundColor;
+      }
+      if (!bg || bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)') return -1;
+      var m = bg.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+      if (!m) return -1;
+      var r = parseInt(m[1]) / 255, g = parseInt(m[2]) / 255, b = parseInt(m[3]) / 255;
+      var max = Math.max(r, g, b), min = Math.min(r, g, b);
+      // Skip near-gray backgrounds (low saturation)
+      if (max - min < 0.08) return -1;
+      var h;
+      if (max === r) h = ((g - b) / (max - min)) % 6;
+      else if (max === g) h = (b - r) / (max - min) + 2;
+      else h = (r - g) / (max - min) + 4;
+      h = Math.round(h * 60);
+      if (h < 0) h += 360;
+      return h;
+    } catch (e) { return -1; }
+  }
+
+  function updateHabitat() {
+    _habitat.sampleTimer++;
+    if (_habitat.sampleTimer < CFG.habitat.sampleIntervalFrames) return;
+    _habitat.sampleTimer = 0;
+
+    var hue = _samplePageHue();
+    if (hue >= 0) {
+      _habitat.dominantHue = hue;
+      // Compute complementary shift: move Lili's hue toward a harmonious offset
+      var baseHue = ageVal(CFG.baseHue);
+      var diff = hue - baseHue;
+      // Normalize to -180..180
+      while (diff > 180) diff -= 360;
+      while (diff < -180) diff += 360;
+      // Lili shifts toward an analogous color (+30° offset from page hue)
+      _habitat.targetHueShift = Math.max(-CFG.habitat.maxHueShift,
+        Math.min(CFG.habitat.maxHueShift, diff * 0.15));
+    }
+
+    // Lerp toward target
+    _habitat.hueShift += (_habitat.targetHueShift - _habitat.hueShift) * CFG.habitat.hueAdaptSpeed;
+
+    // Detect page type from spatial hash density
+    var totalEls = spatialHash.grid.size;
+    if (totalEls < 5) _habitat.pageType = 'sparse';
+    else if (totalEls < 20) _habitat.pageType = 'mixed';
+    else _habitat.pageType = 'dense';
+  }
+
+  // =========================================================================
+  // 28 — Non-verbal Communication (chromatophore signals + tentacle gestures)
+  // Visual signaling of internal state without text.
+  // =========================================================================
+
+  function signalUpdate() {
+    var S = CFG.signals;
+
+    // Welcome wave: when mouse returns after long absence
+    if (mouse.active) {
+      if (!_signals.welcomeActive && _signals.lastCursorSeen > 0 &&
+          Date.now() - _signals.lastCursorSeen > S.welcomeWaveDelay) {
+        _signals.welcomeActive = true;
+        _signals.welcomeFrame = 0;
+        _signals.welcomeArm = Math.floor(Math.random() * TENT_N);
+      }
+      _signals.lastCursorSeen = Date.now();
+    } else if (_signals.lastCursorSeen === 0) {
+      _signals.lastCursorSeen = Date.now();
+    }
+
+    // Advance welcome wave
+    if (_signals.welcomeActive) {
+      _signals.welcomeFrame++;
+      if (_signals.welcomeFrame >= S.welcomeWaveDuration) {
+        _signals.welcomeActive = false;
+      }
+    }
+
+    // Excitement flash: triggered from computeReward when reward > threshold
+    if (_signals.excitementActive) {
+      _signals.excitementFrame++;
+      var t = _signals.excitementFrame / S.excitementFlashDuration;
+      _signals.excitementHueShift = Math.sin(t * Math.PI * 4) * 30 * (1 - t);
+      if (_signals.excitementFrame >= S.excitementFlashDuration) {
+        _signals.excitementActive = false;
+        _signals.excitementHueShift = 0;
+      }
+    }
+
+    // Contentment pulse: calm mood + low stress for sustained period
+    if (lili.mood === 'calm' && stress < 0.2) {
+      _signals.calmFrames++;
+    } else {
+      _signals.calmFrames = Math.max(0, _signals.calmFrames - 2);
+    }
+    if (_signals.calmFrames > S.contentmentMinCalm) {
+      _signals.contentmentPhase += S.contentmentPulseSpeed;
+    } else {
+      _signals.contentmentPhase *= 0.95; // fade out
+    }
+  }
+
+  function signalTriggerExcitement() {
+    _signals.excitementActive = true;
+    _signals.excitementFrame = 0;
+  }
+
+  // =========================================================================
+  // 29 — Enhanced Bioluminescence (night-time glow effects)
+  // =========================================================================
+
+  function updateBioTrail() {
+    var B = CFG.biolum;
+    var isNight = _circadian.isAsleep || (new Date().getHours() >= 22 || new Date().getHours() < 6);
+    var darkBg = _ambient.adapted < 0.35;
+
+    // Spawn trail particles when moving at night/dark
+    if ((isNight || darkBg) && lili.vel.magSq() > 0.5) {
+      _bioTrail.spawnTimer++;
+      if (_bioTrail.spawnTimer >= B.trailSpawnInterval && _bioTrail.particles.length < B.trailMaxParticles) {
+        _bioTrail.spawnTimer = 0;
+        _bioTrail.particles.push({
+          x: lili.pos.x + (Math.random() - 0.5) * lili.bodyR,
+          y: lili.pos.y + (Math.random() - 0.5) * lili.bodyR,
+          life: B.trailLifespan,
+          maxLife: B.trailLifespan,
+          hue: ageVal(CFG.baseHue) + (Math.random() - 0.5) * 30,
+          size: 1.5 + Math.random() * 2.5,
+        });
+      }
+    } else {
+      _bioTrail.spawnTimer = 0;
+    }
+
+    // Age particles
+    for (var i = _bioTrail.particles.length - 1; i >= 0; i--) {
+      _bioTrail.particles[i].life--;
+      _bioTrail.particles[i].y -= 0.15; // slow upward drift
+      if (_bioTrail.particles[i].life <= 0) {
+        _bioTrail.particles.splice(i, 1);
+      }
+    }
+  }
+
+  function renderBioTrail() {
+    if (_bioTrail.particles.length === 0) return;
+    for (var i = 0; i < _bioTrail.particles.length; i++) {
+      var p = _bioTrail.particles[i];
+      var alpha = (p.life / p.maxLife) * 0.6;
+      var r = p.size * (0.5 + 0.5 * p.life / p.maxLife);
+      var glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 3);
+      glow.addColorStop(0, 'hsla(' + p.hue + ', 80%, 70%, ' + alpha + ')');
+      glow.addColorStop(0.5, 'hsla(' + p.hue + ', 70%, 60%, ' + (alpha * 0.4) + ')');
+      glow.addColorStop(1, 'hsla(' + p.hue + ', 60%, 50%, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
 
@@ -2732,24 +3055,27 @@
     const R = CFG.rewards;
     const JC = CFG.journal;
 
+    // Phase 26: Curriculum learning — gate reward components by life phase
+    var gate = CFG.curriculum.gates[age.phase] || CFG.curriculum.gates.adult;
+
     // +1.0: in whitespace, user reading (cursor still/slow), calm/idle mood
     if (sensors.whitespace === 'in_whitespace' &&
         (sensors.cursorVelocity === 'still' || sensors.cursorVelocity === 'slow') &&
         (mood === 'calm' || mood === 'idle')) {
-      reward += R.whitespaceCalm;
+      reward += R.whitespaceCalm * gate.whitespaceCalm;
     }
 
     // +0.8: successful flee (was near, now far, was shy/alert)
     if (_decision.prevCursorProximity === 'near' &&
         sensors.cursorProximity === 'far' &&
         (mood === 'shy' || mood === 'alert')) {
-      reward += R.fleeSuccess;
+      reward += R.fleeSuccess * gate.fleeSuccess;
       triggerMicroExpr('relief'); // Phase 18C
     }
 
     // +0.5: near DOM, low stress, curious mood
     if (sensors.domDensity !== 'sparse' && stress < 0.3 && mood === 'curious') {
-      reward += R.exploreLowStress;
+      reward += R.exploreLowStress * gate.exploreLowStress;
     }
 
     // +0.3: tentacles touching DOM, user not stationary, playful
@@ -2758,7 +3084,7 @@
       for (let t = 0; t < TENT_N; t++) {
         if (tentacles[t].touching) touchCount++;
       }
-      if (touchCount > 0) reward += R.playfulInteraction;
+      if (touchCount > 0) reward += R.playfulInteraction * gate.playfulInteraction;
     }
 
     // +0.3: near document edge, user active in center
@@ -2766,36 +3092,36 @@
       const dL = lili.pos.x, dR = docW - lili.pos.x;
       const dT = lili.pos.y, dB = docH - lili.pos.y;
       if (Math.min(dL, dR, dT, dB) < CFG.boundaryMargin * 1.5) {
-        reward += R.edgeRespect;
+        reward += R.edgeRespect * gate.edgeRespect;
       }
     }
 
     // -2.0: over text/element, cursor still (blocking reading)
     if (sensors.whitespace === 'on_element' && sensors.cursorVelocity === 'still') {
-      reward += R.blockingRead;
+      reward += R.blockingRead * gate.blockingRead;
     }
 
     // -1.0: held element blocks reading (user cursor still, element displaced)
     if (sensors.cursorVelocity === 'still' && _domState.heldCount > 0) {
-      reward += R.heldBlocksRead;
+      reward += R.heldBlocksRead * gate.heldBlocksRead;
     }
 
     // -0.5: idle too long (modulated by age — elders less penalized)
     if (mood === 'idle' && _decision.moodRepeatCount > JC.idlePenaltyThreshold) {
       const ageMod = ageVal({ hatchling: 1.0, juvenile: 0.8, adult: 0.6, mature: 0.4, elder: 0.2 });
-      reward += R.idleTooLong * ageMod;
+      reward += R.idleTooLong * ageMod * gate.idleTooLong;
     }
 
     // -0.3: shy/alert when cursor is slow and far (unnecessary fear)
     if ((mood === 'shy' || mood === 'alert') &&
         sensors.cursorProximity === 'far' &&
         (sensors.cursorVelocity === 'still' || sensors.cursorVelocity === 'slow')) {
-      reward += R.unnecessaryFlee;
+      reward += R.unnecessaryFlee * gate.unnecessaryFlee;
     }
 
     // -0.2: repeating same mood > threshold cycles
     if (_decision.moodRepeatCount > JC.moodRepeatThreshold) {
-      reward += R.moodRepetition;
+      reward += R.moodRepetition * gate.moodRepetition;
     }
 
     // Phase 15A: Update place memory with reward sign
@@ -2871,6 +3197,12 @@
 
       _decision.totalReward += reward;
       psychosomAccumulate(stress, reward); // Phase 18E
+
+      // Phase 28: Trigger excitement flash on high positive reward
+      if (reward >= CFG.signals.excitementThreshold) {
+        signalTriggerExcitement();
+        triggerMicroExpr('joy');
+      }
     }
 
     // Phase 17: Mood plan management
@@ -4102,10 +4434,14 @@
         (_replay.events.length ? ' (' + _replay.events.length + ' ev)' : '') + '\n' +
       'avgQΔ:    ' + (_journal._qDeltaCount > 0 ? (_journal._qDeltaSum / _journal._qDeltaCount).toFixed(5) : '—') + '\n' +
       'polStab:  ' + (1 - (_journal._policyChanges / Math.max(_journal.dayDecisionCount, 1))).toFixed(3) + '\n' +
-      '── Phase 21-24 ─────────\n' +
+      '── Phase 21-29 ─────────\n' +
       'season:   ' + _season.current + '\n' +
       'sound:    ' + (_sound.enabled ? 'on' : 'off') + '\n' +
       'offspring:' + _offspring.count + '/' + CFG.offspring.maxOffspring + '\n' +
+      'dream:    ' + (_dream.sleeping ? _dream.replaysThisSleep + '/' + CFG.dream.maxPerSleep + ' replays' : 'awake') + '\n' +
+      'habitat:  ' + _habitat.pageType + ' hue=' + Math.round(_habitat.dominantHue) + ' shift=' + _habitat.hueShift.toFixed(1) + '\n' +
+      'signals:  ' + (_signals.welcomeActive ? 'wave' : _signals.excitementActive ? 'flash' : _signals.calmFrames > CFG.signals.contentmentMinCalm ? 'content' : '—') + '\n' +
+      'biotrail: ' + _bioTrail.particles.length + '/' + CFG.biolum.trailMaxParticles + '\n' +
       '── Perf ────────────────\n' +
       'FPS:      ' + _fpsAvg.toFixed(1) + (_fpsAvg < 50 ? ' \u26A0' : '') + '\n' +
       'frame#:   ' + frameCount;
@@ -4137,7 +4473,10 @@
           '  Psychosom: stress=' + _psychosom.stressAvg.toFixed(2) + ' reward=' + _psychosom.rewardAvg.toFixed(2) + '\n' +
           '  Genesis: bodyX=' + _genesis.bodyXScale.toFixed(3) + ' bodyY=' + _genesis.bodyYScale.toFixed(3) + ' tilt=' + (_genesis.headTilt * 180 / Math.PI).toFixed(1) + '°\n' +
           '  Place memory: ' + _placeMemory.grid.size + ' cells\n' +
-          '  Cloud sync: ' + syncAge + (_sync.dirty ? ' (dirty)' : '')
+          '  Cloud sync: ' + syncAge + (_sync.dirty ? ' (dirty)' : '') + '\n' +
+          '  Habitat: ' + _habitat.pageType + ' (hue shift ' + _habitat.hueShift.toFixed(1) + '°)\n' +
+          '  Season: ' + _season.current + '\n' +
+          '  Dream replays: ' + _dream.replaysThisSleep
         );
       },
       data: function () { return exportData(true); },
@@ -4201,8 +4540,17 @@
       sound: function () { return soundToggle(); },
       // Phase 24: Offspring
       reproduce: function () { return offspringCreate(); },
+      // Phase 25-29: New console API
+      habitat: function () {
+        console.info('[Lili] Habitat: type=' + _habitat.pageType + ', dominantHue=' + Math.round(_habitat.dominantHue) + ', hueShift=' + _habitat.hueShift.toFixed(1));
+        return { type: _habitat.pageType, hue: _habitat.dominantHue, shift: _habitat.hueShift };
+      },
+      dream: function () {
+        console.info('[Lili] Dream: ' + (_dream.sleeping ? 'sleeping, ' + _dream.replaysThisSleep + ' replays' : 'awake'));
+        return { sleeping: _dream.sleeping, replays: _dream.replaysThisSleep };
+      },
     });
-    console.info('[Lili] Console API ready — try: lili.status(), lili.baseline(), lili.exportCSV(), lili.sound(), lili.reproduce()');
+    console.info('[Lili] Console API ready — try: lili.status(), lili.baseline(), lili.exportCSV(), lili.sound(), lili.reproduce(), lili.habitat(), lili.dream()');
 
     // Keyboard handler (unified)
     document.addEventListener('keydown', function (e) {
@@ -5347,6 +5695,14 @@
         arm.idealY += _sleepAnim.remOffsetY * twitchFade;
       }
     }
+
+    // Phase 28: Welcome wave — one tentacle waves upward toward cursor
+    if (_signals.welcomeActive && idx === _signals.welcomeArm) {
+      var wt = _signals.welcomeFrame / CFG.signals.welcomeWaveDuration;
+      var wave = Math.sin(wt * Math.PI * 3) * (1 - wt); // damped oscillation
+      arm.idealX += (mouse.pos.x - bodyX) * 0.3 * (1 - wt);
+      arm.idealY += -arm.totalLen * 0.4 * wave;
+    }
   }
 
   // =========================================================================
@@ -5888,21 +6244,31 @@
     const seasonSat = _season.satShift;
     const seasonLit = _season.litShift;
 
-    const h = baseHue + circadianHue + stressHue + moodHue + driftHue + seasonHue;
+    // Phase 27: Habitat color adaptation + Phase 28: Excitement/contentment signal shifts
+    const habitatHue = _habitat.hueShift;
+    const signalHue = _signals.excitementHueShift;
+    const contentLit = Math.sin(_signals.contentmentPhase) * 4; // ±4% brightness pulse
+
+    const h = baseHue + circadianHue + stressHue + moodHue + driftHue + seasonHue + habitatHue + signalHue;
     // Phase 18G: Ambient light adaptation (saturation shift for contrast)
     const s = Math.min(Math.max(baseSat + stressSat + moodSat + satPulse + _ambient.satShift + seasonSat, 20), 100);
-    // Phase 18E+18G+21: Psychosomatic + ambient + seasonal lightness shift
-    const l = Math.min(Math.max(baseLit + circadianLit + moodLit + _psychosom.lightness + _ambient.lightnessShift + seasonLit, 15), 85);
+    // Phase 18E+18G+21+28: Psychosomatic + ambient + seasonal + contentment lightness shift
+    const l = Math.min(Math.max(baseLit + circadianLit + moodLit + _psychosom.lightness + _ambient.lightnessShift + seasonLit + contentLit, 15), 85);
+
+    // Phase 29: Enhanced bioluminescence — boost glow at night
+    var isNightBio = _circadian.isAsleep || (new Date().getHours() >= 22 || new Date().getHours() < 6);
+    var nightGlow = isNightBio ? CFG.biolum.nightGlowBoost : 1;
+    var glowAlpha = ageVal(CFG.glowIntensity) * _chromaBlend.glowMod * 0.15 * nightGlow;
 
     return {
       bodyHsl: `hsl(${h}, ${s}%, ${l}%)`,
       bodyHslAlpha: function(a) { return `hsla(${h}, ${s}%, ${l}%, ${a})`; },
       tentHsl: `hsl(${h + 5}, ${s - 5}%, ${l + 5}%)`,
       tentHslAlpha: function(a) { return `hsla(${h + 5}, ${s - 5}%, ${l + 5}%, ${a})`; },
-      glowHsl: `hsla(${h - 10}, ${s + 10}%, ${l + 20}%, ${ageVal(CFG.glowIntensity) * _chromaBlend.glowMod * 0.15})`,
+      glowHsl: `hsla(${h - 10}, ${s + 10}%, ${l + 20}%, ${glowAlpha})`,
       eyeWhite: `hsl(${h}, 15%, 92%)`,
       pupilHsl: `hsl(${h + 30}, ${s + 20}%, ${Math.max(l - 25, 10)}%)`,
-      h, s, l
+      h, s, l, isNightBio
     };
   }
 
@@ -6359,6 +6725,17 @@
       ctx.beginPath();
       ctx.arc(ex + eyeR * 0.15, ey + eyeR * 0.12, eyeR * 0.08, 0, Math.PI * 2);
       ctx.fill();
+
+      // Phase 29: Inner eye glow at night (bioluminescence)
+      if (colors.isNightBio && _ambient.adapted < 0.4) {
+        var eyeGlow = ctx.createRadialGradient(px, py, 0, px, py, eyeR * 0.8);
+        eyeGlow.addColorStop(0, `hsla(${colors.h + 30}, 80%, 70%, ${CFG.biolum.eyeGlowAlpha})`);
+        eyeGlow.addColorStop(1, `hsla(${colors.h + 30}, 60%, 50%, 0)`);
+        ctx.fillStyle = eyeGlow;
+        ctx.beginPath();
+        ctx.arc(ex, ey, eyeR * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     drawEye(leftEyeX, leftEyeY, true);
@@ -6519,6 +6896,18 @@
     // Phase 22: Sound landscape update
     soundUpdateBreathing();
 
+    // Phase 25: Dream replay (experience consolidation during sleep)
+    dreamReplay();
+
+    // Phase 27: Habitat awareness (page color adaptation)
+    updateHabitat();
+
+    // Phase 28: Non-verbal communication signals
+    signalUpdate();
+
+    // Phase 29: Bioluminescence trail particles
+    updateBioTrail();
+
     checkMidnightCleanup(); // Phase 9D: periodic midnight reset check
   }
 
@@ -6534,22 +6923,25 @@
       ctx.translate(-scrollOx, -scrollOy);
 
       // 4E — Rendering pipeline (correct z-order)
-      // 0. Ink cloud behind everything (Phase 15E)
+      // 0. Bioluminescent trail behind everything (Phase 29)
+      renderBioTrail();
+
+      // 1. Ink cloud behind everything (Phase 15E)
       renderInk(colors);
 
-      // 1. Tentacles behind body (hull envelope rendering)
+      // 2. Tentacles behind body (hull envelope rendering)
       renderTentaclesHull(colors);
 
-      // 2. Body (noise-deformed ellipse with glow)
+      // 3. Body (noise-deformed ellipse with glow)
       renderBody(colors);
 
-      // 3. Eyes (on top of body) — circadian eye openness applied
+      // 4. Eyes (on top of body) — circadian eye openness applied
       renderEyes(colors);
 
-      // 4. Enhanced DOM: render grabbed text on canvas (Phase 15F)
+      // 5. Enhanced DOM: render grabbed text on canvas (Phase 15F)
       renderEnhancedDomText(colors);
 
-      // 5. Bubble communication (Phase 16B) — floats above body
+      // 6. Bubble communication (Phase 16B) — floats above body
       renderBubbles();
 
       ctx.restore();

@@ -35,7 +35,7 @@ Lili je autonomní digitální organismus ve formě chobotnice, žijící na web
 
 ## Aktuální stav (2026-04-10)
 
-**24 implementačních fází hotovo** — `public/lili.js` (~6727 řádků)
+**29 implementačních fází hotovo** — `public/lili.js` (~7117 řádků)
 
 | Fáze | Popis |
 |------|-------|
@@ -55,6 +55,11 @@ Lili je autonomní digitální organismus ve formě chobotnice, žijící na web
 | **22** | **Sound Landscape** — Web Audio API ambientní zvukový svět |
 | **23** | **Social Learning** — anonymizované behavioral stats v cloud sync |
 | **24** | **Offspring** — reprodukce s Q-table crossover a genetickou mutací |
+| **25** | **Dream Replay** — experience replay během spánku (DQN konsolidace) |
+| **26** | **Curriculum Learning** — postupné odemykání reward komponent dle věku |
+| **27** | **Habitat Awareness** — detekce barevné palety stránky, hue adaptace |
+| **28** | **Non-verbal Communication** — welcome wave, excitement flash, contentment pulse |
+| **29** | **Enhanced Bioluminescence** — zesílený noční glow, luminiscenční trail |
 
 ## Akademické funkce (Fáze 19-24)
 
@@ -99,6 +104,37 @@ Po dosažení fáze "mature":
 - Gaussovská mutace (σ=0.1) na zděděných hodnotách
 - Max 3 potomci za život, export jako JSON
 - Potomek začíná jako hatchling se "zděděnými instinkty"
+
+### Dream Replay (25)
+DQN-inspired experience replay během spánku:
+- Během cirkadiánního spánku přehrává paměťové zážitky přes brainLearn
+- Prioritizace memorable událostí (vysoké |reward|)
+- Pomalejší učení (αScale 0.5) pro konsolidaci bez přeučení
+- Max 50 replays per sleep session
+
+### Curriculum Learning (26)
+Postupné odemykání složitosti odměňovací funkce:
+- Hatchling: jen základní rewards (whitespace + blocking read)
+- Juvenile: 50-80% reward komponent aktivních
+- Adult+: plná reward function
+
+### Habitat Awareness (27)
+Detekce a adaptace na prostředí stránky:
+- Extrakce dominantní barvy pozadí (RGB → HSL)
+- Lili subtilně posouvá svůj hue k harmonii s page paletou
+- Rozpoznání typu stránky (sparse/mixed/dense)
+
+### Non-verbal Communication (28)
+Vizuální signalizace bez textu:
+- Welcome wave: chapadlo zamává při návratu kurzoru po dlouhé absenci
+- Excitement flash: rychlé chromatoforové záblesky na vysokou odměnu
+- Contentment pulse: pomalá jasová oscilace při klidném stavu
+
+### Enhanced Bioluminescence (29)
+Zesílené noční glow efekty:
+- Noční glow boost (2.5×) na těle a chapadlech
+- Luminiscenční trail particles za pohybem v temnu
+- Inner eye glow v nočních hodinách
 
 ## Zpětná kompatibilita
 
@@ -171,6 +207,8 @@ lili.sound()         // toggle zvuk
 lili.reproduce()     // vytvořit potomka (pokud eligible)
 lili.personality()   // zobrazit personality radar
 lili.sync()          // vynutit cloud sync
+lili.habitat()       // zobrazit habitat awareness stav
+lili.dream()         // zobrazit dream replay stav
 ```
 
 ## Akademický rozměr
