@@ -1,15 +1,15 @@
 {
   "format": "lili_state_v2",
   "stateVersion": 2,
-  "lastSync": "2026-04-10T18:06:47.068Z",
+  "lastSync": "2026-04-10T18:11:47.068Z",
   "metadata": {
     "genesis": 1773395030923,
     "visits": 48,
-    "totalDecisions": 15214,
-    "totalReward": -11523.64260183383,
+    "totalDecisions": 15216,
+    "totalReward": -11523.208852284453,
     "phase": "juvenile",
-    "phaseProgress": 0.18879393731725147,
-    "mood": "shy",
+    "phaseProgress": 0.18885054915935673,
+    "mood": "calm",
     "psychosom": {
       "s": 0.3122,
       "r": -0.0862
@@ -18,9 +18,9 @@
   "brain": {
     "v": 2,
     "stateVersion": 2,
-    "mood": 2,
-    "decisions": 15214,
-    "reward": -11523.64260183383,
+    "mood": 3,
+    "decisions": 15216,
+    "reward": -11523.208852284453,
     "entries": [
       [
         2883,
@@ -1839,11 +1839,11 @@
         [
           -0.4647298495268729,
           0,
-          0.027053822011165827,
+          0.06905179743056154,
+          0.027708330140966964,
+          0.08500042248683594,
           0,
-          0.06814423796346371,
-          0,
-          0.059969521862680224
+          0.06680185744182136
         ]
       ]
     ],
@@ -2142,6 +2142,10 @@
       ],
       [
         "11622,2",
+        2
+      ],
+      [
+        "11622,3",
         1
       ]
     ],
@@ -2224,36 +2228,12 @@
       ],
       [
         11622,
-        7
+        9
       ]
     ]
   },
   "journal": {
     "ringBuffer": [
-      {
-        "ts": 1775208764200,
-        "ageMs": 1813733277,
-        "phase": "juvenile",
-        "state": 1761,
-        "mood": 0,
-        "exp": 0,
-        "reward": -1.5,
-        "stress": 0.25,
-        "x": 478,
-        "y": 119
-      },
-      {
-        "ts": 1775208764950,
-        "ageMs": 1813734027,
-        "phase": "juvenile",
-        "state": 1761,
-        "mood": 2,
-        "exp": 1,
-        "reward": -2,
-        "stress": 0.25,
-        "x": 480,
-        "y": 112
-      },
       {
         "ts": 1775208765699,
         "ageMs": 1813734776,
@@ -26229,6 +26209,30 @@
         "stress": 0.5,
         "x": 884,
         "y": 39
+      },
+      {
+        "ts": 1775844698402,
+        "ageMs": 2449667479,
+        "phase": "juvenile",
+        "state": 11622,
+        "mood": 2,
+        "exp": 1,
+        "reward": 0.22,
+        "stress": 0.5,
+        "x": 894,
+        "y": 46
+      },
+      {
+        "ts": 1775844699153,
+        "ageMs": 2449668230,
+        "phase": "juvenile",
+        "state": 11622,
+        "mood": 3,
+        "exp": 1,
+        "reward": 0.214,
+        "stress": 0.5,
+        "x": 903,
+        "y": 53
       }
     ],
     "dailyAggregates": [
@@ -28173,6 +28177,43 @@
         "avgQDelta": 1.4121,
         "policyStability": 0.808,
         "cumulativeReward": -11523.64,
+        "qtableSize": 152,
+        "baselineMode": "off",
+        "season": "spring"
+      },
+      {
+        "day": "2026-04-10",
+        "ageMs": 2449668246,
+        "phase": "juvenile",
+        "moodDist": [
+          5,
+          0,
+          3,
+          6,
+          9,
+          1,
+          4
+        ],
+        "avgReward": -0.81,
+        "explorationRate": 0.929,
+        "entropy": 2.364,
+        "lzc": 125,
+        "qhash": -381.03,
+        "decisions": 28,
+        "totalReward": -22.69,
+        "personality": [
+          0.7629819997843701,
+          0.09313756396448664,
+          0,
+          0.6835807973633369,
+          0.013150417423204845,
+          1,
+          0.04490521680064974
+        ],
+        "dominantTrait": "idle",
+        "avgQDelta": 0.2655,
+        "policyStability": 1,
+        "cumulativeReward": -11523.21,
         "qtableSize": 152,
         "baselineMode": "off",
         "season": "spring"
@@ -30412,15 +30453,15 @@
   "placeMemory": [
     [
       "1,0",
-      -1.3693
+      -1.3638
     ],
     [
       "2,0",
-      -1.945
+      -1.9372
     ],
     [
       "3,0",
-      -0.7423
+      -0.5399
     ]
   ],
   "visitProfile": {
@@ -30439,17 +30480,17 @@
   },
   "socialStats": {
     "avgStress": 0.5,
-    "dominantMood": "shy",
+    "dominantMood": "calm",
     "personality": [
-      0.7635092999537222,
-      0.09515508464083053,
+      0.7629819997843701,
+      0.09313756396448664,
       0,
-      0.6783080413016209,
-      0.014390681962617348,
+      0.6835807973633369,
+      0.013150417423204845,
       1,
-      0.04665166612732021
+      0.04490521680064974
     ],
-    "entropy": 2.325,
+    "entropy": 2.364,
     "season": "spring",
     "offspring": 0
   }
