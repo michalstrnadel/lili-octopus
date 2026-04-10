@@ -35,7 +35,7 @@ Lili is an autonomous digital organism in the form of an octopus, living on a we
 
 ## Current State (2026-04-10)
 
-**52 implementation phases complete** — `public/lili.js` (~8782 lines)
+**56 implementation phases complete** — `public/lili.js` (~9242 lines)
 
 | Phase | Description |
 |-------|-------------|
@@ -83,6 +83,11 @@ Lili is an autonomous digital organism in the form of an octopus, living on a we
 | **50** | **Life Narrative** — generated text diary from life milestones |
 | **51** | **Q-table Visualization** — brain heatmap as generative art |
 | **52** | **Seasonal Sounds** — seasonal sound landscape modulation |
+| **53** | **Endocrine Model** — virtual hormones (dopamine, cortisol, serotonin) with decay, inhibition, mood/steering modulation |
+| **53b** | **Stochastic Growth** — Brownian perturbation on growth curves (organic random walk ±3%) |
+| **54** | **Cognitive Aging** — age-dependent decision speed, working memory, Q-value volatility, exploitation bonus |
+| **55** | **FABRIK Comfort** — anti-torsion penalty, end-effector alignment during grab |
+| **56** | **Spring-Damper Tentacles** — per-segment spring coupling with lateral drag (underwater wave propagation) |
 
 ## Academic Features (Phases 19-24)
 
@@ -161,7 +166,7 @@ Boosted night glow effects:
 
 ## Backward Compatibility
 
-All new features (Phases 19-52) are **backward compatible** with existing data:
+All new features (Phases 19-56) are **backward compatible** with existing data:
 - New features default to off/passive — don't affect existing behavior
 - Genesis timestamp (`lili_genesis`) is never overwritten
 - Existing Q-table, journal, and daily aggregates remain untouched
@@ -187,7 +192,7 @@ lili-octopus/
 ├── AGENTS.md                    ← AI entry point (context for Claude/Cursor)
 ├── LICENSE                      ← MIT License
 ├── public/
-│   ├── lili.js                  ← single production file (~8782 lines)
+│   ├── lili.js                  ← single production file (~9242 lines)
 │   └── dashboard.html           ← observability dashboard (data visualization)
 ├── data/
 │   └── state.json               ← production state (cloud sync source of truth)
@@ -212,12 +217,13 @@ Lili creates her own canvas, initializes the RL engine, and starts living.
 | Key | Function |
 |-----|----------|
 | **Click on Lili** | Tooltip with status (age, phase, preference) |
-| **D** | Debug panel (state vector, Q-values, FPS, stress, convergence) |
-| **E** | Export data as JSON (for academic analysis) |
-| **I** | Import data from JSON file |
-| **B** | Cycle baseline modes (off → random → frozen → myopic → heuristic) |
-| **R** | Toggle replay recording/playback |
-| **S** | Toggle ambient sound |
+| **Ctrl+Shift+L** | Toggle dev mode (unlocks debug shortcuts below) |
+| **D** | Debug panel *(dev mode only)* |
+| **E** | Export data as JSON *(dev mode only)* |
+| **I** | Import data from JSON file *(dev mode only)* |
+| **B** | Cycle baseline modes *(dev mode only)* |
+| **R** | Toggle replay recording/playback *(dev mode only)* |
+| **S** | Toggle ambient sound *(always available)* |
 
 ## Console API
 

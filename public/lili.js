@@ -795,6 +795,61 @@
       winter: { freqMul: 0.7, volMul: 0.8 },    // deeper, quieter
     },
 
+    // --- Phase 53: Endocrine Model (virtual hormones) ---
+    endocrine: {
+      // Dopamine: reward-driven, promotes curiosity and exploration
+      dopamine: {
+        decayRate: 0.003,         // per frame (~5.5s half-life at 60fps)
+        rewardBoost: 0.25,        // production per positive reward
+        curiosityBoost: 0.05,     // trickle during curious/exploring moods
+        maxLevel: 1.0,
+        moodBias: { curious: 0.15, exploring: 0.12, playful: 0.1 },
+      },
+      // Cortisol: stress-driven, promotes flee/alert
+      cortisol: {
+        decayRate: 0.002,         // per frame (~5.8s half-life) — slower decay (lingers)
+        stressBoost: 0.15,        // production per stress unit above 0.4
+        startleBoost: 0.3,        // spike on startle events
+        maxLevel: 1.0,
+        moodBias: { shy: 0.12, alert: 0.15 },
+        inhibitsSerotonin: 0.4,   // cortisol above this suppresses serotonin production
+      },
+      // Serotonin: calm/safety-driven, promotes exploitation and contentment
+      serotonin: {
+        decayRate: 0.0015,        // per frame (~7.7s half-life) — slowest decay
+        calmBoost: 0.04,          // trickle during calm/idle moods
+        safetyBoost: 0.08,        // boost when low stress + high trust
+        maxLevel: 1.0,
+        moodBias: { calm: 0.12, idle: 0.08 },
+        inhibitsCortisol: 0.5,    // serotonin above this dampens cortisol production
+      },
+      // Cross-hormone modulation
+      dopamineCortisolInhibition: 0.3, // high cortisol reduces dopamine production
+      transitionInfluence: 0.2,        // how much hormones shift mood transition probs
+      steeringInfluence: 0.15,         // how much hormones modulate steering weights
+    },
+
+    // --- Phase 54: Cognitive Aging (deeper age-dependent brain dynamics) ---
+    cognitiveAging: {
+      // Decision cooldown multiplier by phase (elder thinks slower)
+      decisionCooldown: { hatchling: 0.7, juvenile: 0.85, adult: 1.0, mature: 1.1, elder: 1.5 },
+      // Eligibility trace max entries (working memory shrinks with age)
+      traceCapacity: { hatchling: 200, juvenile: 350, adult: 500, mature: 450, elder: 300 },
+      // Q-value overwrite volatility (young = fast overwrite, old = resistant)
+      alphaVolatility: { hatchling: 1.5, juvenile: 1.2, adult: 1.0, mature: 0.85, elder: 0.7 },
+      // Exploitation bonus for known-good states (grows with maturity)
+      exploitationBonus: { hatchling: 0, juvenile: 0.05, adult: 0.1, mature: 0.2, elder: 0.3 },
+      // Error rate (random noise on Q-value reads — young are sloppy)
+      readNoise: { hatchling: 0.15, juvenile: 0.08, adult: 0.02, mature: 0.01, elder: 0.05 },
+    },
+
+    // --- Phase 55: FABRIK Comfort Functions ---
+    fabrikComfort: {
+      maxBendAngle: Math.PI * 0.75,   // max bend between consecutive segments (135°)
+      torsionCorrectionStrength: 0.3,  // how strongly to correct sharp bends
+      tipAlignmentStrength: 0.2,       // end-effector rotation alignment during grab
+    },
+
     // --- localStorage keys ---
     storageKeys: {
       genesis:     'lili_genesis',
@@ -816,6 +871,7 @@
       temperament: 'lili_temperament',
       pageMemory:  'lili_pagemem',
       narrative:   'lili_narrative',
+      endocrine:   'lili_endocrine',
     },
 
     // --- Phase 14: Cloud sync ---
@@ -1726,6 +1782,10 @@
     heartOsc: null,
     heartGain: null,
     lastBubbleMs: 0,
+    // Phase 53: Endocrine harmonic oscillators
+    dopaOsc: null, dopaGain: null,   // dopamine: bright harmonic
+    cortOsc: null, cortGain: null,   // cortisol: dissonant harmonic
+    seroOsc: null, seroGain: null,   // serotonin: pure harmonic
   };
 
   function soundInit() {
@@ -1745,6 +1805,37 @@
       _sound.breathOsc.connect(_sound.breathGain);
       _sound.breathGain.connect(_sound.masterGain);
       _sound.breathOsc.start();
+
+      // Phase 53: Endocrine harmonic oscillators
+      // Dopamine harmonic — bright major 5th (×1.5 freq), triangle wave
+      _sound.dopaOsc = _sound.ctx.createOscillator();
+      _sound.dopaOsc.type = 'triangle';
+      _sound.dopaOsc.frequency.value = CFG.sound.breathFreq * 3;
+      _sound.dopaGain = _sound.ctx.createGain();
+      _sound.dopaGain.gain.value = 0;
+      _sound.dopaOsc.connect(_sound.dopaGain);
+      _sound.dopaGain.connect(_sound.masterGain);
+      _sound.dopaOsc.start();
+
+      // Cortisol harmonic — tritone dissonance (×1.414 freq), sawtooth
+      _sound.cortOsc = _sound.ctx.createOscillator();
+      _sound.cortOsc.type = 'sawtooth';
+      _sound.cortOsc.frequency.value = CFG.sound.breathFreq * 1.414;
+      _sound.cortGain = _sound.ctx.createGain();
+      _sound.cortGain.gain.value = 0;
+      _sound.cortOsc.connect(_sound.cortGain);
+      _sound.cortGain.connect(_sound.masterGain);
+      _sound.cortOsc.start();
+
+      // Serotonin harmonic — pure octave (×2 freq), sine wave
+      _sound.seroOsc = _sound.ctx.createOscillator();
+      _sound.seroOsc.type = 'sine';
+      _sound.seroOsc.frequency.value = CFG.sound.breathFreq * 2;
+      _sound.seroGain = _sound.ctx.createGain();
+      _sound.seroGain.gain.value = 0;
+      _sound.seroOsc.connect(_sound.seroGain);
+      _sound.seroGain.connect(_sound.masterGain);
+      _sound.seroOsc.start();
 
       _sound.enabled = true;
       console.info('[Lili] Sound: enabled');
@@ -1779,6 +1870,31 @@
 
     // Frequency shifts with stress
     _sound.breathOsc.frequency.value = CFG.sound.breathFreq + stress * 30;
+
+    // Phase 53: Endocrine harmonic modulation
+    // Each hormone drives its own harmonic layer — creates rich spectral landscape
+    var baseFreq = CFG.sound.breathFreq + stress * 30;
+
+    if (_sound.dopaGain) {
+      // Dopamine: bright major 5th harmonic, volume proportional to dopamine level
+      // High dopamine = curious/playful = brighter sound
+      _sound.dopaOsc.frequency.value = baseFreq * 3 + _hormones.dopamine * 20;
+      _sound.dopaGain.gain.value = _hormones.dopamine * 0.015 * (breathCycle * 0.3 + 0.7);
+    }
+
+    if (_sound.cortGain) {
+      // Cortisol: tritone dissonance, volume proportional to cortisol level
+      // High cortisol = stressed/fearful = harsh, unsettling overtone
+      _sound.cortOsc.frequency.value = baseFreq * 1.414 + _hormones.cortisol * 15;
+      _sound.cortGain.gain.value = _hormones.cortisol * 0.012;
+    }
+
+    if (_sound.seroGain) {
+      // Serotonin: pure octave harmonic, volume proportional to serotonin level
+      // High serotonin = calm/content = warm, consonant undertone
+      _sound.seroOsc.frequency.value = baseFreq * 2;
+      _sound.seroGain.gain.value = _hormones.serotonin * 0.018 * (breathCycle * 0.2 + 0.8);
+    }
   }
 
   function soundBubblePop() {
@@ -2008,6 +2124,7 @@
       var now = Date.now();
       if (now - _microExpr.lastStartleMs < CFG.microExpr.startleCooldownMs) return;
       _microExpr.lastStartleMs = now;
+      endocrineOnStartle(); // Phase 53: startle → cortisol spike
     }
     _microExpr[type] = 1.0;
   }
@@ -2816,13 +2933,26 @@
   // Phase 41 — Growth Visualization (smooth size scaling)
   // =========================================================================
 
+  // Phase 53: Stochastic growth noise state (Brownian perturbation)
+  var _growthNoise = 0;
+
   function growthScale() {
     var G = CFG.growth.phaseScale;
     var phase = age.phase;
     var range = G[phase] || G.adult;
     // Smooth interpolation within current phase
     var t = age.phaseProgress;
-    return range.start + (range.end - range.start) * t;
+    var base = range.start + (range.end - range.start) * t;
+
+    // Phase 53: Stochastic Brownian perturbation — organic growth feel
+    // Gaussian noise via Box-Muller, accumulated as random walk
+    var u1 = Math.random(), u2 = Math.random();
+    var gauss = Math.sqrt(-2 * Math.log(u1 + 0.0001)) * Math.cos(2 * Math.PI * u2);
+    _growthNoise += gauss * 0.0008;          // tiny random walk step
+    _growthNoise *= 0.998;                   // mean-revert (don't drift forever)
+    _growthNoise = Math.max(-0.03, Math.min(0.03, _growthNoise)); // clamp ±3%
+
+    return base + _growthNoise;
   }
 
   // =========================================================================
@@ -4244,6 +4374,156 @@
   }
 
   // =========================================================================
+  // 53 — Endocrine Model (virtual hormones: dopamine, cortisol, serotonin)
+  // Biological analogy: hormonal substrate modulating mood, steering, visuals.
+  // Hormones have half-life decay, production triggers, mutual inhibition.
+  // =========================================================================
+
+  const _hormones = {
+    dopamine:  0.2,   // reward/curiosity — promotes exploration
+    cortisol:  0.15,  // stress/threat — promotes caution
+    serotonin: 0.3,   // calm/safety — promotes exploitation
+  };
+
+  function updateEndocrine() {
+    var E = CFG.endocrine;
+    var dopa = _hormones.dopamine;
+    var cort = _hormones.cortisol;
+    var sero = _hormones.serotonin;
+
+    // --- Decay (exponential half-life) ---
+    dopa *= (1 - E.dopamine.decayRate);
+    cort *= (1 - E.cortisol.decayRate);
+    sero *= (1 - E.serotonin.decayRate);
+
+    // --- Production: Dopamine ---
+    // Boosted by positive reward (injected from brainDecisionCycle)
+    // Trickle during curious/exploring moods
+    if (lili.mood === 'curious' || lili.mood === 'exploring') {
+      dopa += E.dopamine.curiosityBoost;
+    }
+    // Suppressed when cortisol is high
+    if (cort > E.dopamineCortisolInhibition) {
+      dopa *= 1 - (cort - E.dopamineCortisolInhibition) * 0.3;
+    }
+
+    // --- Production: Cortisol ---
+    // Boosted by stress above threshold
+    if (stress > 0.4) {
+      // Suppressed when serotonin is high
+      var cortisolGain = (stress - 0.4) * E.cortisol.stressBoost;
+      if (sero > E.serotonin.inhibitsCortisol) {
+        cortisolGain *= 1 - (sero - E.serotonin.inhibitsCortisol) * 0.5;
+      }
+      cort += cortisolGain;
+    }
+
+    // --- Production: Serotonin ---
+    // Boosted during calm/idle states
+    if (lili.mood === 'calm' || lili.mood === 'idle') {
+      var seroGain = E.serotonin.calmBoost;
+      // Suppressed when cortisol is high
+      if (cort > E.cortisol.inhibitsSerotonin) {
+        seroGain *= 1 - (cort - E.cortisol.inhibitsSerotonin) * 0.6;
+      }
+      sero += seroGain;
+    }
+    // Safety boost: low stress + trust
+    if (stress < 0.2 && _visitProfile.trustLevel > 1) {
+      sero += E.serotonin.safetyBoost;
+    }
+
+    // --- Clamp ---
+    _hormones.dopamine  = Math.min(Math.max(dopa, 0), E.dopamine.maxLevel);
+    _hormones.cortisol  = Math.min(Math.max(cort, 0), E.cortisol.maxLevel);
+    _hormones.serotonin = Math.min(Math.max(sero, 0), E.serotonin.maxLevel);
+  }
+
+  // Reward event injection (called from brainDecisionCycle)
+  function endocrineOnReward(reward) {
+    if (reward > 0) {
+      _hormones.dopamine = Math.min(
+        _hormones.dopamine + reward * CFG.endocrine.dopamine.rewardBoost,
+        CFG.endocrine.dopamine.maxLevel
+      );
+    }
+    if (reward < -0.5) {
+      // Negative reward spikes cortisol
+      _hormones.cortisol = Math.min(
+        _hormones.cortisol + Math.abs(reward) * 0.1,
+        CFG.endocrine.cortisol.maxLevel
+      );
+    }
+  }
+
+  // Startle event injection (called from triggerMicroExpr)
+  function endocrineOnStartle() {
+    _hormones.cortisol = Math.min(
+      _hormones.cortisol + CFG.endocrine.cortisol.startleBoost,
+      CFG.endocrine.cortisol.maxLevel
+    );
+  }
+
+  // Get hormone-based mood transition bias (modifies softmax probabilities)
+  function endocrineGetMoodBias(moodIdx) {
+    var moodName = CFG.moods[moodIdx];
+    var E = CFG.endocrine;
+    var bias = 0;
+
+    // Dopamine boosts curious/exploring/playful
+    var dBias = E.dopamine.moodBias[moodName] || 0;
+    bias += dBias * _hormones.dopamine;
+
+    // Cortisol boosts shy/alert
+    var cBias = E.cortisol.moodBias[moodName] || 0;
+    bias += cBias * _hormones.cortisol;
+
+    // Serotonin boosts calm/idle
+    var sBias = E.serotonin.moodBias[moodName] || 0;
+    bias += sBias * _hormones.serotonin;
+
+    return bias * E.transitionInfluence;
+  }
+
+  // Get hormone-based steering modulation
+  function endocrineSteeringMod() {
+    var inf = CFG.endocrine.steeringInfluence;
+    return {
+      // High dopamine → more wander, seek DOM
+      wanderBoost:  1 + _hormones.dopamine * inf * 2,
+      seekDomBoost: 1 + _hormones.dopamine * inf,
+      // High cortisol → more flee, less approach
+      fleeBoost:    1 + _hormones.cortisol * inf * 3,
+      followReduce: 1 - _hormones.cortisol * inf * 2,
+      // High serotonin → more boundary respect, calmer movement
+      boundaryBoost: 1 + _hormones.serotonin * inf,
+      speedDampen:   1 - _hormones.serotonin * inf * 0.5,
+    };
+  }
+
+  function endocrineSave() {
+    try {
+      localStorage.setItem(CFG.storageKeys.endocrine, JSON.stringify({
+        d: +_hormones.dopamine.toFixed(4),
+        c: +_hormones.cortisol.toFixed(4),
+        s: +_hormones.serotonin.toFixed(4),
+      }));
+    } catch (e) { /* */ }
+  }
+
+  function endocrineLoad() {
+    try {
+      var json = localStorage.getItem(CFG.storageKeys.endocrine);
+      if (json) {
+        var data = JSON.parse(json);
+        _hormones.dopamine  = data.d || 0.2;
+        _hormones.cortisol  = data.c || 0.15;
+        _hormones.serotonin = data.s || 0.3;
+      }
+    } catch (e) { /* */ }
+  }
+
+  // =========================================================================
   // 8A — Q-Learning Brain (mood coordinator)
   // Q-Learning selects MOODS, not actions. Moods → steering weights + tentacle params.
   // Biological analogy: hormonal system setting tendencies, not motor commands.
@@ -4284,7 +4564,9 @@
     const count = _visitCounts.get(key) || 0;
     // Phase 38: Surprise boosts learning rate temporarily
     // Phase 48: Meta-learning modulates alpha based on environment stability
-    return Math.max(CFG.rl.alphaMin, CFG.rl.alpha / (1 + count * CFG.rl.alphaDecayFactor)) * _surprise.alphaBoost * _metaLearn.alphaMul;
+    // Phase 54: Cognitive aging — young overwrite fast, old are resistant
+    var alphaVol = ageVal(CFG.cognitiveAging.alphaVolatility);
+    return Math.max(CFG.rl.alphaMin, CFG.rl.alpha * alphaVol / (1 + count * CFG.rl.alphaDecayFactor)) * _surprise.alphaBoost * _metaLearn.alphaMul;
   }
 
   function _incrementVisit(stateIndex, moodIdx) {
@@ -4317,6 +4599,14 @@
     let moodIdx;
     let exploratory = false;
 
+    // Phase 54: Cognitive aging — read noise (young are sloppy, elder slightly noisy)
+    var readNoise = ageVal(CFG.cognitiveAging.readNoise);
+
+    // Phase 54: Exploitation bonus — mature/elder get bonus for well-visited states
+    var exploitBonus = ageVal(CFG.cognitiveAging.exploitationBonus);
+    var stateVisits = _stateVisitCounts.get(stateIndex) || 0;
+    var visitBonus = exploitBonus * Math.min(stateVisits / 20, 1); // caps at 20 visits
+
     // Check if unvisited state (all Q = 0) → uniform random
     let allZero = true;
     for (let i = 0; i < MOOD_COUNT; i++) {
@@ -4332,11 +4622,12 @@
       var tauBase = Math.max(ageVal(CFG.rl.temperature), CFG.rl.softmaxMinTemp);
       const tau = _energy.fatigued ? tauBase * CFG.energy.explorationPenalty : tauBase;
 
-      // Find maxQ for numerical stability
-      let maxQ = q[0];
+      // Find maxQ for numerical stability (with noise and exploitation bonus)
+      let maxQ = q[0] + (rlRng() - 0.5) * readNoise + visitBonus;
       let argmaxIdx = 0;
       for (let i = 1; i < MOOD_COUNT; i++) {
-        if (q[i] > maxQ) { maxQ = q[i]; argmaxIdx = i; }
+        var qi = q[i] + (rlRng() - 0.5) * readNoise + visitBonus;
+        if (qi > maxQ) { maxQ = qi; argmaxIdx = i; }
       }
 
       // Compute unnormalized probs
@@ -4362,6 +4653,8 @@
       for (let i = 0; i < MOOD_COUNT; i++) {
         if (_softmaxProbs[i] > 0) {
           var bias = temperamentGetBias(i);
+          // Phase 53: Endocrine hormone bias — dopamine/cortisol/serotonin influence mood selection
+          bias += endocrineGetMoodBias(i);
           _softmaxProbs[i] *= Math.exp(bias); // multiplicative bias
         }
       }
@@ -4461,7 +4754,9 @@
     for (let i = 0; i < toDelete.length; i++) _traces.delete(toDelete[i]);
 
     // Safety cap: prune smallest if over limit
-    if (_traces.size > CFG.rl.traceMaxEntries) {
+    // Phase 54: Cognitive aging — working memory shrinks in old age, smaller in youth
+    var traceCapacity = Math.round(ageVal(CFG.cognitiveAging.traceCapacity));
+    if (_traces.size > traceCapacity) {
       let minKey = null, minVal = Infinity;
       _traces.forEach(function (v, k) {
         if (v < minVal) { minVal = v; minKey = k; }
@@ -4649,7 +4944,9 @@
   function brainDecisionCycle() {
     _decision.frameCounter++;
 
-    if (_decision.frameCounter < CFG.rl.decisionCycleFrames) return;
+    // Phase 54: Cognitive aging — elder thinks slower, hatchling faster
+    var decisionThreshold = Math.round(CFG.rl.decisionCycleFrames * ageVal(CFG.cognitiveAging.decisionCooldown));
+    if (_decision.frameCounter < decisionThreshold) return;
     _decision.frameCounter = 0;
 
     const currentState = sensors.stateIndex;
@@ -4684,6 +4981,7 @@
 
       _decision.totalReward += reward;
       psychosomAccumulate(stress, reward); // Phase 18E
+      endocrineOnReward(reward); // Phase 53: reward → dopamine/cortisol
 
       // Phase 28: Trigger excitement flash on high positive reward
       if (reward >= CFG.signals.excitementThreshold) {
@@ -4846,6 +5144,7 @@
       domLearningSave();     // Phase 15D
       pageMemorySave();      // Phase 46
       narrativeSave();       // Phase 50
+      endocrineSave();       // Phase 53
     }
   }
 
@@ -6142,6 +6441,9 @@
     });
     console.info('[Lili] Console API ready — try: lili.status(), lili.narrative(), lili.pages(), lili.brain()');
 
+    // Dev mode — secret Ctrl+Shift+L combo unlocks debug shortcuts
+    var _devMode = false;
+
     // Keyboard handler (unified)
     document.addEventListener('keydown', function (e) {
       // Ignore if user is typing in an input
@@ -6149,6 +6451,20 @@
           e.target.isContentEditable) return;
 
       var k = e.key.toLowerCase();
+
+      // Secret dev mode toggle: Ctrl+Shift+L
+      if (k === 'l' && e.ctrlKey && e.shiftKey) {
+        _devMode = !_devMode;
+        console.info('[Lili] Dev mode: ' + (_devMode ? 'ON' : 'OFF'));
+        return;
+      }
+
+      // Sound toggle is always available (user-facing)
+      if (k === 's' && !e.ctrlKey && !e.metaKey) { soundToggle(); return; }
+
+      // Everything else requires dev mode
+      if (!_devMode) return;
+
       if (k === 'd') toggleDebug();
       else if (k === 'e') exportData();
       else if (k === 'i') importData();
@@ -6158,7 +6474,6 @@
         else if (_replay.playing) replayStopPlayback();
         else replayStartRecording();
       }
-      else if (k === 's' && !e.ctrlKey && !e.metaKey) soundToggle();
     });
   }
 
@@ -6919,25 +7234,29 @@
     // Phase 8: mood-based weight selection (replaces action-based)
     const weights = CFG.moodWeights[lili.mood] || CFG.moodWeights.idle;
 
+    // Phase 53: Endocrine modulation of steering weights
+    const eMod = endocrineSteeringMod();
+
     // Reset acceleration
     lili.acc.set(0, 0);
 
-    // Wander
+    // Wander — dopamine boosts
     if (weights.wander > 0) {
       steerWander(_steerWander);
-      lili.acc.x += _steerWander.x * weights.wander;
-      lili.acc.y += _steerWander.y * weights.wander;
+      lili.acc.x += _steerWander.x * weights.wander * eMod.wanderBoost;
+      lili.acc.y += _steerWander.y * weights.wander * eMod.wanderBoost;
     }
 
     // Flee (use evade for aggressive cursor — more sophisticated)
     // Phase 32: Habituation modulates flee intensity
+    // Phase 53: Cortisol boosts flee
     if (weights.flee > 0 && mouse.active) {
       if (mouse.classification === 'aggressive' || mouse.classification === 'fast') {
         steerEvade(_steerFlee);
       } else {
         steerFlee(_steerFlee);
       }
-      var fleeHab = weights.flee * _habituation.cursor; // habituated → weaker flee
+      var fleeHab = weights.flee * _habituation.cursor * eMod.fleeBoost;
       lili.acc.x += _steerFlee.x * fleeHab;
       lili.acc.y += _steerFlee.y * fleeHab;
     }
@@ -6949,11 +7268,11 @@
       lili.acc.y += _steerWS.y * weights.seekWhitespace;
     }
 
-    // Seek DOM (exploration)
+    // Seek DOM (exploration) — dopamine boosts
     if (weights.seekDom > 0) {
       steerSeekDom(_steerDom);
-      lili.acc.x += _steerDom.x * weights.seekDom;
-      lili.acc.y += _steerDom.y * weights.seekDom;
+      lili.acc.x += _steerDom.x * weights.seekDom * eMod.seekDomBoost;
+      lili.acc.y += _steerDom.y * weights.seekDom * eMod.seekDomBoost;
     }
 
     // Seek edge
@@ -6966,8 +7285,9 @@
     // Follow slow (cautious cursor following)
     if (weights.followSlow > 0 && mouse.active) {
       steerFollowSlow(_steerFollow);
-      lili.acc.x += _steerFollow.x * weights.followSlow;
-      lili.acc.y += _steerFollow.y * weights.followSlow;
+      // Phase 53: cortisol reduces cursor following
+      lili.acc.x += _steerFollow.x * weights.followSlow * eMod.followReduce;
+      lili.acc.y += _steerFollow.y * weights.followSlow * eMod.followReduce;
     }
 
     // Place memory steering (seek safe spots, avoid dangerous)
@@ -7303,6 +7623,7 @@
   // =========================================================================
   // 3C — Trailing physics (mass-spring-damper on tip target)
   // Research #3: Hooke's law + viscous damping, semi-implicit Euler
+  // Phase 56: Per-segment spring-damper coupling (underwater wave propagation)
   // =========================================================================
 
   function updateTrailingPhysics(arm) {
@@ -7319,6 +7640,64 @@
 
     arm.actualX += arm.trailVX;
     arm.actualY += arm.trailVY;
+  }
+
+  // Per-segment spring-damper: propagates motion from base with delay
+  // Creates underwater wave effect — each segment is coupled to its predecessor
+  function applySegmentSpringDamper(arm) {
+    var n = JOINTS;
+    var segStiff = 0.08;  // inter-segment spring stiffness (softer than tip trailing)
+    var segDamp  = 0.85;  // inter-segment damping (high = more resistance = underwater feel)
+
+    // Lazy-init per-segment velocity arrays
+    if (!arm.segVX) {
+      arm.segVX = new Float32Array(n);
+      arm.segVY = new Float32Array(n);
+    }
+
+    var jx = arm.x, jy = arm.y;
+    var seg = arm.segLen;
+
+    // Base joint is anchored — skip i=0
+    // Apply spring force from predecessor to each joint (base→tip propagation)
+    for (var i = 1; i < n; i++) {
+      // Vector from ideal position (based on segment length from prev joint)
+      var dx = jx[i] - jx[i - 1];
+      var dy = jy[i] - jy[i - 1];
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 0.001) continue;
+
+      // Spring force: correct toward ideal segment distance
+      var stretch = dist - seg;
+      var fx = -(dx / dist) * stretch * segStiff;
+      var fy = -(dy / dist) * stretch * segStiff;
+
+      // Add lateral drag (perpendicular to segment = water resistance)
+      // Movement perpendicular to the tentacle direction is resisted more
+      var nx = -dy / dist;  // perpendicular normal
+      var ny =  dx / dist;
+      var perpVel = arm.segVX[i] * nx + arm.segVY[i] * ny;
+      fx -= nx * perpVel * 0.04;  // lateral drag coefficient
+      fy -= ny * perpVel * 0.04;
+
+      // Semi-implicit Euler
+      arm.segVX[i] = (arm.segVX[i] + fx) * segDamp;
+      arm.segVY[i] = (arm.segVY[i] + fy) * segDamp;
+
+      // Apply (small displacement — stays organic, doesn't break FABRIK)
+      jx[i] += arm.segVX[i];
+      jy[i] += arm.segVY[i];
+
+      // Re-constrain segment length after spring displacement
+      dx = jx[i] - jx[i - 1];
+      dy = jy[i] - jy[i - 1];
+      dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 0.001 && Math.abs(dist - seg) > 0.5) {
+        var lam = seg / dist;
+        jx[i] = jx[i - 1] + dx * lam;
+        jy[i] = jy[i - 1] + dy * lam;
+      }
+    }
   }
 
   // =========================================================================
@@ -7414,6 +7793,83 @@
 
       // 3A: FABRIK solve toward trailed target
       fabrikSolve(arm, arm.actualX, arm.actualY);
+
+      // Phase 55: Comfort functions — anti-torsion + grab tip alignment
+      fabrikComfort(arm);
+
+      // Phase 56: Per-segment spring-damper (underwater wave propagation)
+      applySegmentSpringDamper(arm);
+    }
+  }
+
+  // =========================================================================
+  // 55 — FABRIK Comfort Functions (anti-torsion, end-effector alignment)
+  // Prevents unnatural sharp bends and aligns tip during grab interactions.
+  // =========================================================================
+
+  function fabrikComfort(arm) {
+    var C = CFG.fabrikComfort;
+    var ax = arm.x, ay = arm.y;
+    var n = JOINTS;
+
+    // Anti-torsion: penalize sharp angles between consecutive segments
+    for (var i = 1; i < n - 1; i++) {
+      // Vectors: prev→current, current→next
+      var v1x = ax[i] - ax[i - 1];
+      var v1y = ay[i] - ay[i - 1];
+      var v2x = ax[i + 1] - ax[i];
+      var v2y = ay[i + 1] - ay[i];
+
+      var len1 = Math.sqrt(v1x * v1x + v1y * v1y);
+      var len2 = Math.sqrt(v2x * v2x + v2y * v2y);
+      if (len1 < 0.001 || len2 < 0.001) continue;
+
+      // Cosine of angle between segments
+      var dot = (v1x * v2x + v1y * v2y) / (len1 * len2);
+      dot = Math.max(-1, Math.min(1, dot)); // clamp for acos safety
+      var angle = Math.acos(dot);
+
+      // If bend exceeds comfort threshold, push joint outward
+      if (angle < C.maxBendAngle) {
+        // Cross product sign determines which side to correct toward
+        var cross = v1x * v2y - v1y * v2x;
+        var sign = cross >= 0 ? 1 : -1;
+
+        // Correction: push joint[i+1] away from the sharp bend
+        var correction = (C.maxBendAngle - angle) * C.torsionCorrectionStrength;
+        var perpX = -v2y / len2 * sign;
+        var perpY =  v2x / len2 * sign;
+        ax[i + 1] += perpX * correction * arm.segLen;
+        ay[i + 1] += perpY * correction * arm.segLen;
+
+        // Re-constrain segment length
+        var rdx = ax[i + 1] - ax[i];
+        var rdy = ay[i + 1] - ay[i];
+        var r = Math.sqrt(rdx * rdx + rdy * rdy);
+        if (r > 0.001) {
+          var lam = arm.segLen / r;
+          ax[i + 1] = ax[i] + rdx * lam;
+          ay[i + 1] = ay[i] + rdy * lam;
+        }
+      }
+    }
+
+    // End-effector alignment during grab: tip approaches element smoothly
+    if (arm.interactionState === 'grabbing' && arm.heldElement) {
+      var last = n - 1;
+      var prev = last - 1;
+      // Smooth the tip-to-prev vector toward the reach direction
+      var reachDx = arm.actualX - ax[prev];
+      var reachDy = arm.actualY - ay[prev];
+      var reachLen = Math.sqrt(reachDx * reachDx + reachDy * reachDy);
+      if (reachLen > 0.001) {
+        var tipDx = ax[last] - ax[prev];
+        var tipDy = ay[last] - ay[prev];
+        // Blend tip direction toward reach direction
+        var blend = C.tipAlignmentStrength;
+        ax[last] = ax[prev] + tipDx * (1 - blend) + (reachDx / reachLen) * arm.segLen * blend;
+        ay[last] = ay[prev] + tipDy * (1 - blend) + (reachDy / reachLen) * arm.segLen * blend;
+      }
     }
   }
 
@@ -8466,6 +8922,7 @@
     updateMouse();
     updateSensors();
     updateStress();
+    updateEndocrine();   // Phase 53: hormonal dynamics before brain decisions
     // Phase 21: Seasonal modulation (affects chromatophores in updateMoodBlend)
     updateSeason();
     brainDecisionCycle(); // Phase 8: RL mood selection before physics
@@ -8628,6 +9085,9 @@
 
     // Phase 18B: Load psychosomatic long-term adaptation
     psychosomLoad();
+
+    // Phase 53: Load endocrine state
+    endocrineLoad();
 
     // Register phase transition listeners
     onPhaseTransition(function (from, to, atMs) {

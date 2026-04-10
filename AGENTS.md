@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-52 hotovy, akademická + technologická expanze**
+**Fáze: Implementace — Fáze 1-56 hotovy, akademická + technologická expanze**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -100,16 +100,23 @@ Hotovo:
 - ✅ **Fáze 50:** Life Narrative — generated text diary from milestones and events, exportable via `lili.narrative()`
 - ✅ **Fáze 51:** Q-table Visualization — heatmap brain fingerprint in debug overlay, blue→green→red color mapping
 - ✅ **Fáze 52:** Seasonal Sounds — breathing drone frequency/volume modulated by season (spring=brighter, winter=deeper)
+- ✅ **Fáze 53:** Endocrine Model — virtual hormones (dopamine, cortisol, serotonin) with half-life decay, mutual inhibition, mood transition bias, steering modulation, reward/startle injection, procedural audio harmonics
+- ✅ **Fáze 53b:** Stochastic Growth — Brownian perturbation on growth curves (gaussian random walk, mean-reverting, ±3% clamp)
+- ✅ **Fáze 54:** Cognitive Aging — age-dependent decision cooldown, working memory (trace capacity), Q-value volatility, exploitation bonus, read noise
+- ✅ **Fáze 55:** FABRIK Comfort Functions — anti-torsion penalty (max bend angle correction), end-effector rotation alignment during grab
+- ✅ **Fáze 56:** Spring-Damper Tentacle Physics — per-segment spring coupling with lateral drag, underwater wave propagation from base to tip
+- ✅ **Fáze 53c:** Keyboard Security — dev shortcuts (D/E/I/B/R) locked behind Ctrl+Shift+L; only S (sound) public
 
 **Další krok:** Long-term observation, data collection, academic paper preparation.
 
 **Keyboard shortcuts:**
-- `D` — toggle debug panel
-- `E` — export JSON
-- `I` — import JSON
-- `B` — cycle baseline modes (off → random → frozen → myopic → heuristic)
-- `R` — toggle replay recording/playback
-- `S` — toggle sound
+- `Ctrl+Shift+L` — toggle dev mode (required for debug shortcuts below)
+- `D` — toggle debug panel *(dev mode only)*
+- `E` — export JSON *(dev mode only)*
+- `I` — import JSON *(dev mode only)*
+- `B` — cycle baseline modes *(dev mode only)*
+- `R` — toggle replay recording/playback *(dev mode only)*
+- `S` — toggle sound *(always available)*
 
 ## Co číst a kdy
 
@@ -228,5 +235,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-04-10 (Fáze 1-29 implementovány, lili.js ~8782 řádků, dashboard.html)*
+*Poslední aktualizace: 2026-04-10 (Fáze 1-56 implementovány, lili.js ~9242 řádků, dashboard.html)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*
