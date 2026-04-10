@@ -35,7 +35,7 @@ Lili is an autonomous digital organism in the form of an octopus, living on a we
 
 ## Current State (2026-04-10)
 
-**56 implementation phases complete** — `public/lili.js` (~9242 lines)
+**56 implementation phases complete + visual polish** — `public/lili.js` (~9280 lines)
 
 | Phase | Description |
 |-------|-------------|
@@ -88,6 +88,7 @@ Lili is an autonomous digital organism in the form of an octopus, living on a we
 | **54** | **Cognitive Aging** — age-dependent decision speed, working memory, Q-value volatility, exploitation bonus |
 | **55** | **FABRIK Comfort** — anti-torsion penalty, end-effector alignment during grab |
 | **56** | **Spring-Damper Tentacles** — per-segment spring coupling with lateral drag (underwater wave propagation) |
+| **57** | **Visual Polish** — ink turbulence (Perlin noise swirl), body specular highlight, 3D bubble shading, tentacle stroke outline |
 
 ## Academic Features (Phases 19-24)
 
@@ -192,7 +193,7 @@ lili-octopus/
 ├── AGENTS.md                    ← AI entry point (context for Claude/Cursor)
 ├── LICENSE                      ← MIT License
 ├── public/
-│   ├── lili.js                  ← single production file (~9242 lines)
+│   ├── lili.js                  ← single production file (~9280 lines)
 │   └── dashboard.html           ← observability dashboard (data visualization)
 ├── data/
 │   └── state.json               ← production state (cloud sync source of truth)

@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-56 hotovy, akademická + technologická expanze**
+**Fáze: Implementace — Fáze 1-57 hotovy, akademická + technologická expanze**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -106,6 +106,7 @@ Hotovo:
 - ✅ **Fáze 55:** FABRIK Comfort Functions — anti-torsion penalty (max bend angle correction), end-effector rotation alignment during grab
 - ✅ **Fáze 56:** Spring-Damper Tentacle Physics — per-segment spring coupling with lateral drag, underwater wave propagation from base to tip
 - ✅ **Fáze 53c:** Keyboard Security — dev shortcuts (D/E/I/B/R) locked behind Ctrl+Shift+L; only S (sound) public
+- ✅ **Fáze 57:** Visual Polish — ink turbulence (Perlin noise velocity field pro swirling ink), body specular highlight (3D depth), 3D bubble sphere shading (radial gradient + dual specular), tentacle stroke outline (0.5px definice)
 
 **Další krok:** Long-term observation, data collection, academic paper preparation.
 
@@ -235,5 +236,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-04-10 (Fáze 1-56 implementovány, lili.js ~9242 řádků, dashboard.html)*
+*Poslední aktualizace: 2026-04-10 (Fáze 1-57 implementovány, lili.js ~9280 řádků, dashboard.html)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*
