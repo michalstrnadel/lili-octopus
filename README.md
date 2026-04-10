@@ -35,7 +35,7 @@ Lili je autonomní digitální organismus ve formě chobotnice, žijící na web
 
 ## Aktuální stav (2026-04-10)
 
-**35 implementačních fází hotovo** — `public/lili.js` (~7546 řádků)
+**41 implementačních fází hotovo** — `public/lili.js` (~8031 řádků)
 
 | Fáze | Popis |
 |------|-------|
@@ -66,6 +66,12 @@ Lili je autonomní digitální organismus ve formě chobotnice, žijící na web
 | **33** | **Cognitive Map** — enriched spatial memory (safety + familiarity) |
 | **34** | **Cursor Pattern** — rozpoznávání vzorců kurzoru (nervous/calm/erratic) |
 | **35** | **Attention** — context-dependent sensor weighting |
+| **36** | **Temporal Patterns** — učení časových vzorců (24h profil stresu/aktivity) |
+| **37** | **Personality Drift** — evoluce temperamentu na základě zkušeností |
+| **38** | **Surprise Signal** — predikční chyba → spike pozornosti + zrychlené učení |
+| **39** | **Ink Defense** — dramatický inkoustový výbuch při náhlém stresu |
+| **40** | **Camouflage** — mood-dependent background matching (shy=100%, curious=10%) |
+| **41** | **Growth Visualization** — plynulý růst těla v rámci životních fází |
 
 ## Akademické funkce (Fáze 19-24)
 
@@ -218,6 +224,9 @@ lili.dream()         // zobrazit dream replay stav
 lili.energy()        // zobrazit energy/fatigue stav
 lili.attention()     // zobrazit attention focus a váhy
 lili.cogmap()        // zobrazit cognitive map statistiky
+lili.temporal()      // zobrazit temporal patterns (24h profil)
+lili.temperament()   // zobrazit personality drift axes
+lili.surprise()      // zobrazit surprise signal stav
 ```
 
 ## Akademický rozměr

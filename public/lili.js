@@ -638,6 +638,87 @@
       influenceOnReward: 0.15,    // how much attention modulates reward
     },
 
+    // --- Phase 36: Temporal Patterns (time-of-day learning) ---
+    temporal: {
+      bins: 24,                   // one bin per hour
+      decayRate: 0.995,           // slow decay of old observations
+      minObservations: 5,         // min observations before using prediction
+      baselineInfluence: 0.15,    // how much temporal prediction modulates reward
+      stressWeight: 0.4,          // weight of stress in temporal profile
+      activityWeight: 0.6,        // weight of activity in temporal profile
+    },
+
+    // --- Phase 37: Personality Drift (long-term temperament evolution) ---
+    personalityDrift: {
+      windowSize: 500,            // decisions to accumulate before drift update
+      driftRate: 0.02,            // how fast temperament shifts (slow!)
+      maxBias: 0.4,               // max mood selection bias from temperament
+      // Temperament axes (derived from mood proportions)
+      axes: ['boldness', 'sociability', 'activity', 'emotionality'],
+      // Which moods contribute to which axis (positive = increases axis)
+      moodMap: {
+        boldness:      { curious: 0.3, exploring: 0.3, shy: -0.5, alert: -0.2 },
+        sociability:   { playful: 0.4, curious: 0.2, shy: -0.3, idle: -0.2 },
+        activity:      { exploring: 0.4, playful: 0.3, idle: -0.5, calm: -0.2 },
+        emotionality:  { alert: 0.3, shy: 0.3, calm: -0.3, idle: -0.2 },
+      },
+    },
+
+    // --- Phase 38: Surprise Signal (prediction error mechanism) ---
+    surprise: {
+      tdErrorThreshold: 0.8,      // |TD error| above this triggers surprise
+      attentionBoost: 0.8,        // attention spike on surprise
+      alphaBoostFactor: 1.5,      // learning rate multiplier on surprise
+      alphaBoostDecay: 0.95,      // decay per decision cycle
+      microExprThreshold: 1.0,    // |TD error| above this triggers startle micro-expression
+      decayRate: 0.03,            // surprise intensity decay per frame
+    },
+
+    // --- Phase 39: Ink Defense (dramatic ink burst on startle) ---
+    inkDefense: {
+      stressThreshold: 0.75,      // stress level to trigger defense ink
+      stressRateThreshold: 0.3,   // stress must rise this fast (per cycle)
+      cooldownMs: 5000,           // min ms between defense bursts
+      particleCount: 25,          // burst particles (more than normal ink)
+      spreadSpeed: 4.0,           // faster than normal ink
+      spreadAngle: Math.PI * 1.2, // wide spray angle
+      particleLife: 120,          // frames (longer than normal ink)
+      particleMinR: 6,            // larger particles
+      particleMaxR: 18,
+      opacityStart: 0.7,          // more opaque than normal
+    },
+
+    // --- Phase 40: Camouflage Intensity (mood-dependent background matching) ---
+    camouflage: {
+      moodIntensity: {
+        shy:       1.0,           // full camo when scared
+        alert:     0.8,
+        calm:      0.4,
+        idle:      0.3,
+        curious:   0.1,           // almost no camo when curious
+        playful:   0.05,
+        exploring: 0.15,
+      },
+      maxSatReduction: 25,        // max saturation reduction toward background
+      maxLitShift: 15,            // max lightness shift toward background
+      blendSpeed: 0.03,           // lerp rate per frame
+    },
+
+    // --- Phase 41: Growth Visualization (smooth size scaling within phases) ---
+    growth: {
+      // Multiplier applied to bodyRadius: smooth growth within each phase
+      phaseScale: {
+        hatchling: { start: 0.6, end: 0.85 },   // tiny → small
+        juvenile:  { start: 0.85, end: 1.0 },    // small → normal
+        adult:     { start: 1.0, end: 1.05 },     // normal → slightly bigger
+        mature:    { start: 1.05, end: 1.1 },     // slightly bigger
+        elder:     { start: 1.1, end: 1.15 },     // largest (wise old octopus)
+      },
+      breathScaleByAge: {                          // older = deeper, slower breath → more visible
+        hatchling: 1.3, juvenile: 1.1, adult: 1.0, mature: 0.9, elder: 0.8,
+      },
+    },
+
     // --- localStorage keys ---
     storageKeys: {
       genesis:     'lili_genesis',
@@ -655,6 +736,8 @@
       baseline:    'lili_baseline',
       replay:      'lili_replay',
       offspring:   'lili_offspring',
+      temporal:    'lili_temporal',
+      temperament: 'lili_temperament',
     },
 
     // --- Phase 14: Cloud sync ---
@@ -1153,6 +1236,48 @@
   const _attention = {
     weights: {},                // sensorName → attention weight (0.3..2.0)
     prevSensors: {},            // previous sensor values for change detection
+  };
+
+  // Phase 36: Temporal patterns (time-of-day learning)
+  const _temporal = {
+    bins: new Array(24),        // per-hour profile {stress, activity, observations}
+    lastHour: -1,               // track hour changes
+  };
+  // Initialize temporal bins
+  for (var _ti = 0; _ti < 24; _ti++) {
+    _temporal.bins[_ti] = { stress: 0.3, activity: 0.5, observations: 0 };
+  }
+
+  // Phase 37: Personality drift (long-term temperament)
+  const _temperament = {
+    boldness: 0,                // -1..+1 axis values
+    sociability: 0,
+    activity: 0,
+    emotionality: 0,
+    moodAccum: new Float64Array(7), // mood counts in current window
+    windowCount: 0,             // decisions in current window
+  };
+
+  // Phase 38: Surprise signal
+  const _surprise = {
+    intensity: 0,               // current surprise level (0..1)
+    lastTdError: 0,             // most recent |TD error|
+    alphaBoost: 1.0,            // current learning rate multiplier (decays toward 1)
+  };
+
+  // Phase 39: Ink defense
+  const _inkDefense = {
+    particles: [],              // [{x, y, vx, vy, r, life, maxLife, alpha}]
+    lastBurstMs: 0,             // cooldown tracker
+    prevStress: 0,              // for rate-of-change detection
+  };
+
+  // Phase 40: Camouflage
+  const _camouflage = {
+    intensity: 0,               // current camo blend (0..1, lerped)
+    targetIntensity: 0,
+    satShift: 0,                // current saturation shift
+    litShift: 0,                // current lightness shift
   };
 
   function onMoodChange(fn) { _moodListeners.push(fn); }
@@ -2292,6 +2417,290 @@
   }
 
   // =========================================================================
+  // Phase 36 — Temporal Patterns (time-of-day learning)
+  // =========================================================================
+
+  function temporalUpdate() {
+    var hour = new Date().getHours();
+    // Detect hour change for periodic save
+    if (hour !== _temporal.lastHour) {
+      _temporal.lastHour = hour;
+      temporalSave();
+    }
+    var bin = _temporal.bins[hour];
+    var T = CFG.temporal;
+    // Running average update
+    var curActivity = (lili.vel.mag() / Math.max(ageVal(CFG.maxSpeed), 0.1));
+    bin.stress = bin.stress * T.decayRate + stress * (1 - T.decayRate);
+    bin.activity = bin.activity * T.decayRate + Math.min(curActivity, 1) * (1 - T.decayRate);
+    bin.observations++;
+  }
+
+  function temporalGetExpectation() {
+    // Returns expected stress and activity for current hour
+    var hour = new Date().getHours();
+    var bin = _temporal.bins[hour];
+    if (bin.observations < CFG.temporal.minObservations) return null;
+    return { stress: bin.stress, activity: bin.activity };
+  }
+
+  function temporalSave() {
+    try {
+      var data = [];
+      for (var i = 0; i < 24; i++) {
+        var b = _temporal.bins[i];
+        data.push([
+          Math.round(b.stress * 1000) / 1000,
+          Math.round(b.activity * 1000) / 1000,
+          b.observations
+        ]);
+      }
+      localStorage.setItem(CFG.storageKeys.temporal, JSON.stringify(data));
+    } catch (e) { /**/ }
+  }
+
+  function temporalLoad() {
+    try {
+      var json = localStorage.getItem(CFG.storageKeys.temporal);
+      if (!json) return;
+      var data = JSON.parse(json);
+      for (var i = 0; i < 24 && i < data.length; i++) {
+        _temporal.bins[i].stress = data[i][0];
+        _temporal.bins[i].activity = data[i][1];
+        _temporal.bins[i].observations = data[i][2] || 0;
+      }
+    } catch (e) { /**/ }
+  }
+
+  // =========================================================================
+  // Phase 37 — Personality Drift (long-term temperament evolution)
+  // =========================================================================
+
+  function temperamentAccumulate(moodIdx) {
+    _temperament.moodAccum[moodIdx]++;
+    _temperament.windowCount++;
+
+    if (_temperament.windowCount >= CFG.personalityDrift.windowSize) {
+      temperamentDriftUpdate();
+      // Reset window
+      for (var i = 0; i < 7; i++) _temperament.moodAccum[i] = 0;
+      _temperament.windowCount = 0;
+    }
+  }
+
+  function temperamentDriftUpdate() {
+    var PD = CFG.personalityDrift;
+    var total = _temperament.windowCount || 1;
+    // Compute mood proportions for this window
+    var props = {};
+    for (var i = 0; i < MOOD_COUNT; i++) {
+      props[CFG.moods[i]] = _temperament.moodAccum[i] / total;
+    }
+    // Update each temperament axis
+    var axes = PD.axes;
+    for (var a = 0; a < axes.length; a++) {
+      var axis = axes[a];
+      var map = PD.moodMap[axis];
+      var signal = 0;
+      for (var mood in map) {
+        signal += (props[mood] || 0) * map[mood];
+      }
+      // Drift toward signal
+      _temperament[axis] += (signal - _temperament[axis]) * PD.driftRate;
+      // Clamp
+      _temperament[axis] = Math.max(-1, Math.min(1, _temperament[axis]));
+    }
+    temperamentSave();
+  }
+
+  function temperamentGetBias(moodIdx) {
+    // Returns a soft bias for mood selection based on temperament
+    var mood = CFG.moods[moodIdx];
+    var PD = CFG.personalityDrift;
+    var bias = 0;
+    var axes = PD.axes;
+    for (var a = 0; a < axes.length; a++) {
+      var axis = axes[a];
+      var map = PD.moodMap[axis];
+      if (map[mood]) {
+        // Positive temperament + positive mood mapping = boost
+        bias += _temperament[axis] * map[mood];
+      }
+    }
+    return Math.max(-PD.maxBias, Math.min(PD.maxBias, bias));
+  }
+
+  function temperamentSave() {
+    try {
+      localStorage.setItem(CFG.storageKeys.temperament, JSON.stringify({
+        boldness: _temperament.boldness,
+        sociability: _temperament.sociability,
+        activity: _temperament.activity,
+        emotionality: _temperament.emotionality,
+      }));
+    } catch (e) { /**/ }
+  }
+
+  function temperamentLoad() {
+    try {
+      var json = localStorage.getItem(CFG.storageKeys.temperament);
+      if (!json) return;
+      var data = JSON.parse(json);
+      _temperament.boldness = data.boldness || 0;
+      _temperament.sociability = data.sociability || 0;
+      _temperament.activity = data.activity || 0;
+      _temperament.emotionality = data.emotionality || 0;
+    } catch (e) { /**/ }
+  }
+
+  // =========================================================================
+  // Phase 38 — Surprise Signal (prediction error mechanism)
+  // =========================================================================
+
+  function surpriseOnTdError(absDelta) {
+    var S = CFG.surprise;
+    _surprise.lastTdError = absDelta;
+
+    if (absDelta > S.tdErrorThreshold) {
+      // Spike surprise intensity
+      _surprise.intensity = Math.min(1, absDelta / 2);
+
+      // Boost learning rate temporarily
+      _surprise.alphaBoost = S.alphaBoostFactor;
+
+      // Boost all attention weights
+      for (var name in _attention.weights) {
+        _attention.weights[name] = Math.min(CFG.attention.maxWeight,
+          _attention.weights[name] + S.attentionBoost);
+      }
+
+      // Trigger startle micro-expression on very high surprise
+      if (absDelta > S.microExprThreshold) {
+        triggerMicroExpr('startle');
+      }
+    }
+  }
+
+  function updateSurprise() {
+    // Decay surprise intensity
+    _surprise.intensity *= (1 - CFG.surprise.decayRate);
+    if (_surprise.intensity < 0.01) _surprise.intensity = 0;
+
+    // Decay alpha boost toward 1.0
+    _surprise.alphaBoost = 1 + (_surprise.alphaBoost - 1) * CFG.surprise.alphaBoostDecay;
+    if (_surprise.alphaBoost < 1.01) _surprise.alphaBoost = 1.0;
+  }
+
+  // =========================================================================
+  // Phase 39 — Ink Defense (dramatic ink burst on startle)
+  // =========================================================================
+
+  function inkDefenseTryBurst() {
+    var ID = CFG.inkDefense;
+    var now = Date.now();
+    if (now - _inkDefense.lastBurstMs < ID.cooldownMs) return;
+
+    // Check stress rate of change
+    var stressRate = stress - _inkDefense.prevStress;
+    _inkDefense.prevStress = stress;
+
+    if (stress >= ID.stressThreshold && stressRate >= ID.stressRateThreshold) {
+      _inkDefense.lastBurstMs = now;
+
+      // Burst particles in wide spray away from cursor
+      var dx = lili.pos.x - mouse.pos.x;
+      var dy = lili.pos.y - mouse.pos.y;
+      var d = Math.sqrt(dx * dx + dy * dy) || 1;
+      var baseAngle = Math.atan2(dy / d, dx / d);
+
+      for (var i = 0; i < ID.particleCount; i++) {
+        var angle = baseAngle + (noiseRng() - 0.5) * ID.spreadAngle;
+        var spd = ID.spreadSpeed * (0.5 + noiseRng() * 0.8);
+        _inkDefense.particles.push({
+          x: lili.pos.x + (noiseRng() - 0.5) * lili.bodyR * 0.8,
+          y: lili.pos.y + (noiseRng() - 0.5) * lili.bodyR * 0.8,
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd,
+          r: ID.particleMinR + noiseRng() * (ID.particleMaxR - ID.particleMinR),
+          life: ID.particleLife,
+          maxLife: ID.particleLife,
+          alpha: ID.opacityStart,
+        });
+      }
+      // Cap total defense particles
+      while (_inkDefense.particles.length > 60) _inkDefense.particles.shift();
+      soundInkSplash(); // reuse existing sound
+    }
+  }
+
+  function updateInkDefense() {
+    for (var i = _inkDefense.particles.length - 1; i >= 0; i--) {
+      var p = _inkDefense.particles[i];
+      p.life--;
+      if (p.life <= 0) { _inkDefense.particles.splice(i, 1); continue; }
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.94;
+      p.vy *= 0.94;
+      p.vy -= 0.02; // slight upward drift (ink rises)
+      p.alpha = (p.life / p.maxLife) * CFG.inkDefense.opacityStart;
+      p.r *= 1.005; // slowly expand
+    }
+  }
+
+  function renderInkDefense() {
+    if (_inkDefense.particles.length === 0) return;
+    for (var i = 0; i < _inkDefense.particles.length; i++) {
+      var p = _inkDefense.particles[i];
+      var grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+      grad.addColorStop(0, 'rgba(15, 10, 25, ' + (p.alpha * 0.9) + ')');
+      grad.addColorStop(0.5, 'rgba(20, 12, 30, ' + (p.alpha * 0.5) + ')');
+      grad.addColorStop(1, 'rgba(25, 15, 35, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // =========================================================================
+  // Phase 40 — Camouflage Intensity (mood-dependent background matching)
+  // =========================================================================
+
+  function updateCamouflage() {
+    var mood = lili.mood;
+    var CI = CFG.camouflage;
+    _camouflage.targetIntensity = CI.moodIntensity[mood] || 0.2;
+
+    // Lerp toward target
+    _camouflage.intensity += (_camouflage.targetIntensity - _camouflage.intensity) * CI.blendSpeed;
+
+    // Compute actual shifts based on ambient background and camo intensity
+    var bgLightness = _ambient.lightness; // 0..1
+    var currentLit = ageVal(CFG.baseLightness);
+
+    // Shift toward background lightness
+    var litDelta = (bgLightness * 100 - currentLit);
+    _camouflage.litShift = litDelta * _camouflage.intensity * CI.maxLitShift / 100;
+
+    // Reduce saturation toward background (most backgrounds are desaturated)
+    _camouflage.satShift = -_camouflage.intensity * CI.maxSatReduction;
+  }
+
+  // =========================================================================
+  // Phase 41 — Growth Visualization (smooth size scaling)
+  // =========================================================================
+
+  function growthScale() {
+    var G = CFG.growth.phaseScale;
+    var phase = age.phase;
+    var range = G[phase] || G.adult;
+    // Smooth interpolation within current phase
+    var t = age.phaseProgress;
+    return range.start + (range.end - range.start) * t;
+  }
+
+  // =========================================================================
   // 15D — DOM Structure Learning (element type preferences)
   // =========================================================================
 
@@ -3189,7 +3598,8 @@
   function _getAlpha(stateIndex, moodIdx) {
     const key = stateIndex + ',' + moodIdx;
     const count = _visitCounts.get(key) || 0;
-    return Math.max(CFG.rl.alphaMin, CFG.rl.alpha / (1 + count * CFG.rl.alphaDecayFactor));
+    // Phase 38: Surprise boosts learning rate temporarily
+    return Math.max(CFG.rl.alphaMin, CFG.rl.alpha / (1 + count * CFG.rl.alphaDecayFactor)) * _surprise.alphaBoost;
   }
 
   function _incrementVisit(stateIndex, moodIdx) {
@@ -3263,6 +3673,14 @@
         }
       }
 
+      // Phase 37: Apply personality drift bias (soft temperament influence)
+      for (let i = 0; i < MOOD_COUNT; i++) {
+        if (_softmaxProbs[i] > 0) {
+          var bias = temperamentGetBias(i);
+          _softmaxProbs[i] *= Math.exp(bias); // multiplicative bias
+        }
+      }
+
       // Normalize
       let sum = 0;
       for (let i = 0; i < MOOD_COUNT; i++) sum += _softmaxProbs[i];
@@ -3312,6 +3730,9 @@
     // Phase 19C: Track convergence metric (avg |delta|)
     _journal._qDeltaSum += Math.abs(delta);
     _journal._qDeltaCount++;
+
+    // Phase 38: Surprise signal — high TD error triggers surprise response
+    surpriseOnTdError(Math.abs(delta));
 
     // Phase 19C: Track policy stability (did top mood change?)
     let prevTop = 0;
@@ -3525,6 +3946,14 @@
       reward *= (1 + CFG.attention.influenceOnReward); // attending to cursor → stronger reward signal
     }
 
+    // Phase 36: Temporal pattern — bonus/penalty for matching learned time-of-day expectations
+    var temporal = temporalGetExpectation();
+    if (temporal) {
+      // If current stress matches expected pattern, small reward (behaving "normally")
+      var stressDev = Math.abs(stress - temporal.stress);
+      if (stressDev < 0.15) reward += CFG.temporal.baselineInfluence;
+    }
+
     return reward;
   }
 
@@ -3698,6 +4127,9 @@
     _decision.prevState = currentState;
     _decision.prevMoodIndex = newMoodIdx;
     _decision.totalDecisions++;
+
+    // Phase 37: Accumulate mood for personality drift
+    temperamentAccumulate(newMoodIdx);
 
     // Phase 31: Energy cost per decision
     energyOnDecision(_decision.wasExploratory);
@@ -4835,6 +5267,13 @@
       'cogMap:   ' + _cogMap.cells.size + '/' + CFG.cogMap.maxCells + ' cells\n' +
       'cursor:   ' + _cursorPattern.pattern + ' (' + _cursorPattern.directionChanges + ' chg)\n' +
       'focus:    ' + attentionGetFocus() + '\n' +
+      '── Phase 36-41 ─────────\n' +
+      'temporal: hr=' + new Date().getHours() + ' obs=' + _temporal.bins[new Date().getHours()].observations + '\n' +
+      'temper:   B=' + _temperament.boldness.toFixed(2) + ' S=' + _temperament.sociability.toFixed(2) + ' A=' + _temperament.activity.toFixed(2) + ' E=' + _temperament.emotionality.toFixed(2) + '\n' +
+      'surprise: ' + _surprise.intensity.toFixed(2) + ' \u03B1\u00D7' + _surprise.alphaBoost.toFixed(2) + '\n' +
+      'inkDef:   ' + _inkDefense.particles.length + ' particles\n' +
+      'camo:     ' + (_camouflage.intensity * 100).toFixed(0) + '% (sat=' + _camouflage.satShift.toFixed(1) + ' lit=' + _camouflage.litShift.toFixed(1) + ')\n' +
+      'growth:   ' + growthScale().toFixed(3) + '\u00D7\n' +
       '── Perf ────────────────\n' +
       'FPS:      ' + _fpsAvg.toFixed(1) + (_fpsAvg < 50 ? ' \u26A0' : '') + '\n' +
       'frame#:   ' + frameCount;
@@ -4960,8 +5399,32 @@
         console.info('[Lili] Cognitive map: ' + _cogMap.cells.size + ' cells');
         return { cells: _cogMap.cells.size };
       },
+      // Phase 36-41: New console API
+      temporal: function () {
+        var exp = temporalGetExpectation();
+        var hr = new Date().getHours();
+        console.info('[Lili] Temporal: hour=' + hr + ', observations=' + _temporal.bins[hr].observations +
+          (exp ? ', expected stress=' + exp.stress.toFixed(2) + ', activity=' + exp.activity.toFixed(2) : ' (not enough data)'));
+        return { hour: hr, bins: _temporal.bins.map(function (b) { return { stress: b.stress, activity: b.activity, obs: b.observations }; }) };
+      },
+      temperament: function () {
+        console.info('[Lili] Temperament: boldness=' + _temperament.boldness.toFixed(3) +
+          ' sociability=' + _temperament.sociability.toFixed(3) +
+          ' activity=' + _temperament.activity.toFixed(3) +
+          ' emotionality=' + _temperament.emotionality.toFixed(3));
+        return {
+          boldness: _temperament.boldness, sociability: _temperament.sociability,
+          activity: _temperament.activity, emotionality: _temperament.emotionality
+        };
+      },
+      surprise: function () {
+        console.info('[Lili] Surprise: intensity=' + _surprise.intensity.toFixed(3) +
+          ', lastTD=' + _surprise.lastTdError.toFixed(3) +
+          ', alphaBoost=' + _surprise.alphaBoost.toFixed(3));
+        return { intensity: _surprise.intensity, lastTdError: _surprise.lastTdError, alphaBoost: _surprise.alphaBoost };
+      },
     });
-    console.info('[Lili] Console API ready — try: lili.status(), lili.energy(), lili.attention(), lili.cogmap()');
+    console.info('[Lili] Console API ready — try: lili.status(), lili.energy(), lili.temporal(), lili.temperament(), lili.surprise()');
 
     // Keyboard handler (unified)
     document.addEventListener('keydown', function (e) {
@@ -5828,7 +6291,8 @@
 
   function updatePhysics(dt) {
     // Update age-dependent body radius
-    lili.bodyR = ageVal(CFG.bodyRadius);
+    // Phase 41: Growth visualization — smooth size scaling within life phases
+    lili.bodyR = ageVal(CFG.bodyRadius) * growthScale();
 
     // Pulse-glide cycle advance — frequency is age-dependent (Research #1)
     // Hatchling: 5.0 Hz (rapid inefficient pulsing), Adult: 0.9 Hz (efficient)
@@ -6666,9 +7130,10 @@
 
     const h = baseHue + circadianHue + stressHue + moodHue + driftHue + seasonHue + habitatHue + signalHue;
     // Phase 18G: Ambient light adaptation (saturation shift for contrast)
-    const s = Math.min(Math.max(baseSat + stressSat + moodSat + satPulse + _ambient.satShift + seasonSat, 20), 100);
-    // Phase 18E+18G+21+28: Psychosomatic + ambient + seasonal + contentment lightness shift
-    const l = Math.min(Math.max(baseLit + circadianLit + moodLit + _psychosom.lightness + _ambient.lightnessShift + seasonLit + contentLit, 15), 85);
+    // Phase 40: Camouflage — mood-dependent saturation/lightness shift toward background
+    const s = Math.min(Math.max(baseSat + stressSat + moodSat + satPulse + _ambient.satShift + seasonSat + _camouflage.satShift, 20), 100);
+    // Phase 18E+18G+21+28+40: Psychosomatic + ambient + seasonal + contentment + camouflage lightness shift
+    const l = Math.min(Math.max(baseLit + circadianLit + moodLit + _psychosom.lightness + _ambient.lightnessShift + seasonLit + contentLit + _camouflage.litShift, 15), 85);
 
     // Phase 29: Enhanced bioluminescence — boost glow at night
     var isNightBio = _circadian.isAsleep || (new Date().getHours() >= 22 || new Date().getHours() < 6);
@@ -7276,7 +7741,7 @@
     scrollOy = window.scrollY || window.pageYOffset || 0;
 
     updateAge();
-    lili.bodyR = ageVal(CFG.bodyRadius); // grow with age
+    lili.bodyR = ageVal(CFG.bodyRadius) * growthScale(); // grow with age (Phase 41: smooth scaling)
     updateCircadian();                   // Phase 15B: day/night rhythm
     updateSleepAnim();                   // Phase 18D: REM twitch management
     updateAmbient();                     // Phase 18G: background light awareness
@@ -7337,6 +7802,19 @@
     // Phase 34: Cursor pattern recognition
     updateCursorPattern();
 
+    // Phase 36: Temporal pattern learning
+    temporalUpdate();
+
+    // Phase 38: Surprise signal decay
+    updateSurprise();
+
+    // Phase 39: Ink defense burst check + particle update
+    inkDefenseTryBurst();
+    updateInkDefense();
+
+    // Phase 40: Camouflage intensity update
+    updateCamouflage();
+
     checkMidnightCleanup(); // Phase 9D: periodic midnight reset check
   }
 
@@ -7357,6 +7835,9 @@
 
       // 1. Ink cloud behind everything (Phase 15E)
       renderInk(colors);
+
+      // 1b. Defense ink burst (Phase 39) — larger, more dramatic
+      renderInkDefense();
 
       // 2. Tentacles behind body (hull envelope rendering)
       renderTentaclesHull(colors);
@@ -7428,6 +7909,10 @@
     domLearningLoad();
     visitProfileLoad();
 
+    // Phase 36-37: Load temporal patterns and temperament
+    temporalLoad();
+    temperamentLoad();
+
     // Phase 15C: Register this visit and compute trust
     _visitProfile.totalVisits++;
     _visitProfile.timestamps.push(Date.now());
@@ -7468,7 +7953,7 @@
     updateDocDimensions();
 
     // Phase 11A: Restore position from localStorage (or center of current viewport in document coords)
-    lili.bodyR = ageVal(CFG.bodyRadius);
+    lili.bodyR = ageVal(CFG.bodyRadius) * growthScale();
     if (!restorePosition()) {
       lili.pos.set(scrollOx + W * 0.5, scrollOy + H * 0.5);
     }

@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-35 hotovy, akademická + technologická expanze**
+**Fáze: Implementace — Fáze 1-41 hotovy, akademická + technologická expanze**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -83,8 +83,14 @@ Hotovo:
 - ✅ **Fáze 33:** Cognitive Map — enriched spatial memory (safety+reward+visits per 80px cell), familiarity bonus v reward, decay per decision, max 500 cells
 - ✅ **Fáze 34:** Cursor Pattern Recognition — direction change analysis (60-frame window), klasifikace: nervous/calm/directed/erratic/unknown, modulates stress
 - ✅ **Fáze 35:** Attention Mechanism — per-sensor attention weights (0.3-2.0), boost on change, decay toward baseline, focus sensor modulates reward signal
+- ✅ **Fáze 36:** Temporal Patterns — 24-hour bins tracking stress+activity, learned time-of-day expectations, reward bonus for matching patterns
+- ✅ **Fáze 37:** Personality Drift — long-term temperament evolution (boldness, sociability, activity, emotionality), soft bias on mood selection via accumulated experience
+- ✅ **Fáze 38:** Surprise Signal — TD error triggers surprise response: attention spike, temporary α boost (1.5×), micro-expression on high prediction error
+- ✅ **Fáze 39:** Ink Defense — dramatic ink burst on sudden stress spike (rate-of-change detection), larger particles, wider spray, separate particle system
+- ✅ **Fáze 40:** Camouflage Intensity — mood-dependent background matching (shy=100%, curious=10%), smooth sat/lit shifts toward ambient
+- ✅ **Fáze 41:** Growth Visualization — smooth body size scaling within life phases (hatchling 0.6× → elder 1.15×), no discrete jumps
 
-**Další krok:** Testování všech nových fází, tuning parametrů, příprava akademického paperu.
+**Další krok:** Testování všech nových fází, long-term observation, příprava akademického paperu.
 
 **Keyboard shortcuts:**
 - `D` — toggle debug panel
@@ -124,7 +130,7 @@ lili-octopus/
 ├── LILI_PRD_v1.md           ← Product Requirements Document (ZDROJ PRAVDY)
 │
 ├── public/
-│   ├── lili.js              ← JEDINÝ produkční soubor (~7546 řádků)
+│   ├── lili.js              ← JEDINÝ produkční soubor (~8031 řádků)
 │   └── dashboard.html       ← Observability dashboard (vizualizace exportovaných dat)
 │
 ├── docs/
@@ -211,5 +217,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-04-10 (Fáze 1-29 implementovány, lili.js ~7546 řádků, dashboard.html)*
+*Poslední aktualizace: 2026-04-10 (Fáze 1-29 implementovány, lili.js ~8031 řádků, dashboard.html)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*
