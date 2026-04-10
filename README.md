@@ -35,7 +35,7 @@ Lili je autonomní digitální organismus ve formě chobotnice, žijící na web
 
 ## Aktuální stav (2026-04-10)
 
-**29 implementačních fází hotovo** — `public/lili.js` (~7117 řádků)
+**35 implementačních fází hotovo** — `public/lili.js` (~7546 řádků)
 
 | Fáze | Popis |
 |------|-------|
@@ -60,6 +60,12 @@ Lili je autonomní digitální organismus ve formě chobotnice, žijící na web
 | **27** | **Habitat Awareness** — detekce barevné palety stránky, hue adaptace |
 | **28** | **Non-verbal Communication** — welcome wave, excitement flash, contentment pulse |
 | **29** | **Enhanced Bioluminescence** — zesílený noční glow, luminiscenční trail |
+| **30** | **Anticipation** — prediktivní pre-reakce na přibližující se kurzor |
+| **31** | **Energy / Fatigue** — energy model s activity costs a regenerací |
+| **32** | **Habituation** — stimulus adaptation (opakované podněty → slabší reakce) |
+| **33** | **Cognitive Map** — enriched spatial memory (safety + familiarity) |
+| **34** | **Cursor Pattern** — rozpoznávání vzorců kurzoru (nervous/calm/erratic) |
+| **35** | **Attention** — context-dependent sensor weighting |
 
 ## Akademické funkce (Fáze 19-24)
 
@@ -209,6 +215,9 @@ lili.personality()   // zobrazit personality radar
 lili.sync()          // vynutit cloud sync
 lili.habitat()       // zobrazit habitat awareness stav
 lili.dream()         // zobrazit dream replay stav
+lili.energy()        // zobrazit energy/fatigue stav
+lili.attention()     // zobrazit attention focus a váhy
+lili.cogmap()        // zobrazit cognitive map statistiky
 ```
 
 ## Akademický rozměr

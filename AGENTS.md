@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-29 hotovy, akademická + technologická expanze**
+**Fáze: Implementace — Fáze 1-35 hotovy, akademická + technologická expanze**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -77,6 +77,13 @@ Hotovo:
 - ✅ **Fáze 28:** Non-verbal Communication — welcome wave (chapadlo mávne při návratu kurzoru), excitement flash (chromatoforový záblesk na vysokou odměnu), contentment pulse (pomalá jasová oscilace při klidném stavu)
 - ✅ **Fáze 29:** Enhanced Bioluminescence — zesílený glow v noci (nightGlowBoost 2.5×), luminiscenční trail particles za pohybem, inner eye glow, body outline luminescence
 
+- ✅ **Fáze 30:** Anticipation — prediktivní pre-reakce na přibližující se kurzor (body tense, tentacle alert spread), approach detection across 15 frames, relaxRate decay
+- ✅ **Fáze 31:** Energy / Fatigue — energy model (100 max), movement/decision/exploration costs, sleep+idle regen, fatigued=slower+less exploration, critical=forced rest
+- ✅ **Fáze 32:** Habituation — cursor/scroll stimulus adaptation (opakovaný podnět→slabší reakce), novelty reset (theme change), minSensitivity floor 0.15, moduluje flee+stress
+- ✅ **Fáze 33:** Cognitive Map — enriched spatial memory (safety+reward+visits per 80px cell), familiarity bonus v reward, decay per decision, max 500 cells
+- ✅ **Fáze 34:** Cursor Pattern Recognition — direction change analysis (60-frame window), klasifikace: nervous/calm/directed/erratic/unknown, modulates stress
+- ✅ **Fáze 35:** Attention Mechanism — per-sensor attention weights (0.3-2.0), boost on change, decay toward baseline, focus sensor modulates reward signal
+
 **Další krok:** Testování všech nových fází, tuning parametrů, příprava akademického paperu.
 
 **Keyboard shortcuts:**
@@ -117,7 +124,7 @@ lili-octopus/
 ├── LILI_PRD_v1.md           ← Product Requirements Document (ZDROJ PRAVDY)
 │
 ├── public/
-│   ├── lili.js              ← JEDINÝ produkční soubor (~7117 řádků)
+│   ├── lili.js              ← JEDINÝ produkční soubor (~7546 řádků)
 │   └── dashboard.html       ← Observability dashboard (vizualizace exportovaných dat)
 │
 ├── docs/
@@ -204,5 +211,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-04-10 (Fáze 1-29 implementovány, lili.js ~7117 řádků, dashboard.html)*
+*Poslední aktualizace: 2026-04-10 (Fáze 1-29 implementovány, lili.js ~7546 řádků, dashboard.html)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

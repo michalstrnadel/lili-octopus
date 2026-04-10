@@ -576,6 +576,68 @@
       eyeGlowAlpha: 0.3,        // inner eye glow at night
     },
 
+    // --- Phase 30: Anticipation (predictive pre-reaction) ---
+    anticipation: {
+      approachDetectDistance: 300, // px: start tracking cursor approach
+      approachFrames: 15,         // frames of consistent approach to trigger
+      tenseFactor: 0.3,           // body shrink when anticipating threat
+      tentacleAlertSpread: 1.4,   // tentacle spread multiplier during anticipation
+      relaxRate: 0.05,            // how fast anticipation fades
+    },
+
+    // --- Phase 31: Energy / Fatigue ---
+    energy: {
+      max: 100,
+      regenRate: 0.02,            // per frame when idle/calm
+      sleepRegenRate: 0.08,       // per frame during sleep
+      moveCost: 0.005,            // per frame × velocity magnitude
+      decisionCost: 0.1,          // per brain decision cycle
+      explorationCost: 0.15,      // extra cost for exploratory decisions
+      lowThreshold: 25,           // below this: fatigued (slower, less exploration)
+      criticalThreshold: 10,      // below this: forced rest behavior
+      speedPenalty: 0.6,          // speed multiplier when fatigued
+      explorationPenalty: 0.5,    // exploration temperature multiplier when fatigued
+    },
+
+    // --- Phase 32: Habituation (stimulus adaptation) ---
+    habituation: {
+      cursorDecayRate: 0.003,     // per frame: how fast cursor threat habituates
+      cursorRecoveryRate: 0.001,  // per frame: how fast habituation recovers when cursor absent
+      scrollDecayRate: 0.01,      // scroll habituation (faster — scrolls are brief)
+      scrollRecoveryRate: 0.005,
+      noveltyBoost: 0.4,          // habituation reset amount on novel stimulus
+      minSensitivity: 0.15,       // floor: never fully habituate (always some response)
+    },
+
+    // --- Phase 33: Cognitive Map (enhanced spatial memory) ---
+    cogMap: {
+      cellSize: 80,               // finer grid than place memory
+      maxCells: 500,              // memory limit
+      decayRate: 0.998,           // per decision cycle
+      safetyWeight: 0.6,          // weight of safety vs reward in cell value
+      rewardWeight: 0.4,
+      visitBonus: 0.05,           // familiarity bonus per visit
+      maxVisits: 50,              // cap visit counter
+    },
+
+    // --- Phase 34: Cursor Pattern Recognition ---
+    cursorPattern: {
+      historyLength: 60,          // frames of cursor position history
+      sampleInterval: 3,          // record every Nth frame
+      nervousThreshold: 8,        // direction changes per window = nervous
+      calmThreshold: 2,           // direction changes per window = calm
+      patternInfluence: 0.3,      // how much pattern affects stress/trust
+    },
+
+    // --- Phase 35: Attention Mechanism ---
+    attention: {
+      decayRate: 0.02,            // attention weight decay per frame
+      boostOnChange: 0.5,         // attention boost when sensor changes
+      maxWeight: 2.0,             // max attention multiplier
+      minWeight: 0.3,             // min attention multiplier
+      influenceOnReward: 0.15,    // how much attention modulates reward
+    },
+
     // --- localStorage keys ---
     storageKeys: {
       genesis:     'lili_genesis',
@@ -1050,6 +1112,47 @@
   const _bioTrail = {
     particles: [],             // {x, y, life, maxLife, hue, size}
     spawnTimer: 0,
+  };
+
+  // Phase 30: Anticipation state
+  const _anticipation = {
+    approaching: false,         // is cursor consistently approaching?
+    approachFrames: 0,          // consecutive frames of approach
+    intensity: 0,               // 0..1 anticipation intensity
+    prevDist: Infinity,         // previous cursor distance
+  };
+
+  // Phase 31: Energy/fatigue state
+  const _energy = {
+    level: 80,                  // current energy (starts slightly below max)
+    fatigued: false,            // true when below lowThreshold
+    critical: false,            // true when below criticalThreshold
+  };
+
+  // Phase 32: Habituation state
+  const _habituation = {
+    cursor: 1.0,                // cursor sensitivity (1.0 = fully sensitive, 0.15 = habituated)
+    scroll: 1.0,                // scroll sensitivity
+    lastNovelty: 0,             // timestamp of last novel stimulus
+  };
+
+  // Phase 33: Cognitive map
+  const _cogMap = {
+    cells: new Map(),           // key "cx,cy" → {safety, reward, visits}
+  };
+
+  // Phase 34: Cursor pattern recognition
+  const _cursorPattern = {
+    history: [],                // [{x, y, frame}]
+    sampleCounter: 0,
+    pattern: 'unknown',         // nervous / calm / erratic / directed / unknown
+    directionChanges: 0,
+  };
+
+  // Phase 35: Attention mechanism
+  const _attention = {
+    weights: {},                // sensorName → attention weight (0.3..2.0)
+    prevSensors: {},            // previous sensor values for change detection
   };
 
   function onMoodChange(fn) { _moodListeners.push(fn); }
@@ -1741,10 +1844,11 @@
     // Detect sudden theme change (big lightness jump)
     var delta = Math.abs(sampled - _ambient.lastSampleLightness);
     if (delta > A.changeThreshold) {
-      // Theme changed! Stress spike + startle
+      // Theme changed! Stress spike + startle + habituation reset
       stress = Math.min(1, stress + A.stressSpike);
       lili.stress = stress;
       triggerMicroExpr('startle');
+      habituationNovelty(); // Phase 32: novel stimulus resets habituation
       console.info('[Lili] Theme change detected: ' +
         _ambient.lastSampleLightness.toFixed(2) + ' → ' + sampled.toFixed(2));
     }
@@ -1940,6 +2044,251 @@
       ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2);
       ctx.fill();
     }
+  }
+
+  // =========================================================================
+  // 30 — Anticipation (predictive pre-reaction to approaching stimuli)
+  // =========================================================================
+
+  function updateAnticipation() {
+    if (!mouse.active) {
+      _anticipation.intensity *= (1 - CFG.anticipation.relaxRate);
+      _anticipation.approachFrames = 0;
+      _anticipation.approaching = false;
+      return;
+    }
+
+    var dx = lili.pos.x - mouse.pos.x;
+    var dy = lili.pos.y - mouse.pos.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Detect approach: distance decreasing + within detection range
+    if (dist < CFG.anticipation.approachDetectDistance && dist < _anticipation.prevDist - 0.5) {
+      _anticipation.approachFrames++;
+    } else {
+      _anticipation.approachFrames = Math.max(0, _anticipation.approachFrames - 2);
+    }
+    _anticipation.prevDist = dist;
+
+    if (_anticipation.approachFrames >= CFG.anticipation.approachFrames) {
+      _anticipation.approaching = true;
+      // Intensity scales with how close and how fast
+      var closeness = 1 - (dist / CFG.anticipation.approachDetectDistance);
+      var target = Math.min(1, closeness * 1.5);
+      _anticipation.intensity += (target - _anticipation.intensity) * 0.1;
+    } else {
+      _anticipation.approaching = false;
+      _anticipation.intensity *= (1 - CFG.anticipation.relaxRate);
+    }
+  }
+
+  // =========================================================================
+  // 31 — Energy / Fatigue (activity budget creates natural rhythms)
+  // =========================================================================
+
+  function updateEnergy() {
+    var E = CFG.energy;
+
+    // Regeneration
+    if (_circadian.isAsleep) {
+      _energy.level = Math.min(E.max, _energy.level + E.sleepRegenRate);
+    } else if (lili.mood === 'idle' || lili.mood === 'calm') {
+      _energy.level = Math.min(E.max, _energy.level + E.regenRate);
+    }
+
+    // Movement cost
+    var speed = lili.vel.mag();
+    if (speed > 0.3) {
+      _energy.level = Math.max(0, _energy.level - E.moveCost * speed);
+    }
+
+    // Thresholds
+    _energy.fatigued = _energy.level < E.lowThreshold;
+    _energy.critical = _energy.level < E.criticalThreshold;
+  }
+
+  function energyOnDecision(wasExploratory) {
+    _energy.level = Math.max(0, _energy.level - CFG.energy.decisionCost);
+    if (wasExploratory) {
+      _energy.level = Math.max(0, _energy.level - CFG.energy.explorationCost);
+    }
+  }
+
+  // =========================================================================
+  // 32 — Habituation (repeated stimuli → decreased response)
+  // =========================================================================
+
+  function updateHabituation() {
+    var H = CFG.habituation;
+
+    // Cursor habituation: decays when cursor is active (becoming used to it)
+    if (mouse.active && mouse.speed > 0.5) {
+      _habituation.cursor = Math.max(H.minSensitivity,
+        _habituation.cursor - H.cursorDecayRate);
+    } else {
+      // Recover when cursor absent/still
+      _habituation.cursor = Math.min(1.0,
+        _habituation.cursor + H.cursorRecoveryRate);
+    }
+
+    // Scroll habituation
+    if (scrollActive) {
+      _habituation.scroll = Math.max(H.minSensitivity,
+        _habituation.scroll - H.scrollDecayRate);
+    } else {
+      _habituation.scroll = Math.min(1.0,
+        _habituation.scroll + H.scrollRecoveryRate);
+    }
+  }
+
+  function habituationNovelty() {
+    // Called on novel stimulus (theme change, new DOM elements, etc.)
+    _habituation.cursor = Math.min(1.0, _habituation.cursor + CFG.habituation.noveltyBoost);
+    _habituation.scroll = Math.min(1.0, _habituation.scroll + CFG.habituation.noveltyBoost);
+    _habituation.lastNovelty = Date.now();
+  }
+
+  // =========================================================================
+  // 33 — Cognitive Map (enriched spatial memory with safety + familiarity)
+  // =========================================================================
+
+  function _cogKey(x, y) {
+    var cs = CFG.cogMap.cellSize;
+    return ((x / cs) | 0) + ',' + ((y / cs) | 0);
+  }
+
+  function cogMapUpdate(x, y, reward, isSafe) {
+    var key = _cogKey(x, y);
+    var cell = _cogMap.cells.get(key);
+    if (!cell) {
+      if (_cogMap.cells.size >= CFG.cogMap.maxCells) return; // at capacity
+      cell = { safety: 0, reward: 0, visits: 0 };
+      _cogMap.cells.set(key, cell);
+    }
+    cell.visits = Math.min(CFG.cogMap.maxVisits, cell.visits + 1);
+    cell.safety += ((isSafe ? 1 : -1) - cell.safety) * 0.1;
+    cell.reward += (reward - cell.reward) * 0.1;
+  }
+
+  function cogMapQuery(x, y) {
+    var cell = _cogMap.cells.get(_cogKey(x, y));
+    if (!cell) return { value: 0, familiar: false };
+    var value = cell.safety * CFG.cogMap.safetyWeight +
+                cell.reward * CFG.cogMap.rewardWeight +
+                Math.min(cell.visits, 10) * CFG.cogMap.visitBonus;
+    return { value: value, familiar: cell.visits > 3 };
+  }
+
+  function cogMapDecay() {
+    var decay = CFG.cogMap.decayRate;
+    _cogMap.cells.forEach(function (cell, key) {
+      cell.safety *= decay;
+      cell.reward *= decay;
+      if (Math.abs(cell.safety) < 0.001 && Math.abs(cell.reward) < 0.001 && cell.visits < 2) {
+        _cogMap.cells.delete(key);
+      }
+    });
+  }
+
+  // =========================================================================
+  // 34 — Cursor Pattern Recognition (nervous vs calm visitor detection)
+  // =========================================================================
+
+  function updateCursorPattern() {
+    var CP = CFG.cursorPattern;
+    _cursorPattern.sampleCounter++;
+    if (_cursorPattern.sampleCounter < CP.sampleInterval) return;
+    _cursorPattern.sampleCounter = 0;
+
+    if (!mouse.active) {
+      _cursorPattern.pattern = 'unknown';
+      return;
+    }
+
+    _cursorPattern.history.push({
+      x: mouse.pos.x, y: mouse.pos.y, frame: frameCount
+    });
+
+    // Keep window limited
+    while (_cursorPattern.history.length > CP.historyLength) {
+      _cursorPattern.history.shift();
+    }
+
+    if (_cursorPattern.history.length < 10) {
+      _cursorPattern.pattern = 'unknown';
+      return;
+    }
+
+    // Count direction changes (sign changes in velocity)
+    var changes = 0;
+    var h = _cursorPattern.history;
+    for (var i = 2; i < h.length; i++) {
+      var dx1 = h[i - 1].x - h[i - 2].x;
+      var dy1 = h[i - 1].y - h[i - 2].y;
+      var dx2 = h[i].x - h[i - 1].x;
+      var dy2 = h[i].y - h[i - 1].y;
+      // Direction change if dot product is negative
+      if (dx1 * dx2 + dy1 * dy2 < 0) changes++;
+    }
+    _cursorPattern.directionChanges = changes;
+
+    // Classify
+    if (changes >= CP.nervousThreshold) {
+      _cursorPattern.pattern = 'nervous';
+    } else if (changes <= CP.calmThreshold) {
+      // Check if moving in consistent direction
+      var totalDx = h[h.length - 1].x - h[0].x;
+      var totalDy = h[h.length - 1].y - h[0].y;
+      if (Math.sqrt(totalDx * totalDx + totalDy * totalDy) > 50) {
+        _cursorPattern.pattern = 'directed';
+      } else {
+        _cursorPattern.pattern = 'calm';
+      }
+    } else {
+      _cursorPattern.pattern = 'erratic';
+    }
+  }
+
+  // =========================================================================
+  // 35 — Attention Mechanism (context-dependent sensor weighting)
+  // =========================================================================
+
+  function updateAttention() {
+    var A = CFG.attention;
+    var sensorNames = ['cursorProximity', 'cursorVelocity', 'domDensity',
+                       'whitespace', 'scrollState', 'timeOfDay'];
+
+    for (var i = 0; i < sensorNames.length; i++) {
+      var name = sensorNames[i];
+      // Initialize if needed
+      if (!_attention.weights[name]) _attention.weights[name] = 1.0;
+
+      // Boost attention when sensor value changes
+      if (_attention.prevSensors[name] !== undefined &&
+          _attention.prevSensors[name] !== sensors[name]) {
+        _attention.weights[name] = Math.min(A.maxWeight,
+          _attention.weights[name] + A.boostOnChange);
+      }
+
+      // Decay toward baseline
+      _attention.weights[name] = Math.max(A.minWeight,
+        _attention.weights[name] - A.decayRate);
+
+      _attention.prevSensors[name] = sensors[name];
+    }
+  }
+
+  function attentionGetFocus() {
+    // Return the sensor with highest attention weight
+    var maxName = 'cursorProximity';
+    var maxW = 0;
+    for (var name in _attention.weights) {
+      if (_attention.weights[name] > maxW) {
+        maxW = _attention.weights[name];
+        maxName = name;
+      }
+    }
+    return maxName;
   }
 
   // =========================================================================
@@ -2780,6 +3129,13 @@
     // On element stress
     if (sensors.whitespace === 'on_element') raw += 0.1;
 
+    // Phase 34: Cursor pattern modulates stress
+    if (_cursorPattern.pattern === 'nervous') raw += 0.15 * CFG.cursorPattern.patternInfluence;
+    else if (_cursorPattern.pattern === 'calm') raw -= 0.1 * CFG.cursorPattern.patternInfluence;
+
+    // Phase 32: Habituation dampens cursor-driven stress
+    raw *= _habituation.cursor;
+
     // Clamp raw input
     raw = Math.min(raw, 1);
 
@@ -2877,7 +3233,9 @@
       exploratory = true;
     } else {
       // Boltzmann: P(m) ∝ exp((Q(s,m) - maxQ) / τ)
-      const tau = Math.max(ageVal(CFG.rl.temperature), CFG.rl.softmaxMinTemp);
+      // Phase 31: Fatigue reduces exploration temperature (less random when tired)
+      var tauBase = Math.max(ageVal(CFG.rl.temperature), CFG.rl.softmaxMinTemp);
+      const tau = _energy.fatigued ? tauBase * CFG.energy.explorationPenalty : tauBase;
 
       // Find maxQ for numerical stability
       let maxQ = q[0];
@@ -3155,6 +3513,18 @@
     var beta = ageVal(CFG.rl.curiosityBeta);
     reward += beta / Math.sqrt(1 + stateVisits);
 
+    // Phase 33: Cognitive map bonus for being in familiar safe locations
+    var cogInfo = cogMapQuery(lili.pos.x, lili.pos.y);
+    if (cogInfo.familiar && cogInfo.value > 0.1) {
+      reward += cogInfo.value * 0.2; // small bonus for returning to known good spots
+    }
+
+    // Phase 35: Attention-modulated reward — reward for stimuli in focus gets slight boost
+    var focusSensor = attentionGetFocus();
+    if (focusSensor === 'cursorProximity' && sensors.cursorProximity === 'near') {
+      reward *= (1 + CFG.attention.influenceOnReward); // attending to cursor → stronger reward signal
+    }
+
     return reward;
   }
 
@@ -3328,6 +3698,22 @@
     _decision.prevState = currentState;
     _decision.prevMoodIndex = newMoodIdx;
     _decision.totalDecisions++;
+
+    // Phase 31: Energy cost per decision
+    energyOnDecision(_decision.wasExploratory);
+
+    // Phase 33: Update cognitive map with current position and reward
+    if (_decision.prevState >= 0) {
+      var lastReward = _journal.ringBuffer.length > 0 ?
+        _journal.ringBuffer[_journal.ringBuffer.length - 1].reward : 0;
+      cogMapUpdate(lili.pos.x, lili.pos.y, lastReward, stress < 0.3);
+    }
+
+    // Phase 33: Cognitive map decay (same interval as place memory)
+    cogMapDecay();
+
+    // Phase 35: Update attention weights
+    updateAttention();
 
     // Periodic Q-table + position + journal save
     if (frameCount - _decision.lastSaveFrame >= CFG.rl.saveIntervalFrames) {
@@ -4442,6 +4828,13 @@
       'habitat:  ' + _habitat.pageType + ' hue=' + Math.round(_habitat.dominantHue) + ' shift=' + _habitat.hueShift.toFixed(1) + '\n' +
       'signals:  ' + (_signals.welcomeActive ? 'wave' : _signals.excitementActive ? 'flash' : _signals.calmFrames > CFG.signals.contentmentMinCalm ? 'content' : '—') + '\n' +
       'biotrail: ' + _bioTrail.particles.length + '/' + CFG.biolum.trailMaxParticles + '\n' +
+      '── Phase 30-35 ─────────\n' +
+      'anticip:  ' + (_anticipation.approaching ? 'APPROACH ' : '') + _anticipation.intensity.toFixed(2) + '\n' +
+      'energy:   ' + _energy.level.toFixed(1) + '/' + CFG.energy.max + (_energy.fatigued ? ' TIRED' : '') + '\n' +
+      'habitu:   cursor=' + _habituation.cursor.toFixed(2) + ' scroll=' + _habituation.scroll.toFixed(2) + '\n' +
+      'cogMap:   ' + _cogMap.cells.size + '/' + CFG.cogMap.maxCells + ' cells\n' +
+      'cursor:   ' + _cursorPattern.pattern + ' (' + _cursorPattern.directionChanges + ' chg)\n' +
+      'focus:    ' + attentionGetFocus() + '\n' +
       '── Perf ────────────────\n' +
       'FPS:      ' + _fpsAvg.toFixed(1) + (_fpsAvg < 50 ? ' \u26A0' : '') + '\n' +
       'frame#:   ' + frameCount;
@@ -4476,7 +4869,10 @@
           '  Cloud sync: ' + syncAge + (_sync.dirty ? ' (dirty)' : '') + '\n' +
           '  Habitat: ' + _habitat.pageType + ' (hue shift ' + _habitat.hueShift.toFixed(1) + '°)\n' +
           '  Season: ' + _season.current + '\n' +
-          '  Dream replays: ' + _dream.replaysThisSleep
+          '  Dream replays: ' + _dream.replaysThisSleep + '\n' +
+          '  Energy: ' + _energy.level.toFixed(1) + '/' + CFG.energy.max + (_energy.fatigued ? ' (fatigued)' : '') + '\n' +
+          '  Cursor: ' + _cursorPattern.pattern + '\n' +
+          '  Habituation: cursor=' + _habituation.cursor.toFixed(2) + ' scroll=' + _habituation.scroll.toFixed(2)
         );
       },
       data: function () { return exportData(true); },
@@ -4549,8 +4945,23 @@
         console.info('[Lili] Dream: ' + (_dream.sleeping ? 'sleeping, ' + _dream.replaysThisSleep + ' replays' : 'awake'));
         return { sleeping: _dream.sleeping, replays: _dream.replaysThisSleep };
       },
+      // Phase 30-35: New console API
+      energy: function () {
+        console.info('[Lili] Energy: ' + _energy.level.toFixed(1) + '/' + CFG.energy.max +
+          (_energy.fatigued ? ' (fatigued)' : '') + (_energy.critical ? ' (critical!)' : ''));
+        return { level: _energy.level, fatigued: _energy.fatigued, critical: _energy.critical };
+      },
+      attention: function () {
+        var focus = attentionGetFocus();
+        console.info('[Lili] Attention focus: ' + focus + ', weights:', _attention.weights);
+        return { focus: focus, weights: Object.assign({}, _attention.weights) };
+      },
+      cogmap: function () {
+        console.info('[Lili] Cognitive map: ' + _cogMap.cells.size + ' cells');
+        return { cells: _cogMap.cells.size };
+      },
     });
-    console.info('[Lili] Console API ready — try: lili.status(), lili.baseline(), lili.exportCSV(), lili.sound(), lili.reproduce(), lili.habitat(), lili.dream()');
+    console.info('[Lili] Console API ready — try: lili.status(), lili.energy(), lili.attention(), lili.cogmap()');
 
     // Keyboard handler (unified)
     document.addEventListener('keydown', function (e) {
@@ -5340,14 +5751,16 @@
     }
 
     // Flee (use evade for aggressive cursor — more sophisticated)
+    // Phase 32: Habituation modulates flee intensity
     if (weights.flee > 0 && mouse.active) {
       if (mouse.classification === 'aggressive' || mouse.classification === 'fast') {
         steerEvade(_steerFlee);
       } else {
         steerFlee(_steerFlee);
       }
-      lili.acc.x += _steerFlee.x * weights.flee;
-      lili.acc.y += _steerFlee.y * weights.flee;
+      var fleeHab = weights.flee * _habituation.cursor; // habituated → weaker flee
+      lili.acc.x += _steerFlee.x * fleeHab;
+      lili.acc.y += _steerFlee.y * fleeHab;
     }
 
     // Seek whitespace
@@ -5427,7 +5840,9 @@
 
     // Integrate: velocity += acceleration
     lili.vel.addIn(lili.acc);
-    lili.vel.limitIn(ageVal(CFG.maxSpeed) * _circadian.activityMul);
+    // Phase 31: Energy fatigue reduces max speed
+    var energySpeedMul = _energy.fatigued ? CFG.energy.speedPenalty : 1;
+    lili.vel.limitIn(ageVal(CFG.maxSpeed) * _circadian.activityMul * energySpeedMul);
 
     // Damping — base damping from PRD + coherence-based efficiency modifier
     // Research #1: Paralarva jets are turbulent and inefficient (no separated vortex rings)
@@ -6447,6 +6862,8 @@
     var microScale = 1.0;
     if (_microExpr.startle > 0) microScale *= 1 + (_microExpr.startle * (CFG.microExpr.startleBodyShrink - 1));
     if (_microExpr.relief > 0) microScale *= 1 + (_microExpr.relief * (CFG.microExpr.reliefBodyExpand - 1));
+    // Phase 30: Anticipation → body tenses (slight shrink)
+    if (_anticipation.intensity > 0.1) microScale *= 1 - (_anticipation.intensity * CFG.anticipation.tenseFactor);
     const moodScale = _bodyBlend.bodyScale * _psychosom.bodyScale * microScale;
     const finalRx = rx * breathMod * pulseMod * moodScale;
     const finalRy = ry * breathMod * pulseMod * moodScale;
@@ -6907,6 +7324,18 @@
 
     // Phase 29: Bioluminescence trail particles
     updateBioTrail();
+
+    // Phase 30: Anticipation (predictive pre-reaction)
+    updateAnticipation();
+
+    // Phase 31: Energy/fatigue management
+    updateEnergy();
+
+    // Phase 32: Habituation (stimulus adaptation)
+    updateHabituation();
+
+    // Phase 34: Cursor pattern recognition
+    updateCursorPattern();
 
     checkMidnightCleanup(); // Phase 9D: periodic midnight reset check
   }
