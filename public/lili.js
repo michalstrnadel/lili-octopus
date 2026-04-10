@@ -35,12 +35,25 @@
       epsilon: { hatchling: 0.85, juvenile: 0.55, adult: 0.25, mature: 0.12, elder: 0.05 },
       decisionCycleFrames: 45,   // 30-60 range, mid-point
       saveIntervalFrames: 600,   // ~10 seconds at 60fps
+      // Phase 17: Eligibility traces
+      lambda: { hatchling: 0.8, juvenile: 0.75, adult: 0.7, mature: 0.65, elder: 0.6 },
+      traceMinThreshold: 0.01,   // prune traces below this
+      traceMaxEntries: 500,      // safety cap on trace map size
+      // Phase 17: Boltzmann/Softmax exploration (replaces epsilon-greedy)
+      temperature: { hatchling: 5.0, juvenile: 3.0, adult: 1.5, mature: 0.8, elder: 0.3 },
+      softmaxMinTemp: 0.1,
+      // Phase 17: Adaptive learning rate
+      alphaDecayFactor: 0.01,    // alpha = base / (1 + visits * factor)
+      alphaMin: 0.01,            // floor for learning rate
+      // Phase 17: Intrinsic curiosity reward
+      curiosityBeta: { hatchling: 0.5, juvenile: 0.4, adult: 0.3, mature: 0.2, elder: 0.1 },
     },
 
-    // --- State space (7 sensors → 4320 states) ---
+    // --- State space (9 sensors → 38880 states) ---
     stateSpace: {
-      dimensions: 7,
-      totalStates: 4320,
+      dimensions: 9,
+      totalStates: 38880,        // 3×4×3×3×2×4×5×3×3
+      version: 2,                // bumped: added momentum + trust sensors
     },
 
     // --- Moods ---
@@ -144,6 +157,35 @@
       alert:     { curiosity: 0.3, gripTendency: 0.0 },
       idle:      { curiosity: 0.0, gripTendency: 0.0 },
       exploring: { curiosity: 0.7, gripTendency: 0.2 },
+    },
+
+    // --- Phase 17: Mood transition matrix (biologically plausible flow) ---
+    // matrix[fromIdx][toIdx]: true=allowed, false=blocked, 'stress'=needs stress>threshold
+    // Indices: 0=curious, 1=playful, 2=shy, 3=calm, 4=alert, 5=idle, 6=exploring
+    moodTransitions: {
+      matrix: [
+        /* curious   → */ [true, true,  true,  true,  true,  true,  true ],
+        /* playful   → */ [true, true,  false, true,  true,  true,  true ],
+        /* shy       → */ [true, false, true,  true,  true,  true,  false],
+        /* calm      → */ [true, true,  false, true,  'stress', true, true],
+        /* alert     → */ [false,false, true,  true,  true,  true,  false],
+        /* idle      → */ [true, false, false, true,  true,  true,  true ],
+        /* exploring → */ [true, true,  false, true,  true,  true,  true ],
+      ],
+      stressGateThreshold: 0.5,
+    },
+
+    // --- Phase 17: Multi-step mood plans (options framework) ---
+    moodPlans: {
+      plans: [
+        { name: 'investigate', sequence: ['alert', 'curious', 'exploring'], cyclesPerStep: 3 },
+        { name: 'settle',      sequence: ['exploring', 'calm', 'idle'],     cyclesPerStep: 3 },
+        { name: 'socialize',   sequence: ['shy', 'curious', 'playful'],     cyclesPerStep: 2 },
+        { name: 'retreat',     sequence: ['alert', 'shy', 'calm'],          cyclesPerStep: 2 },
+      ],
+      stressAbortThreshold: 0.85,
+      planRewardDiscount: 0.9,
+      planConsiderInterval: 3,   // consider plans every Nth decision cycle
     },
 
     // --- Phase 13A: Mood → chromatophore expression ---
@@ -279,15 +321,34 @@
                  IMG: 'image', A: 'link', P: 'paragraph', SPAN: 'paragraph', DIV: 'other' },
     },
 
-    // --- Phase 15: Ink Secretion ---
+    // --- Phase 15/17: Ink Secretion (enhanced with mood color + trails) ---
     ink: {
-      poolSize: 50,              // max particles
+      poolSize: 80,              // max particles (was 50)
       stressThreshold: 0.8,      // stress > this to trigger
-      cooldownMs: 8000,          // between emissions
-      particleLifeMs: 2500,      // alpha fade duration
-      emitCount: 8,              // particles per emission
+      cooldownMs: 6000,          // between emissions (was 8000)
+      particleLifeMs: 3500,      // alpha fade duration (was 2500)
+      emitCount: 12,             // particles per emission (was 8)
       spreadSpeed: 2.5,          // initial spread velocity
-      particleRadius: { min: 3, max: 7 },
+      particleRadius: { min: 2, max: 9 },  // wider range (was 3-7)
+      // Phase 17: Mood-dependent ink colors
+      moodInkColors: {
+        curious:   { r: 40,  g: 80,  b: 120 },  // deep blue
+        playful:   { r: 100, g: 60,  b: 30  },  // warm amber
+        shy:       { r: 80,  g: 80,  b: 100 },  // muted lavender
+        calm:      { r: 20,  g: 50,  b: 80  },  // dark navy
+        alert:     { r: 120, g: 30,  b: 25  },  // dark crimson
+        idle:      { r: 15,  g: 12,  b: 20  },  // near-black (original)
+        exploring: { r: 30,  g: 70,  b: 50  },  // dark teal
+      },
+      // Phase 17: Stress-dependent scaling
+      stressParticleScale: 1.5,  // at stress=1, particles 1.5× larger
+      stressSpreadScale: 1.8,    // at stress=1, spread 1.8× wider
+      stressEmitMultiplier: 2.0, // at stress=1, emit 2× more particles
+      // Phase 17: Trail persistence (fading ink stains)
+      trailEnabled: true,
+      trailMaxMarks: 30,
+      trailFadeDurationMs: 8000,
+      trailMarkRadius: { min: 5, max: 15 },
     },
 
     // --- Phase 15: Enhanced DOM Interaction ---
@@ -940,10 +1001,13 @@
     lastEmitMs: 0,       // timestamp of last emission
   };
 
+  // Phase 17: Persistent ink trail marks
+  const _inkTrail = { marks: [] };
+
   // Pre-allocate ink particle pool
   (function initInkPool() {
     for (let i = 0; i < CFG.ink.poolSize; i++) {
-      _ink.pool.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, r: 4, born: 0, life: 0 });
+      _ink.pool.push({ active: false, x: 0, y: 0, vx: 0, vy: 0, r: 4, born: 0, life: 0, cr: 15, cg: 12, cb: 20 });
     }
   })();
 
@@ -953,6 +1017,15 @@
     _ink.lastEmitMs = now;
 
     const IC = CFG.ink;
+    // Stress-scaled emission
+    const stressFactor = Math.max(0, stress - IC.stressThreshold) / (1 - IC.stressThreshold);
+    const emitCount = Math.ceil(IC.emitCount * (1 + stressFactor * IC.stressEmitMultiplier));
+    const spreadScale = 1 + stressFactor * (IC.stressSpreadScale - 1);
+    const radiusScale = 1 + stressFactor * (IC.stressParticleScale - 1);
+
+    // Mood-dependent ink color
+    const moodColor = IC.moodInkColors[lili.mood] || IC.moodInkColors.idle;
+
     // Emit away from cursor
     const dx = lili.pos.x - mouse.pos.x;
     const dy = lili.pos.y - mouse.pos.y;
@@ -961,22 +1034,35 @@
     const awayY = dy / d;
 
     let emitted = 0;
-    for (let i = 0; i < IC.poolSize && emitted < IC.emitCount; i++) {
+    for (let i = 0; i < IC.poolSize && emitted < emitCount; i++) {
       var p = _ink.pool[i];
       if (p.active) continue;
       p.active = true;
       p.x = lili.pos.x + (noiseRng() - 0.5) * lili.bodyR;
       p.y = lili.pos.y + (noiseRng() - 0.5) * lili.bodyR;
       const angle = Math.atan2(awayY, awayX) + (noiseRng() - 0.5) * 1.2;
-      const spd = IC.spreadSpeed * (0.6 + noiseRng() * 0.8);
+      const spd = IC.spreadSpeed * spreadScale * (0.6 + noiseRng() * 0.8);
       p.vx = Math.cos(angle) * spd;
       p.vy = Math.sin(angle) * spd;
-      p.r = IC.particleRadius.min + noiseRng() * (IC.particleRadius.max - IC.particleRadius.min);
+      p.r = (IC.particleRadius.min + noiseRng() * (IC.particleRadius.max - IC.particleRadius.min)) * radiusScale;
       p.born = now;
       p.life = IC.particleLifeMs;
+      p.cr = moodColor.r; p.cg = moodColor.g; p.cb = moodColor.b;
       emitted++;
     }
     _ink.activeCount += emitted;
+
+    // Phase 17: Leave a trail mark
+    if (IC.trailEnabled) {
+      const tr = IC.trailMarkRadius;
+      _inkTrail.marks.push({
+        x: lili.pos.x, y: lili.pos.y,
+        r: tr.min + noiseRng() * (tr.max - tr.min),
+        born: now, fadeDuration: IC.trailFadeDurationMs,
+        cr: moodColor.r, cg: moodColor.g, cb: moodColor.b,
+      });
+      if (_inkTrail.marks.length > IC.trailMaxMarks) _inkTrail.marks.shift();
+    }
   }
 
   function updateInk() {
@@ -999,8 +1085,25 @@
   }
 
   function renderInk(colors) {
-    if (_ink.activeCount === 0) return;
     const now = Date.now();
+
+    // Phase 17: Render trail marks first (behind active particles)
+    if (CFG.ink.trailEnabled) {
+      for (let i = _inkTrail.marks.length - 1; i >= 0; i--) {
+        const m = _inkTrail.marks[i];
+        const elapsed = now - m.born;
+        if (elapsed >= m.fadeDuration) { _inkTrail.marks.splice(i, 1); continue; }
+        const t = elapsed / m.fadeDuration;
+        const alpha = (1 - t) * (1 - t) * 0.25;
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(' + m.cr + ',' + m.cg + ',' + m.cb + ',' + alpha.toFixed(3) + ')';
+        ctx.fill();
+      }
+    }
+
+    // Active particles
+    if (_ink.activeCount === 0) return;
     for (let i = 0; i < CFG.ink.poolSize; i++) {
       var p = _ink.pool[i];
       if (!p.active) continue;
@@ -1010,7 +1113,7 @@
       const alpha = (1 - t) * (1 - t) * 0.7;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r * (1 + t * 0.5), 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(15, 12, 20, ' + alpha.toFixed(3) + ')';
+      ctx.fillStyle = 'rgba(' + p.cr + ',' + p.cg + ',' + p.cb + ',' + alpha.toFixed(3) + ')';
       ctx.fill();
     }
   }
@@ -1509,8 +1612,10 @@
     scrollState: 'idle',          // idle / active
     timeOfDay: 'morning',         // morning / afternoon / evening / night
     agePhase: 'hatchling',        // hatchling / juvenile / adult / mature / elder
+    momentum: 'steady',           // Phase 17: accelerating / steady / decelerating
+    trust: 'low',                 // Phase 17: low / medium / high
 
-    // Numeric state index for Q-Learning (4320 states)
+    // Numeric state index for Q-Learning (38880 states)
     stateIndex: 0,
   };
 
@@ -1523,9 +1628,22 @@
     scrollState:     { idle: 0, active: 1 },                   // 2
     timeOfDay:       { morning: 0, afternoon: 1, evening: 2, night: 3 }, // 4
     agePhase:        { hatchling: 0, juvenile: 1, adult: 2, mature: 3, elder: 4 }, // 5
+    momentum:        { accelerating: 0, steady: 1, decelerating: 2 }, // 3
+    trust:           { low: 0, medium: 1, high: 2 },           // 3
   };
-  // Dimension sizes: 3 × 4 × 3 × 3 × 2 × 4 × 5 = 4320
-  const _sensorDims = [3, 4, 3, 3, 2, 4, 5];
+  // Dimension sizes: 3×4×3×3×2×4×5×3×3 = 38880
+  const _sensorDims = [3, 4, 3, 3, 2, 4, 5, 3, 3];
+
+  // Phase 17: Velocity history for momentum sensor
+  const _velHistory = new Float32Array(10);
+  let _velHistoryIdx = 0;
+  let _velHistoryFull = false;
+
+  // Sensor ordering for loop-based state index computation
+  const _sensorOrder = [
+    'cursorProximity', 'cursorVelocity', 'domDensity', 'whitespace',
+    'scrollState', 'timeOfDay', 'agePhase', 'momentum', 'trust',
+  ];
 
   function updateSensors() {
     sensors.cursorProximity = getCursorProximity();
@@ -1536,21 +1654,40 @@
     sensors.timeOfDay = getTimeOfDay();
     sensors.agePhase = age.phase;
 
-    // Compute flat state index (mixed-radix encoding)
-    sensors.stateIndex =
-      _sensorIndices.cursorProximity[sensors.cursorProximity]
-      * _sensorDims[1] * _sensorDims[2] * _sensorDims[3] * _sensorDims[4] * _sensorDims[5] * _sensorDims[6]
-      + _sensorIndices.cursorVelocity[sensors.cursorVelocity]
-      * _sensorDims[2] * _sensorDims[3] * _sensorDims[4] * _sensorDims[5] * _sensorDims[6]
-      + _sensorIndices.domDensity[sensors.domDensity]
-      * _sensorDims[3] * _sensorDims[4] * _sensorDims[5] * _sensorDims[6]
-      + _sensorIndices.whitespace[sensors.whitespace]
-      * _sensorDims[4] * _sensorDims[5] * _sensorDims[6]
-      + _sensorIndices.scrollState[sensors.scrollState]
-      * _sensorDims[5] * _sensorDims[6]
-      + _sensorIndices.timeOfDay[sensors.timeOfDay]
-      * _sensorDims[6]
-      + _sensorIndices.agePhase[sensors.agePhase];
+    // Phase 17: Momentum sensor — velocity trend over recent history
+    const velMag = lili.vel.mag();
+    _velHistory[_velHistoryIdx] = velMag;
+    _velHistoryIdx = (_velHistoryIdx + 1) % 10;
+    if (_velHistoryIdx === 0) _velHistoryFull = true;
+    const histLen = _velHistoryFull ? 10 : _velHistoryIdx;
+
+    if (histLen >= 4) {
+      const half = Math.floor(histLen / 2);
+      let recentSum = 0, olderSum = 0;
+      for (let i = 0; i < half; i++) {
+        recentSum += _velHistory[(_velHistoryIdx - 1 - i + 10) % 10];
+        olderSum  += _velHistory[(_velHistoryIdx - 1 - half - i + 10) % 10];
+      }
+      const diff = recentSum / half - olderSum / half;
+      if (diff > 0.15) sensors.momentum = 'accelerating';
+      else if (diff < -0.15) sensors.momentum = 'decelerating';
+      else sensors.momentum = 'steady';
+    } else {
+      sensors.momentum = 'steady';
+    }
+
+    // Phase 17: Trust sensor — discretize visit profile trust level
+    if (_visitProfile.trustLevel < 0.3) sensors.trust = 'low';
+    else if (_visitProfile.trustLevel < 0.7) sensors.trust = 'medium';
+    else sensors.trust = 'high';
+
+    // Compute flat state index (loop-based mixed-radix encoding)
+    sensors.stateIndex = 0;
+    let multiplier = 1;
+    for (let i = _sensorDims.length - 1; i >= 0; i--) {
+      sensors.stateIndex += _sensorIndices[_sensorOrder[i]][sensors[_sensorOrder[i]]] * multiplier;
+      multiplier *= _sensorDims[i];
+    }
   }
 
   // 6B — Per-tentacle local sensors (tip touching DOM element)
@@ -1633,36 +1770,120 @@
     wasExploratory: false,   // last decision was ε-random
   };
 
-  // --- Epsilon-greedy mood selection ---
+  // --- Phase 17: Adaptive learning rate — per (state, mood) visit counts ---
+  const _visitCounts = new Map();  // "state,mood" → count
+
+  function _getAlpha(stateIndex, moodIdx) {
+    const key = stateIndex + ',' + moodIdx;
+    const count = _visitCounts.get(key) || 0;
+    return Math.max(CFG.rl.alphaMin, CFG.rl.alpha / (1 + count * CFG.rl.alphaDecayFactor));
+  }
+
+  function _incrementVisit(stateIndex, moodIdx) {
+    const key = stateIndex + ',' + moodIdx;
+    _visitCounts.set(key, (_visitCounts.get(key) || 0) + 1);
+  }
+
+  // --- Phase 17: Intrinsic curiosity — per-state visit counts ---
+  const _stateVisitCounts = new Map();  // stateIndex → count
+
+  // --- Phase 17: Eligibility traces (Q(λ) replacing traces) ---
+  const _traces = new Map();  // "state,mood" → trace value
+
+  // --- Phase 17: Softmax pre-allocated buffer ---
+  const _softmaxProbs = new Float64Array(MOOD_COUNT);
+
+  // --- Phase 17: Mood plan state ---
+  const _activePlan = {
+    planIndex: -1,          // -1 = no active plan
+    stepIndex: 0,           // current step within plan sequence
+    cyclesInStep: 0,        // decision cycles spent in current step
+    accumulatedReward: 0,   // total reward during plan execution
+    initiationState: -1,    // state at plan start
+    initiationMood: -1,     // mood at plan start
+  };
+
+  // --- Boltzmann/Softmax mood selection (replaces epsilon-greedy) ---
   function brainDecideMood(stateIndex) {
-    const eps = ageVal(CFG.rl.epsilon);
     const q = _getQ(stateIndex);
     let moodIdx;
     let exploratory = false;
 
-    if (rlRng() < eps) {
-      // Explore: random mood
+    // Check if unvisited state (all Q = 0) → uniform random
+    let allZero = true;
+    for (let i = 0; i < MOOD_COUNT; i++) {
+      if (q[i] !== 0) { allZero = false; break; }
+    }
+
+    if (allZero) {
       moodIdx = Math.floor(rlRng() * MOOD_COUNT);
       exploratory = true;
     } else {
-      // Exploit: argmax Q
-      moodIdx = 0;
+      // Boltzmann: P(m) ∝ exp((Q(s,m) - maxQ) / τ)
+      const tau = Math.max(ageVal(CFG.rl.temperature), CFG.rl.softmaxMinTemp);
+
+      // Find maxQ for numerical stability
       let maxQ = q[0];
+      let argmaxIdx = 0;
       for (let i = 1; i < MOOD_COUNT; i++) {
-        if (q[i] > maxQ) { maxQ = q[i]; moodIdx = i; }
+        if (q[i] > maxQ) { maxQ = q[i]; argmaxIdx = i; }
       }
+
+      // Compute unnormalized probs
+      for (let i = 0; i < MOOD_COUNT; i++) {
+        _softmaxProbs[i] = Math.exp((q[i] - maxQ) / tau);
+      }
+
+      // Phase 17: Apply mood transition mask
+      const trans = CFG.moodTransitions;
+      const fromIdx = _decision.prevMoodIndex;
+      if (fromIdx >= 0) {
+        for (let i = 0; i < MOOD_COUNT; i++) {
+          const rule = trans.matrix[fromIdx][i];
+          if (rule === false) {
+            _softmaxProbs[i] = 0;
+          } else if (rule === 'stress') {
+            if (stress < trans.stressGateThreshold) _softmaxProbs[i] = 0;
+          }
+        }
+      }
+
+      // Normalize
+      let sum = 0;
+      for (let i = 0; i < MOOD_COUNT; i++) sum += _softmaxProbs[i];
+
+      if (sum > 0) {
+        // Sample from cumulative distribution
+        let r = rlRng() * sum;
+        moodIdx = MOOD_COUNT - 1;
+        for (let i = 0; i < MOOD_COUNT; i++) {
+          r -= _softmaxProbs[i];
+          if (r <= 0) { moodIdx = i; break; }
+        }
+      } else {
+        // All transitions blocked — stay in current mood
+        moodIdx = _decision.prevMoodIndex >= 0 ? _decision.prevMoodIndex : 0;
+      }
+
+      exploratory = (moodIdx !== argmaxIdx);
     }
+
+    // Clear eligibility traces on exploratory action (replacing traces protocol)
+    if (exploratory) _traces.clear();
 
     _decision.wasExploratory = exploratory;
     return moodIdx;
   }
 
-  // --- Bellman update ---
+  // --- Q(λ) Bellman update with eligibility traces ---
   function brainLearn(prevState, moodIdx, reward, newState) {
-    const alpha = CFG.rl.alpha;
     const gamma = CFG.rl.gamma;
+    const lambda = ageVal(CFG.rl.lambda);
     const qPrev = _getQ(prevState);
     const qNew = _getQ(newState);
+
+    // Increment visit count for adaptive alpha
+    _incrementVisit(prevState, moodIdx);
 
     // max Q(s', m') for all moods
     let maxNext = qNew[0];
@@ -1670,8 +1891,85 @@
       if (qNew[i] > maxNext) maxNext = qNew[i];
     }
 
-    // Q(s,m) ← Q(s,m) + α[R + γ·max(Q(s',m')) - Q(s,m)]
-    qPrev[moodIdx] += alpha * (reward + gamma * maxNext - qPrev[moodIdx]);
+    // TD error: δ = R + γ·max(Q(s',m')) - Q(s,m)
+    const delta = reward + gamma * maxNext - qPrev[moodIdx];
+
+    // Set replacing trace for current (s,m) to 1.0
+    const curKey = prevState + ',' + moodIdx;
+    _traces.set(curKey, 1.0);
+
+    // Update all traced (s,m) pairs
+    const threshold = CFG.rl.traceMinThreshold;
+    const gammaLambda = gamma * lambda;
+    const toDelete = [];
+
+    _traces.forEach(function (e, key) {
+      // Parse key to get alpha for this (s,m) pair
+      const sep = key.indexOf(',');
+      const s = +key.substring(0, sep);
+      const m = +key.substring(sep + 1);
+      const alpha = _getAlpha(s, m);
+
+      // Q(s,m) += α · δ · e(s,m)
+      const qRow = _getQ(s);
+      qRow[m] += alpha * delta * e;
+
+      // Decay trace: e(s,m) *= γ·λ
+      const newE = e * gammaLambda;
+      if (newE < threshold) {
+        toDelete.push(key);
+      } else {
+        _traces.set(key, newE);
+      }
+    });
+
+    // Prune decayed traces
+    for (let i = 0; i < toDelete.length; i++) _traces.delete(toDelete[i]);
+
+    // Safety cap: prune smallest if over limit
+    if (_traces.size > CFG.rl.traceMaxEntries) {
+      let minKey = null, minVal = Infinity;
+      _traces.forEach(function (v, k) {
+        if (v < minVal) { minVal = v; minKey = k; }
+      });
+      if (minKey) _traces.delete(minKey);
+    }
+  }
+
+  // --- Phase 17: Plan selection heuristic ---
+  function _considerPlan(currentState) {
+    const plans = CFG.moodPlans.plans;
+    const mood = lili.mood;
+
+    // 'retreat': stress rising + in exposed mood
+    if (stress > 0.4 && (mood === 'curious' || mood === 'exploring')) {
+      for (let i = 0; i < plans.length; i++) {
+        if (plans[i].name === 'retreat') return i;
+      }
+    }
+
+    // 'investigate': near DOM-dense area, low stress
+    if (sensors.domDensity === 'dense' && stress < 0.3 && mood !== 'shy') {
+      for (let i = 0; i < plans.length; i++) {
+        if (plans[i].name === 'investigate') return i;
+      }
+    }
+
+    // 'socialize': high trust + cursor near
+    if (_visitProfile.trustLevel > 0.5 && sensors.cursorProximity === 'near' && stress < 0.3) {
+      for (let i = 0; i < plans.length; i++) {
+        if (plans[i].name === 'socialize') return i;
+      }
+    }
+
+    // 'settle': in whitespace after exploring
+    if (sensors.whitespace === 'in_whitespace' && mood === 'exploring') {
+      for (let i = 0; i < plans.length; i++) {
+        if (plans[i].name === 'settle') return i;
+      }
+    }
+
+    return -1; // no plan
   }
 
   // --- Reward computation (PRD-specified values) ---
@@ -1772,6 +2070,11 @@
       }
     }
 
+    // Phase 17: Intrinsic curiosity reward — bonus for unvisited states
+    var stateVisits = _stateVisitCounts.get(sensors.stateIndex) || 0;
+    var beta = ageVal(CFG.rl.curiosityBeta);
+    reward += beta / Math.sqrt(1 + stateVisits);
+
     return reward;
   }
 
@@ -1784,11 +2087,20 @@
 
     const currentState = sensors.stateIndex;
 
+    // Phase 17: Track state visitation for intrinsic curiosity
+    _stateVisitCounts.set(currentState, (_stateVisitCounts.get(currentState) || 0) + 1);
+
     // Compute reward for previous mood (outcome of last cycle)
     if (_decision.prevState >= 0) {
       const reward = computeReward();
 
-      // Bellman update
+      // Phase 17: Mood plan — accumulate reward if plan active
+      if (_activePlan.planIndex >= 0) {
+        _activePlan.accumulatedReward += reward *
+          Math.pow(CFG.moodPlans.planRewardDiscount, _activePlan.stepIndex);
+      }
+
+      // Q(λ) update with eligibility traces
       brainLearn(_decision.prevState, _decision.prevMoodIndex, reward, currentState);
 
       // Journal logging
@@ -1797,9 +2109,65 @@
       _decision.totalReward += reward;
     }
 
-    // Choose new mood
-    const newMoodIdx = brainDecideMood(currentState);
-    const newMood = CFG.moods[newMoodIdx];
+    // Phase 17: Mood plan management
+    let newMoodIdx, newMood;
+    let planOverride = false;
+
+    if (_activePlan.planIndex >= 0) {
+      const plan = CFG.moodPlans.plans[_activePlan.planIndex];
+      _activePlan.cyclesInStep++;
+
+      // Abort on high stress
+      if (stress > CFG.moodPlans.stressAbortThreshold) {
+        brainLearn(_activePlan.initiationState, _activePlan.initiationMood,
+                   _activePlan.accumulatedReward, currentState);
+        _activePlan.planIndex = -1;
+      } else if (_activePlan.cyclesInStep >= plan.cyclesPerStep) {
+        // Advance to next step
+        _activePlan.stepIndex++;
+        _activePlan.cyclesInStep = 0;
+        if (_activePlan.stepIndex >= plan.sequence.length) {
+          // Plan complete — attribute reward
+          brainLearn(_activePlan.initiationState, _activePlan.initiationMood,
+                     _activePlan.accumulatedReward, currentState);
+          _activePlan.planIndex = -1;
+        }
+      }
+
+      // Still in plan? Override mood selection
+      if (_activePlan.planIndex >= 0) {
+        const planMood = plan.sequence[_activePlan.stepIndex];
+        newMoodIdx = CFG.moods.indexOf(planMood);
+        newMood = planMood;
+        planOverride = true;
+      }
+    }
+
+    if (!planOverride) {
+      // Consider initiating a plan
+      if (_activePlan.planIndex < 0 &&
+          _decision.totalDecisions % CFG.moodPlans.planConsiderInterval === 0) {
+        const pi = _considerPlan(currentState);
+        if (pi >= 0) {
+          _activePlan.planIndex = pi;
+          _activePlan.stepIndex = 0;
+          _activePlan.cyclesInStep = 0;
+          _activePlan.accumulatedReward = 0;
+          _activePlan.initiationState = currentState;
+          _activePlan.initiationMood = _decision.prevMoodIndex;
+          const plan = CFG.moodPlans.plans[pi];
+          newMoodIdx = CFG.moods.indexOf(plan.sequence[0]);
+          newMood = plan.sequence[0];
+          planOverride = true;
+        }
+      }
+
+      if (!planOverride) {
+        // Normal Boltzmann/Softmax mood selection
+        newMoodIdx = brainDecideMood(currentState);
+        newMood = CFG.moods[newMoodIdx];
+      }
+    }
 
     // Track mood repetition
     if (newMoodIdx === _decision.prevMoodIndex) {
@@ -1875,12 +2243,21 @@
     _qtable.forEach(function (q, key) {
       entries.push([key, Array.from(q)]);
     });
+    // Phase 17: visit counts + state visits
+    const vc = [];
+    _visitCounts.forEach(function (v, k) { vc.push([k, v]); });
+    const sv = [];
+    _stateVisitCounts.forEach(function (v, k) { sv.push([k, v]); });
+
     return JSON.stringify({
-      v: 1,
+      v: 2,
+      stateVersion: CFG.stateSpace.version,
       mood: lili.moodIndex,
       decisions: _decision.totalDecisions,
       reward: _decision.totalReward,
       entries: entries,
+      visitCounts: vc,
+      stateVisits: sv,
     });
   }
 
@@ -1888,6 +2265,99 @@
     try {
       const data = JSON.parse(json);
       if (!data || !data.entries) return false;
+
+      // Phase 17: State space version migration (v1→v2: remap 4320→38880)
+      const savedVersion = data.stateVersion || 1;
+      if (savedVersion !== CFG.stateSpace.version) {
+        // Remap old 7-sensor indices to new 9-sensor indices
+        // Old dims: [3,4,3,3,2,4,5] = 4320, new dims: [3,4,3,3,2,4,5,3,3] = 38880
+        // Default for new sensors: momentum=steady(1), trust=low(0)
+        var oldDims = [3, 4, 3, 3, 2, 4, 5];
+        var newMul = [12960, 3240, 1080, 360, 180, 45, 9, 3, 1]; // pre-computed new multipliers
+        var migratedCount = 0;
+
+        _qtable.clear();
+        for (var ei = 0; ei < data.entries.length; ei++) {
+          var oldKey = data.entries[ei][0];
+          var qvals = data.entries[ei][1];
+
+          // Decode old index → 7 sensor values
+          var rem = oldKey;
+          var sensorVals = new Array(7);
+          for (var di = 6; di >= 0; di--) {
+            sensorVals[di] = rem % oldDims[di];
+            rem = Math.floor(rem / oldDims[di]);
+          }
+
+          // Encode into new index: same 7 values + momentum=steady(1) + trust=low(0)
+          var newKey = 0;
+          for (var ni = 0; ni < 7; ni++) newKey += sensorVals[ni] * newMul[ni];
+          newKey += 1 * newMul[7]; // momentum=steady=1
+          newKey += 0 * newMul[8]; // trust=low=0
+
+          _qtable.set(newKey, new Float64Array(qvals));
+          migratedCount++;
+        }
+
+        console.info('[Lili] State space migrated v' + savedVersion + ' \u2192 v' +
+          CFG.stateSpace.version + ': ' + migratedCount + ' Q-states remapped (4320\u219238880)');
+
+        if (typeof data.decisions === 'number') _decision.totalDecisions = data.decisions;
+        if (typeof data.reward === 'number') _decision.totalReward = data.reward;
+        if (typeof data.mood === 'number') {
+          lili.moodIndex = data.mood;
+          lili.mood = CFG.moods[data.mood] || 'idle';
+        }
+
+        // Remap visit counts ("oldState,mood" → "newState,mood")
+        _visitCounts.clear();
+        if (data.visitCounts) {
+          for (var vi = 0; vi < data.visitCounts.length; vi++) {
+            var parts = data.visitCounts[vi][0].split(',');
+            var oldS = +parts[0];
+            var rem2 = oldS;
+            var sv2 = new Array(7);
+            for (var d2 = 6; d2 >= 0; d2--) {
+              sv2[d2] = rem2 % oldDims[d2];
+              rem2 = Math.floor(rem2 / oldDims[d2]);
+            }
+            var newS = 0;
+            for (var n2 = 0; n2 < 7; n2++) newS += sv2[n2] * newMul[n2];
+            newS += 1 * newMul[7] + 0 * newMul[8];
+            _visitCounts.set(newS + ',' + parts[1], data.visitCounts[vi][1]);
+          }
+        }
+
+        // Remap state visit counts (oldStateIndex → newStateIndex)
+        _stateVisitCounts.clear();
+        if (data.stateVisits) {
+          for (var si = 0; si < data.stateVisits.length; si++) {
+            var oldSv = data.stateVisits[si][0];
+            var rem3 = oldSv;
+            var sv3 = new Array(7);
+            for (var d3 = 6; d3 >= 0; d3--) {
+              sv3[d3] = rem3 % oldDims[d3];
+              rem3 = Math.floor(rem3 / oldDims[d3]);
+            }
+            var newSv = 0;
+            for (var n3 = 0; n3 < 7; n3++) newSv += sv3[n3] * newMul[n3];
+            newSv += 1 * newMul[7] + 0 * newMul[8];
+            _stateVisitCounts.set(newSv, data.stateVisits[si][1]);
+          }
+        }
+
+        // Log milestone
+        _journal.milestones.push({
+          type: 'state_space_migration',
+          from: savedVersion,
+          to: CFG.stateSpace.version,
+          ts: Date.now(),
+          migratedStates: migratedCount,
+          preservedDecisions: data.decisions || 0,
+        });
+        return true;
+      }
+
       _qtable.clear();
       for (let i = 0; i < data.entries.length; i++) {
         const e = data.entries[i];
@@ -1902,6 +2372,19 @@
       }
       if (typeof data.reward === 'number') {
         _decision.totalReward = data.reward;
+      }
+      // Phase 17: Restore visit counts
+      _visitCounts.clear();
+      if (data.visitCounts) {
+        for (let i = 0; i < data.visitCounts.length; i++) {
+          _visitCounts.set(data.visitCounts[i][0], data.visitCounts[i][1]);
+        }
+      }
+      _stateVisitCounts.clear();
+      if (data.stateVisits) {
+        for (let i = 0; i < data.stateVisits.length; i++) {
+          _stateVisitCounts.set(data.stateVisits[i][0], data.stateVisits[i][1]);
+        }
       }
       return true;
     } catch (e) {
@@ -2018,6 +2501,9 @@
       for (let i = 0; i < MOOD_COUNT; i++) qhash += q[i] * (i + 1);
     });
 
+    // Phase 17: Personality snapshot for drift tracking
+    const pers = computePersonalityProfile();
+
     const agg = {
       day: _journal.lastDayKey,
       ageMs: age.elapsedMs,
@@ -2030,6 +2516,8 @@
       qhash: Math.round(qhash * 100) / 100,
       decisions: _journal.dayDecisionCount,
       totalReward: Math.round(_journal.dayRewardSum * 100) / 100,
+      personality: Array.from(pers),
+      dominantTrait: dominantPersonalityTrait(pers),
     };
 
     _journal.dailyAggregates.push(agg);
@@ -2136,8 +2624,12 @@
       String(d.getMonth() + 1).padStart(2, '0') +
       String(d.getDate()).padStart(2, '0');
 
+    // Phase 17: Personality snapshot for export
+    const pers = computePersonalityProfile();
+
     const exportObj = {
-      format: 'lili_export_v1',
+      format: 'lili_export_v2',
+      stateVersion: CFG.stateSpace.version,
       exportDate: d.toISOString(),
       metadata: {
         genesis: genesisMs,
@@ -2148,8 +2640,12 @@
         totalDecisions: _decision.totalDecisions,
         totalReward: _decision.totalReward,
         qtableSize: _qtable.size,
+        personality: Array.from(pers),
+        dominantTrait: dominantPersonalityTrait(pers),
       },
       qtable: [],
+      visitCounts: Array.from(_visitCounts.entries()),
+      stateVisits: Array.from(_stateVisitCounts.entries()),
       dailyAggregates: _journal.dailyAggregates,
       milestones: _journal.milestones,
       recentDecisions: _journal.ringBuffer.slice(-1000), // last 1000
@@ -2279,12 +2775,17 @@
     };
     const dotColor = moodDotColors[lili.mood] || '#888';
 
+    // Phase 17: personality trait
+    var pers = computePersonalityProfile();
+    var dominant = dominantPersonalityTrait(pers);
+
     el.innerHTML =
       '<b style="color:#8cf">Lili</b> ' +
       '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;' +
       'background:' + dotColor + ';vertical-align:middle"></span><br>' +
       '<span style="color:#667">Autonomous octopus living on this page.</span><br>' +
-      '<span style="color:#6a8">' + age.phase + '</span> · ' + ageStr + ' · ' + lili.mood;
+      '<span style="color:#6a8">' + age.phase + '</span> · ' + ageStr + ' · ' + lili.mood +
+      '<br><span style="color:#a8a">' + dominant + ' personality</span>';
 
     // Position: prefer above the click point, shift to stay in viewport
     document.body.appendChild(el);
@@ -2363,6 +2864,39 @@
     _fpsAvg = fpsSum / fpsN;
   }
 
+  // --- Phase 17: Personality profile from Q-table ---
+  function computePersonalityProfile() {
+    const profile = new Float64Array(MOOD_COUNT);
+    const counts = new Float64Array(MOOD_COUNT);
+    _qtable.forEach(function (q) {
+      for (let i = 0; i < MOOD_COUNT; i++) {
+        if (q[i] !== 0) { profile[i] += q[i]; counts[i]++; }
+      }
+    });
+    for (let i = 0; i < MOOD_COUNT; i++) {
+      profile[i] = counts[i] > 0 ? profile[i] / counts[i] : 0;
+    }
+    // Normalize to 0..1
+    let minV = Infinity, maxV = -Infinity;
+    for (let i = 0; i < MOOD_COUNT; i++) {
+      if (profile[i] < minV) minV = profile[i];
+      if (profile[i] > maxV) maxV = profile[i];
+    }
+    const range = maxV - minV || 1;
+    for (let i = 0; i < MOOD_COUNT; i++) {
+      profile[i] = (profile[i] - minV) / range;
+    }
+    return profile;
+  }
+
+  function dominantPersonalityTrait(profile) {
+    let maxIdx = 0;
+    for (let i = 1; i < MOOD_COUNT; i++) {
+      if (profile[i] > profile[maxIdx]) maxIdx = i;
+    }
+    return CFG.moods[maxIdx];
+  }
+
   function updateDebugPanel() {
     if (!_debugVisible || !_debugPanel) return;
 
@@ -2436,8 +2970,29 @@
       '── Phase 16 ────────────\n' +
       'novelRects:' + _novelty.pendingNewRects.length + ' seen:' + _novelty.seenKeys.length + '\n' +
       'bubbles:  ' + _bubbles.activeCount + '/' + CFG.bubbles.poolSize + '\n' +
+      '── Phase 17 (Brain v2) ─\n' +
+      'tau:      ' + Math.max(ageVal(CFG.rl.temperature), CFG.rl.softmaxMinTemp).toFixed(2) + '\n' +
+      'alpha(s): ' + _getAlpha(sensors.stateIndex, lili.moodIndex).toFixed(4) + '\n' +
+      'traces:   ' + _traces.size + '/' + CFG.rl.traceMaxEntries + '\n' +
+      'visits:   ' + _visitCounts.size + ' (s,m) pairs\n' +
+      'stateVis: ' + _stateVisitCounts.size + ' states\n' +
+      'plan:     ' + (_activePlan.planIndex >= 0 ? CFG.moodPlans.plans[_activePlan.planIndex].name + ' [' + _activePlan.stepIndex + '/' + CFG.moodPlans.plans[_activePlan.planIndex].sequence.length + ']' : 'none') + '\n' +
+      'momentum: ' + sensors.momentum + '  trust:' + sensors.trust + '\n' +
+      (function () {
+        var pers = computePersonalityProfile();
+        var s = '── Personality ─────────\n';
+        for (var pi = 0; pi < MOOD_COUNT; pi++) {
+          var barLen = Math.round(pers[pi] * 10);
+          s += '  ' + (CFG.moods[pi] + '         ').substring(0, 9) + ' ';
+          for (var bi = 0; bi < 10; bi++) s += bi < barLen ? '\u2588' : '\u2591';
+          s += ' ' + pers[pi].toFixed(2) + '\n';
+        }
+        s += '  dominant: ' + dominantPersonalityTrait(pers);
+        return s;
+      })() + '\n' +
+      'inkTrail: ' + _inkTrail.marks.length + '/' + CFG.ink.trailMaxMarks + '\n' +
       '── Perf ────────────────\n' +
-      'FPS:      ' + _fpsAvg.toFixed(1) + (_fpsAvg < 50 ? ' ⚠' : '') + '\n' +
+      'FPS:      ' + _fpsAvg.toFixed(1) + (_fpsAvg < 50 ? ' \u26A0' : '') + '\n' +
       'frame#:   ' + frameCount;
   }
 
@@ -2469,8 +3024,41 @@
         );
       },
       data: function () { return exportData(true); },
+      // Phase 17: New console API
+      traces: function () {
+        var maxVal = 0;
+        _traces.forEach(function (v) { if (v > maxVal) maxVal = v; });
+        console.info('[Lili] Traces: ' + _traces.size + ' entries, max=' + maxVal.toFixed(4));
+        return { size: _traces.size, max: maxVal };
+      },
+      visitCounts: function () {
+        console.info('[Lili] Visit counts: ' + _visitCounts.size + ' (s,m) pairs, ' +
+          _stateVisitCounts.size + ' unique states');
+        return { smPairs: _visitCounts.size, states: _stateVisitCounts.size };
+      },
+      personality: function () {
+        var pers = computePersonalityProfile();
+        var result = {};
+        for (var i = 0; i < MOOD_COUNT; i++) {
+          result[CFG.moods[i]] = Math.round(pers[i] * 100) / 100;
+        }
+        result.dominant = dominantPersonalityTrait(pers);
+        console.info('[Lili] Personality:', result);
+        return result;
+      },
+      plan: function () {
+        if (_activePlan.planIndex < 0) {
+          console.info('[Lili] No active plan');
+          return null;
+        }
+        var p = CFG.moodPlans.plans[_activePlan.planIndex];
+        var info = { name: p.name, step: _activePlan.stepIndex + '/' + p.sequence.length,
+                     mood: p.sequence[_activePlan.stepIndex], accReward: _activePlan.accumulatedReward };
+        console.info('[Lili] Active plan:', info);
+        return info;
+      },
     });
-    console.info('[Lili] Console API ready — try: lili.status(), lili.sync(), lili.export()');
+    console.info('[Lili] Console API ready — try: lili.status(), lili.personality(), lili.traces(), lili.export()');
   }
 
   // =========================================================================
@@ -2560,7 +3148,7 @@
       reader.onload = function () {
         try {
           const data = JSON.parse(reader.result);
-          if (!data || data.format !== 'lili_export_v1') {
+          if (!data || (data.format !== 'lili_export_v1' && data.format !== 'lili_export_v2')) {
             console.error('[Lili] Import failed: invalid format');
             return;
           }
@@ -2598,7 +3186,8 @@
       _flushDailyAggregate();
     }
     return {
-      format: 'lili_state_v1',
+      format: 'lili_state_v2',
+      stateVersion: CFG.stateSpace.version,
       lastSync: new Date().toISOString(),
       metadata: {
         genesis: age.genesisMs,
@@ -2623,7 +3212,7 @@
 
   // Merge remote state into local (remote wins for brain if it has more decisions)
   function _applySyncState(remote) {
-    if (!remote || remote.format !== 'lili_state_v1') return false;
+    if (!remote || (remote.format !== 'lili_state_v1' && remote.format !== 'lili_state_v2')) return false;
 
     var applied = false;
 

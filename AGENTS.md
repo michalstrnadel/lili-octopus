@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-12 hotovy, v1.0 ready**
+**Fáze: Implementace — Fáze 1-17 hotovy, v2.0 brain upgrade**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -25,17 +25,28 @@ Hotovo:
 - ✅ **Fáze 3:** FABRIK IK — 8 chapadel × 8 segmentů, Float32Array, trailing physics, procedurální biomechanický pohyb, lokální stav per chapadlo, recoil reflexy
 - ✅ **Fáze 4:** Vizuální systém — hull/envelope chapadla (Catmull-Rom→Bézier), tělo s noise deformací, oči sledující kurzor, chromatofory (HSL + cirkadiánní rytmus), glow, menší hatchling
 - ✅ **Fáze 5:** Spatial Hash Grid — Map s 120px buňkami, `getNearby()`, `getNearbyCount()`, MutationObserver, scroll rebuild, obstacle avoidance napojený na hash
-- ✅ **Fáze 6:** Senzorický systém — 7 globálních senzorů (4320 state index), per-tentacle tip touching DOM, stress model (0..1) napojený na chromatofory
+- ✅ **Fáze 6:** Senzorický systém — 9 globálních senzorů (38880 state index), per-tentacle tip touching DOM, stress model (0..1) napojený na chromatofory
 - ✅ **Fáze 7:** Age system — smoothstep interpolace mezi fázemi, phaseProgress tracking, onPhaseTransition event system, growth curves
-- ✅ **Fáze 8:** Q-Learning brain — sparse Q-table (4320 stavů × 7 nálad), Bellman update (α=0.1, γ=0.85), ε-greedy z age systému, mood→steering weight mapping, 4 nové steering behaviors (seekWhitespace, seekDom, seekEdge, followSlow), reward function (9 situací), behavioral journal (ring buffer 5000 + daily aggregates + milestones + LZ complexity + Shannon entropy), Q-table snapshots, export systém (klávesa E)
+- ✅ **Fáze 8:** Q-Learning brain — sparse Q-table (38880 stavů × 7 nálad), Q(λ) eligibility traces, Boltzmann/softmax exploration, adaptive learning rate, mood→steering weight mapping, 4 nové steering behaviors (seekWhitespace, seekDom, seekEdge, followSlow), reward function (9+ situací + intrinsic curiosity), behavioral journal (ring buffer 5000 + daily aggregates + milestones + LZ complexity + Shannon entropy + personality), Q-table snapshots, export systém (klávesa E)
 - ✅ **Fáze 9:** DOM interakce — word indexer (text→`<span class="lili-word">`), 5-fázový pipeline (touch→interest→grab→play→drop), per-tentacle state machine, max 2 held + 4 disturbed, tvarová afinita (round/angular/mixed), shape-aware selection, CSS only (transform+color), midnight cleanup s denním resetem
-- ✅ **Fáze 10:** Click detection + Tooltip + Debug panel — klik na Lili = faktický tooltip (jméno, věk, fáze, preference, visits, auto-dismiss 3.5s), klávesa D = debug panel (phase, mood, stress, sensors, Q-values, entropy, LZC, DOM state, FPS, hash stats), klávesa E = export (unified keydown handler)
+- ✅ **Fáze 10:** Click detection + Tooltip + Debug panel — klik na Lili = faktický tooltip (jméno, věk, fáze, preference, personality, visits, auto-dismiss 3.5s), klávesa D = debug panel (phase, mood, stress, sensors, Q-values, entropy, LZC, DOM state, FPS, hash stats, personality radar, traces, plan status), klávesa E = export (unified keydown handler)
 - ✅ **Fáze 11:** Persistence — position save/restore (localStorage, periodic + beforeunload), viewport clamping, mood restore, `navigator.storage.persist()`, data loss detection (Safari ITP), import systém (klávesa I, merge duplicates), graceful fallback pro corrupted data
 - ✅ **Fáze 12:** Optimalizace — render culling (offscreen skip), pre-allocated hull arrays (zero-alloc render), drawHullSide reverse traversal (no array mutation), FPS monitoring (rolling avg + console warning <50), init timing (performance.now)
 - ✅ **Fáze 13:** Emoční exprese — chromatoforová exprese nálad (HSL mood modulation), oční exprese (mrkání, pupil dilation, squint, DOM gaze), tělesná exprese (breathing rate/depth, body scale, glow pulsation), chapadlová exprese (amplitude, spread, gravity, noise, forward bias per mood), tooltip mood dot, debug mood history, onMoodChange callbacks, moodBlend smooth transitions, sustained_mood milestones
 - ✅ **Fáze 14:** Cloud Sync — GitHub persistence přes `/api/lili` (Vercel serverless → GitHub API), `data/state.json` jako single source of truth, 5min sync interval + sendBeacon na beforeunload, merge strategie (brain: více decisions vyhrává, genesis: nejstarší, journal: merge by day/type), SHA conflict detection + retry, localStorage jako offline fallback, `lili.sync()` console API
+- ✅ **Fáze 17:** Brain v2 Upgrade — 10 vylepšení Q-learning systému:
+  1. **Eligibility traces Q(λ)** — replacing traces, λ age-dependent (0.8→0.6), TD error propagace přes celou sekvenci, max 500 entries, ephemeral (ne-persistované)
+  2. **Boltzmann/Softmax exploration** — nahrazuje ε-greedy, τ age-dependent (5.0→0.3), numericky stabilní (max subtraction), inteligentní explorace respektující Q-values
+  3. **Adaptive learning rate** — per (state, mood) visit counts, α = base/(1 + visits*0.01), floor 0.01, persistované v brain format v2
+  4. **Intrinsic curiosity reward** — per-state visit counter, β/√(1+visits), β age-dependent (0.5→0.1), motivuje explorace neznámých stavů
+  5. **Momentum sensor** — velocity trend (accelerating/steady/decelerating), Float32Array(10) circular buffer, state space +3×
+  6. **Trust sensor** — discretizovaný trust level (low/medium/high) ve state, state space celkem 38880
+  7. **Mood transition matrix** — 7×7 boolean+stress-gate matrix, biologicky plausibilní přechody (shy→playful blocked, calm→alert needs stress)
+  8. **Multi-step mood plans** — 4 heuristické plány (investigate/settle/socialize/retreat), options framework, stress abort, reward attribution na initiation (s,m)
+  9. **Ink trail enhancement** — mood-colored particles, stress-scaled (count/size/spread), persistent trail marks s 8s fade, 80 particle pool
+  10. **Personality radar** — avg Q-value per mood normalizovaný 0..1, dominant trait v tooltip, text-based bar chart v debug, daily aggregate snapshot, console API `lili.personality()`
 
-**Další krok:** Nastavit GITHUB_TOKEN na Vercelu, testování sync, akademické baselines.
+**Další krok:** Testování, akademické baselines, journal entry pro Phase 17.
 
 ## Co číst a kdy
 
@@ -105,7 +116,7 @@ lili-octopus/
 - **Distribuovaná inteligence:** Mozek (Q-Learning) nastavuje nálady/tendence. Chapadla mají lokální inteligenci a reagují autonomně. Chování emerguje z kombinace obou.
 - **Brain Interface (koordinátor nálad):** `brain.decideMood()`, `brain.learn()`, `brain.serialize()`, `brain.deserialize()`. Žádné přímé volání Q-tabulky z jiných modulů.
 - **Chapadla (semi-autonomní):** Každé chapadlo má lokální stav (stress, curiosity, grip, heldElement) a autonomně reaguje na podněty (recoil, explorace, grab).
-- **Stavový prostor:** 4320 stavů (7 diskretizovaných globálních senzorů). Nerozdělovat, nezvětšovat bez důvodu.
+- **Stavový prostor:** 38880 stavů (9 diskretizovaných globálních senzorů: cursor proximity/velocity, DOM density, whitespace, scroll, time, age, momentum, trust).
 - **Mood space (místo action space):** 7 nálad (curious, playful, shy, calm, alert, idle, exploring).
 - **DOM interakce:** 5 fází — touch → interest → grab → play → drop. Max 2 held elementy. Nikdy interaktivní elementy.
 - **Reward function** přesně dle IMPLEMENTATION_PLAN.md (Fáze 8). Neměnit bez zdůvodnění.
@@ -136,7 +147,7 @@ lili-octopus/
 
 Pokud implementuješ a potřebuješ rychlý přehled:
 
-- **Q-Learning (nálady):** Bellmanova rovnice, α=0.1, γ=0.85, ε vázáno na biologický věk. Výstup = nálada (ne akce)
+- **Q(λ)-Learning (nálady):** Eligibility traces (λ age-dependent), Boltzmann/softmax exploration (τ age-dependent), adaptive α per (s,m), γ=0.85. Výstup = nálada (ne akce)
 - **Distribuovaná inteligence:** Brain = hormonální systém (nálady). Chapadla = lokální neurony (reflexy, explorace, grab). Chování = emergence.
 - **Steering Behaviors:** Craig Reynolds (1987) — wander, seek, flee, evade, obstacle avoidance (ovlivněno náladou)
 - **FABRIK IK:** Forward And Backward Reaching (Aristidou & Lasenby 2011) — 8 chapadel × 8 segmentů, každé semi-autonomní
@@ -153,5 +164,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-03-13 (Fáze 1-14 implementovány, lili.js ~3944 řádků)*
+*Poslední aktualizace: 2026-04-10 (Fáze 1-17 implementovány, lili.js ~5324 řádků)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*
