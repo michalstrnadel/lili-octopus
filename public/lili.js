@@ -487,6 +487,49 @@
       neutralLightness: 0.15,     // lightness value considered "neutral" (dark default)
     },
 
+    // --- Phase 19: Baselines (Research #5: academic controls) ---
+    // 'off' = normal Q-Learning | 'random' | 'frozen' | 'myopic' | 'heuristic'
+    baseline: {
+      mode: 'off',
+      modes: ['off', 'random', 'frozen', 'myopic', 'heuristic'],
+      frozenAfterDecisions: 500,  // freeze policy after N decisions
+    },
+
+    // --- Phase 19B: Replay system (Research #5: reproducibility) ---
+    replay: {
+      maxEvents: 10000,       // max recorded cursor events
+      snapshotInterval: 45,   // frames between DOM snapshots (= decision cycle)
+      storageKey: 'lili_replay',
+    },
+
+    // --- Phase 21: Seasonal awareness ---
+    season: {
+      // Modulates chromatophores and movement, NOT state space
+      hueShift:   { spring: 10, summer: 15, autumn: -10, winter: -20 },
+      satShift:   { spring: 5,  summer: 8,  autumn: -5,  winter: -10 },
+      litShift:   { spring: 3,  summer: 5,  autumn: -3,  winter: -8 },
+      speedMul:   { spring: 1.05, summer: 1.1, autumn: 0.95, winter: 0.85 },
+      sleepExtra: { spring: 0, summer: -0.5, autumn: 0.5, winter: 1.0 }, // hours shift
+    },
+
+    // --- Phase 22: Sound landscape (Web Audio API) ---
+    sound: {
+      enabled: false,          // user must click to enable (autoplay policy)
+      masterVolume: 0.15,
+      breathFreq: 80,          // Hz base for breathing drone
+      bubbleFreq: [400, 600, 800], // Hz options for bubble pops
+      heartbeatBpm: 60,
+    },
+
+    // --- Phase 24: Offspring / generational learning ---
+    offspring: {
+      minPhase: 'mature',      // must reach this phase to reproduce
+      qTableInheritance: 0.5,  // fraction of Q-table entries inherited
+      mutationNoise: 0.1,      // std dev of gaussian noise on inherited Q-values
+      maxOffspring: 3,         // lifetime limit
+      storageKey: 'lili_offspring',
+    },
+
     // --- localStorage keys ---
     storageKeys: {
       genesis:     'lili_genesis',
@@ -501,6 +544,9 @@
       visitProfile:'lili_visitprof',
       domLearning: 'lili_domlearn',
       psychosom:   'lili_psychosom',
+      baseline:    'lili_baseline',
+      replay:      'lili_replay',
+      offspring:   'lili_offspring',
     },
 
     // --- Phase 14: Cloud sync ---
@@ -1186,6 +1232,269 @@
   }
 
   // =========================================================================
+  // 21 — Seasonal Awareness (date-based, modulates visuals, not state space)
+  // =========================================================================
+
+  const _season = {
+    current: 'spring',       // spring / summer / autumn / winter
+    hueShift: 0,
+    satShift: 0,
+    litShift: 0,
+    speedMul: 1.0,
+    lastCheck: 0,
+  };
+
+  function getSeason() {
+    var d = new Date();
+    var m = d.getMonth(); // 0=Jan
+    // Northern hemisphere default
+    if (m >= 2 && m <= 4) return 'spring';
+    if (m >= 5 && m <= 7) return 'summer';
+    if (m >= 8 && m <= 10) return 'autumn';
+    return 'winter';
+  }
+
+  function updateSeason() {
+    // Check once per minute
+    var now = Date.now();
+    if (now - _season.lastCheck < 60000) return;
+    _season.lastCheck = now;
+
+    _season.current = getSeason();
+    var S = CFG.season;
+    var target;
+
+    // Lerp toward target values
+    target = S.hueShift[_season.current] || 0;
+    _season.hueShift += (target - _season.hueShift) * 0.1;
+    target = S.satShift[_season.current] || 0;
+    _season.satShift += (target - _season.satShift) * 0.1;
+    target = S.litShift[_season.current] || 0;
+    _season.litShift += (target - _season.litShift) * 0.1;
+    target = S.speedMul[_season.current] || 1;
+    _season.speedMul += (target - _season.speedMul) * 0.1;
+  }
+
+  // =========================================================================
+  // 22 — Sound Landscape (Web Audio API, zero deps)
+  // User must click Lili or press 'S' to enable (browser autoplay policy).
+  // =========================================================================
+
+  const _sound = {
+    ctx: null,               // AudioContext (lazy init)
+    enabled: false,
+    masterGain: null,
+    breathOsc: null,
+    breathGain: null,
+    heartOsc: null,
+    heartGain: null,
+    lastBubbleMs: 0,
+  };
+
+  function soundInit() {
+    if (_sound.ctx) return;
+    try {
+      _sound.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      _sound.masterGain = _sound.ctx.createGain();
+      _sound.masterGain.gain.value = CFG.sound.masterVolume;
+      _sound.masterGain.connect(_sound.ctx.destination);
+
+      // Breathing drone — low frequency oscillator
+      _sound.breathOsc = _sound.ctx.createOscillator();
+      _sound.breathOsc.type = 'sine';
+      _sound.breathOsc.frequency.value = CFG.sound.breathFreq;
+      _sound.breathGain = _sound.ctx.createGain();
+      _sound.breathGain.gain.value = 0;
+      _sound.breathOsc.connect(_sound.breathGain);
+      _sound.breathGain.connect(_sound.masterGain);
+      _sound.breathOsc.start();
+
+      _sound.enabled = true;
+      console.info('[Lili] Sound: enabled');
+    } catch (e) {
+      console.warn('[Lili] Sound: Web Audio API not available');
+    }
+  }
+
+  function soundToggle() {
+    if (!_sound.enabled) {
+      soundInit();
+      return _sound.enabled;
+    }
+    if (_sound.ctx.state === 'suspended') {
+      _sound.ctx.resume();
+    } else {
+      _sound.ctx.suspend();
+    }
+    return _sound.ctx.state === 'running';
+  }
+
+  function soundUpdateBreathing() {
+    if (!_sound.enabled || !_sound.breathGain) return;
+    // Breathing volume follows body breathing cycle
+    var breathCycle = Math.sin(Date.now() * 0.001 * CFG.breathingBpm / 60 * Math.PI * 2);
+    var vol = 0.02 + (breathCycle + 1) * 0.03; // 0.02 to 0.08
+    // Mood modulation
+    if (lili.mood === 'calm' || lili.mood === 'idle') vol *= 1.3;
+    if (lili.mood === 'alert') vol *= 0.5;
+    if (_circadian.isAsleep) vol *= 1.5;
+    _sound.breathGain.gain.value = vol;
+
+    // Frequency shifts with stress
+    _sound.breathOsc.frequency.value = CFG.sound.breathFreq + stress * 30;
+  }
+
+  function soundBubblePop() {
+    if (!_sound.enabled || !_sound.ctx) return;
+    var now = Date.now();
+    if (now - _sound.lastBubbleMs < 500) return; // rate limit
+    _sound.lastBubbleMs = now;
+
+    var osc = _sound.ctx.createOscillator();
+    var gain = _sound.ctx.createGain();
+    var freqs = CFG.sound.bubbleFreq;
+    osc.frequency.value = freqs[Math.floor(Math.random() * freqs.length)];
+    osc.type = 'sine';
+    gain.gain.value = 0.04;
+    osc.connect(gain);
+    gain.connect(_sound.masterGain);
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, _sound.ctx.currentTime + 0.15);
+    osc.stop(_sound.ctx.currentTime + 0.2);
+  }
+
+  function soundInkSplash() {
+    if (!_sound.enabled || !_sound.ctx) return;
+    // White noise burst
+    var bufSize = _sound.ctx.sampleRate * 0.08;
+    var buf = _sound.ctx.createBuffer(1, bufSize, _sound.ctx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * 0.3;
+    var src = _sound.ctx.createBufferSource();
+    src.buffer = buf;
+    var gain = _sound.ctx.createGain();
+    gain.gain.value = 0.06;
+    src.connect(gain);
+    gain.connect(_sound.masterGain);
+    src.start();
+    gain.gain.exponentialRampToValueAtTime(0.001, _sound.ctx.currentTime + 0.1);
+  }
+
+  // =========================================================================
+  // 24 — Offspring / Generational Learning
+  // After mature phase: Lili can "reproduce". Offspring inherits partial
+  // Q-table with mutation. Enables evolutionary + ontogenetic axes.
+  // =========================================================================
+
+  const _offspring = {
+    count: 0,               // how many offspring created this lifetime
+    history: [],            // { timestamp, genesis, inherited Q-states }
+  };
+
+  function offspringCanReproduce() {
+    var minPhaseIdx = LIFE_PHASES.indexOf(CFG.offspring.minPhase);
+    if (minPhaseIdx < 0) minPhaseIdx = 3; // default to mature
+    return age.phaseIndex >= minPhaseIdx && _offspring.count < CFG.offspring.maxOffspring;
+  }
+
+  function offspringCreate() {
+    if (!offspringCanReproduce()) {
+      console.warn('[Lili] Offspring: not eligible (phase=' + age.phase +
+        ', count=' + _offspring.count + '/' + CFG.offspring.maxOffspring + ')');
+      return null;
+    }
+
+    // Create offspring Q-table: random subset of parent entries + mutation
+    var childEntries = [];
+    var inheritRate = CFG.offspring.qTableInheritance;
+    var noise = CFG.offspring.mutationNoise;
+
+    _qtable.forEach(function (q, key) {
+      if (Math.random() < inheritRate) {
+        var childQ = new Float64Array(MOOD_COUNT);
+        for (var i = 0; i < MOOD_COUNT; i++) {
+          // Gaussian mutation: Box-Muller transform
+          var u1 = Math.random(), u2 = Math.random();
+          var gaussian = Math.sqrt(-2 * Math.log(u1 + 1e-10)) * Math.cos(2 * Math.PI * u2);
+          childQ[i] = q[i] + gaussian * noise;
+        }
+        childEntries.push([key, Array.from(childQ)]);
+      }
+    });
+
+    var childGenesis = Date.now();
+    var childData = {
+      format: 'lili_offspring_v1',
+      parentGenesis: age.genesisMs,
+      childGenesis: childGenesis,
+      parentPhase: age.phase,
+      parentDecisions: _decision.totalDecisions,
+      inheritedStates: childEntries.length,
+      totalParentStates: _qtable.size,
+      brain: {
+        v: 2,
+        stateVersion: CFG.stateSpace.version,
+        mood: 5, // start idle
+        decisions: 0,
+        reward: 0,
+        entries: childEntries,
+        visitCounts: [],
+        stateVisits: [],
+      },
+    };
+
+    _offspring.count++;
+    _offspring.history.push({
+      ts: childGenesis,
+      inherited: childEntries.length,
+    });
+
+    // Save offspring count
+    try {
+      localStorage.setItem(CFG.storageKeys.offspring, JSON.stringify({
+        count: _offspring.count,
+        history: _offspring.history,
+      }));
+    } catch (e) { /**/ }
+
+    // Download as JSON
+    var blob = new Blob([JSON.stringify(childData, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'lili_offspring_' + new Date().toISOString().slice(0, 10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    console.info('[Lili] Offspring created: ' + childEntries.length + '/' +
+      _qtable.size + ' Q-states inherited, noise=' + noise);
+
+    // Journal milestone
+    _journal.milestones.push({
+      type: 'offspring',
+      ts: childGenesis,
+      inherited: childEntries.length,
+      total: _qtable.size,
+      count: _offspring.count,
+    });
+
+    return childData;
+  }
+
+  function offspringLoad() {
+    try {
+      var json = localStorage.getItem(CFG.storageKeys.offspring);
+      if (json) {
+        var data = JSON.parse(json);
+        _offspring.count = data.count || 0;
+        _offspring.history = data.history || [];
+      }
+    } catch (e) { /**/ }
+  }
+
+  // =========================================================================
   // 18C — Micro-expressions (instant visual reactions to events)
   // =========================================================================
 
@@ -1432,6 +1741,7 @@
       emitted++;
     }
     _ink.activeCount += emitted;
+    if (emitted > 0) soundInkSplash(); // Phase 22
 
     // Phase 17: Leave a trail mark
     if (IC.trailEnabled) {
@@ -1650,7 +1960,10 @@
       emitted++;
       _bubbles.activeCount++;
     }
-    if (emitted > 0) _bubbles.lastEmitMs = now;
+    if (emitted > 0) {
+      _bubbles.lastEmitMs = now;
+      soundBubblePop(); // Phase 22: bubble sound
+    }
   }
 
   function updateBubbles() {
@@ -2315,6 +2628,16 @@
     // TD error: δ = R + γ·max(Q(s',m')) - Q(s,m)
     const delta = reward + gamma * maxNext - qPrev[moodIdx];
 
+    // Phase 19C: Track convergence metric (avg |delta|)
+    _journal._qDeltaSum += Math.abs(delta);
+    _journal._qDeltaCount++;
+
+    // Phase 19C: Track policy stability (did top mood change?)
+    let prevTop = 0;
+    for (let ii = 1; ii < MOOD_COUNT; ii++) {
+      if (qPrev[ii] > qPrev[prevTop]) prevTop = ii;
+    }
+
     // Set replacing trace for current (s,m) to 1.0
     const curKey = prevState + ',' + moodIdx;
     _traces.set(curKey, 1.0);
@@ -2354,6 +2677,15 @@
         if (v < minVal) { minVal = v; minKey = k; }
       });
       if (minKey) _traces.delete(minKey);
+    }
+
+    // Phase 19C: Check if top mood for this state changed (policy stability)
+    let newTop = 0;
+    for (let ii = 1; ii < MOOD_COUNT; ii++) {
+      if (qPrev[ii] > qPrev[newTop]) newTop = ii;
+    }
+    if (newTop !== prevTop) {
+      _journal._policyChanges++;
     }
   }
 
@@ -2512,6 +2844,9 @@
     // Phase 17: Track state visitation for intrinsic curiosity
     _stateVisitCounts.set(currentState, (_stateVisitCounts.get(currentState) || 0) + 1);
 
+    // Phase 19B: Record replay snapshot at decision point
+    replayRecordSnapshot();
+
     // Compute reward for previous mood (outcome of last cycle)
     if (_decision.prevState >= 0) {
       const reward = computeReward();
@@ -2522,8 +2857,14 @@
           Math.pow(CFG.moodPlans.planRewardDiscount, _activePlan.stepIndex);
       }
 
-      // Q(λ) update with eligibility traces
-      brainLearn(_decision.prevState, _decision.prevMoodIndex, reward, currentState);
+      // Q(λ) update — skip for baselines that don't learn
+      if (!baselineSkipLearning()) {
+        // Phase 19A: Myopic baseline overrides gamma
+        var savedGamma = CFG.rl.gamma;
+        CFG.rl.gamma = baselineGamma();
+        brainLearn(_decision.prevState, _decision.prevMoodIndex, reward, currentState);
+        CFG.rl.gamma = savedGamma;
+      }
 
       // Journal logging
       journalLogDecision(currentState, reward);
@@ -2586,9 +2927,16 @@
       }
 
       if (!planOverride) {
-        // Normal Boltzmann/Softmax mood selection
-        newMoodIdx = brainDecideMood(currentState);
-        newMood = CFG.moods[newMoodIdx];
+        // Phase 19A: Check if baseline mode overrides mood selection
+        var baselineMood = baselineSelectMood(currentState);
+        if (baselineMood >= 0) {
+          newMoodIdx = baselineMood;
+          newMood = CFG.moods[newMoodIdx];
+        } else {
+          // Normal Boltzmann/Softmax mood selection
+          newMoodIdx = brainDecideMood(currentState);
+          newMood = CFG.moods[newMoodIdx];
+        }
       }
     }
 
@@ -2658,6 +3006,254 @@
       placeMemorySave();     // Phase 15A
       domLearningSave();     // Phase 15D
     }
+  }
+
+  // =========================================================================
+  // 19A — Baseline System (Research #5: academic control conditions)
+  // 4 alternative brain policies for paired comparison with Q-Learning.
+  // Toggle with keyboard 'B' or lili.baseline() console API.
+  // =========================================================================
+
+  const _baseline = {
+    mode: 'off',             // current mode (from CFG.baseline.modes)
+    frozenQtable: null,      // snapshot of Q-table for frozen baseline
+    frozenAt: 0,             // decision count when frozen
+  };
+
+  // Random Policy: uniform random mood, no learning
+  function baselineRandomMood() {
+    return Math.floor(rlRng() * MOOD_COUNT);
+  }
+
+  // Frozen Policy: learned Q-table, alpha=0 (no more learning)
+  function baselineFrozenMood(stateIndex) {
+    // Freeze the Q-table on first call or after configured threshold
+    if (!_baseline.frozenQtable) {
+      _baseline.frozenQtable = new Map();
+      _qtable.forEach(function (q, key) {
+        _baseline.frozenQtable.set(key, new Float64Array(q));
+      });
+      _baseline.frozenAt = _decision.totalDecisions;
+      console.info('[Lili] Baseline: froze Q-table at ' + _baseline.frozenAt + ' decisions');
+    }
+    // Use frozen table for decision (same Boltzmann but no updates)
+    const q = _baseline.frozenQtable.get(stateIndex);
+    if (!q) return Math.floor(rlRng() * MOOD_COUNT);
+
+    let allZero = true;
+    for (let i = 0; i < MOOD_COUNT; i++) {
+      if (q[i] !== 0) { allZero = false; break; }
+    }
+    if (allZero) return Math.floor(rlRng() * MOOD_COUNT);
+
+    const tau = Math.max(ageVal(CFG.rl.temperature), CFG.rl.softmaxMinTemp);
+    let maxQ = q[0];
+    for (let i = 1; i < MOOD_COUNT; i++) {
+      if (q[i] > maxQ) maxQ = q[i];
+    }
+    for (let i = 0; i < MOOD_COUNT; i++) {
+      _softmaxProbs[i] = Math.exp((q[i] - maxQ) / tau);
+    }
+    let sum = 0;
+    for (let i = 0; i < MOOD_COUNT; i++) sum += _softmaxProbs[i];
+    let r = rlRng() * sum;
+    for (let i = 0; i < MOOD_COUNT; i++) {
+      r -= _softmaxProbs[i];
+      if (r <= 0) return i;
+    }
+    return MOOD_COUNT - 1;
+  }
+
+  // Myopic Policy: gamma=0, only immediate reward
+  function baselineMyopicMood(stateIndex) {
+    // Same as brainDecideMood but we override gamma to 0 in learning
+    return brainDecideMood(stateIndex);
+  }
+
+  // Heuristic Policy: hand-coded expert rules
+  function baselineHeuristicMood() {
+    // Rule 1: cursor near + high stress → shy (flee)
+    if (sensors.cursorProximity === 'near' && stress > 0.3) return 2; // shy
+
+    // Rule 2: cursor near + low stress → alert
+    if (sensors.cursorProximity === 'near') return 4; // alert
+
+    // Rule 3: on DOM elements → exploring
+    if (sensors.whitespace === 'on_element') return 6; // exploring
+
+    // Rule 4: in whitespace + user reading → calm
+    if (sensors.whitespace === 'in_whitespace' &&
+        (sensors.cursorVelocity === 'still' || sensors.cursorVelocity === 'slow')) return 3; // calm
+
+    // Rule 5: DOM dense + low stress → curious
+    if (sensors.domDensity === 'dense' && stress < 0.3) return 0; // curious
+
+    // Rule 6: evening/night → idle
+    if (sensors.timeOfDay === 'night') return 5; // idle
+
+    // Rule 7: default → playful
+    return 1; // playful
+  }
+
+  // Select mood based on active baseline mode
+  function baselineSelectMood(stateIndex) {
+    switch (_baseline.mode) {
+      case 'random':    return baselineRandomMood();
+      case 'frozen':    return baselineFrozenMood(stateIndex);
+      case 'myopic':    return baselineMyopicMood(stateIndex);
+      case 'heuristic': return baselineHeuristicMood();
+      default:          return -1; // not in baseline mode
+    }
+  }
+
+  // Should brainLearn be skipped? (random/frozen/heuristic skip learning)
+  function baselineSkipLearning() {
+    return _baseline.mode === 'random' || _baseline.mode === 'frozen' ||
+           _baseline.mode === 'heuristic';
+  }
+
+  // Myopic override: gamma=0 for learning
+  function baselineGamma() {
+    return _baseline.mode === 'myopic' ? 0 : CFG.rl.gamma;
+  }
+
+  function cycleBaseline() {
+    const modes = CFG.baseline.modes;
+    const idx = modes.indexOf(_baseline.mode);
+    _baseline.mode = modes[(idx + 1) % modes.length];
+    if (_baseline.mode !== 'frozen') _baseline.frozenQtable = null;
+    try { localStorage.setItem(CFG.storageKeys.baseline, _baseline.mode); } catch (e) { /**/ }
+    console.info('[Lili] Baseline mode: ' + _baseline.mode);
+    return _baseline.mode;
+  }
+
+  function loadBaseline() {
+    try {
+      var saved = localStorage.getItem(CFG.storageKeys.baseline);
+      if (saved && CFG.baseline.modes.indexOf(saved) >= 0) {
+        _baseline.mode = saved;
+      }
+    } catch (e) { /**/ }
+  }
+
+  // =========================================================================
+  // 19B — Replay System (Research #5: reproducibility)
+  // Records cursor trajectories + state at decision points.
+  // Replay mode feeds recorded data for paired testing.
+  // =========================================================================
+
+  const _replay = {
+    recording: false,
+    playing: false,
+    events: [],             // { t, x, y, vx, vy } cursor snapshots
+    snapshots: [],          // { t, state, stress, domDensity, scroll } at decision points
+    playbackIndex: 0,
+    playbackFrame: 0,
+    startTime: 0,
+  };
+
+  function replayStartRecording() {
+    _replay.recording = true;
+    _replay.playing = false;
+    _replay.events = [];
+    _replay.snapshots = [];
+    _replay.startTime = Date.now();
+    console.info('[Lili] Replay: recording started');
+  }
+
+  function replayStopRecording() {
+    _replay.recording = false;
+    console.info('[Lili] Replay: recording stopped (' +
+      _replay.events.length + ' cursor events, ' +
+      _replay.snapshots.length + ' snapshots)');
+    try {
+      localStorage.setItem(CFG.replay.storageKey, JSON.stringify({
+        events: _replay.events,
+        snapshots: _replay.snapshots,
+        startTime: _replay.startTime,
+        duration: Date.now() - _replay.startTime,
+      }));
+    } catch (e) { console.warn('[Lili] Replay: save failed (storage full)'); }
+  }
+
+  function replayRecordCursor() {
+    if (!_replay.recording || _replay.events.length >= CFG.replay.maxEvents) return;
+    _replay.events.push({
+      t: Date.now() - _replay.startTime,
+      x: mouse.pos.x, y: mouse.pos.y,
+      vx: mouse.vel.x, vy: mouse.vel.y,
+    });
+  }
+
+  function replayRecordSnapshot() {
+    if (!_replay.recording) return;
+    _replay.snapshots.push({
+      t: Date.now() - _replay.startTime,
+      state: sensors.stateIndex,
+      stress: Math.round(stress * 100) / 100,
+      mood: lili.moodIndex,
+      pos: { x: Math.round(lili.pos.x), y: Math.round(lili.pos.y) },
+    });
+  }
+
+  function replayStartPlayback() {
+    try {
+      var json = localStorage.getItem(CFG.replay.storageKey);
+      if (!json) { console.warn('[Lili] Replay: no recording found'); return; }
+      var data = JSON.parse(json);
+      _replay.events = data.events || [];
+      _replay.snapshots = data.snapshots || [];
+    } catch (e) { console.warn('[Lili] Replay: load failed'); return; }
+
+    _replay.playing = true;
+    _replay.recording = false;
+    _replay.playbackIndex = 0;
+    _replay.playbackFrame = 0;
+    _replay.startTime = Date.now();
+    console.info('[Lili] Replay: playback started (' +
+      _replay.events.length + ' events)');
+  }
+
+  function replayStopPlayback() {
+    _replay.playing = false;
+    console.info('[Lili] Replay: playback stopped');
+  }
+
+  function replayFeedCursor() {
+    if (!_replay.playing) return false;
+    var elapsed = Date.now() - _replay.startTime;
+    // Find the next event at or past current time
+    while (_replay.playbackIndex < _replay.events.length &&
+           _replay.events[_replay.playbackIndex].t <= elapsed) {
+      var ev = _replay.events[_replay.playbackIndex];
+      mouse.prev.setFrom(mouse.pos);
+      mouse.pos.set(ev.x, ev.y);
+      mouse.vel.set(ev.vx, ev.vy);
+      mouse.active = true;
+      _replay.playbackIndex++;
+    }
+    if (_replay.playbackIndex >= _replay.events.length) {
+      replayStopPlayback();
+    }
+    return true;
+  }
+
+  function replayExport() {
+    try {
+      var json = localStorage.getItem(CFG.replay.storageKey);
+      if (!json) { console.warn('[Lili] Replay: no recording'); return null; }
+      var data = JSON.parse(json);
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'lili_replay_' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      return data;
+    } catch (e) { return null; }
   }
 
   // --- Q-table persistence ---
@@ -2842,6 +3438,11 @@
     dayDecisionCount: 0,
     lastDayKey: '',         // 'YYYY-MM-DD' of current tracking day
     firstMoods: {},         // first occurrence of each mood (for milestones)
+    // Phase 19C: Convergence tracking
+    _qDeltaSum: 0,          // sum of |delta| for daily avg
+    _qDeltaCount: 0,        // count of Q-updates today
+    _policyChanges: 0,      // count of policy switches (top mood changed) today
+    _prevTopMoods: new Map(),  // stateIndex → last top mood index
   };
 
   function _dayKey() {
@@ -2927,6 +3528,13 @@
     // Phase 17: Personality snapshot for drift tracking
     const pers = computePersonalityProfile();
 
+    // Phase 19C: Convergence metric — avg absolute Q-delta per update
+    var avgQDelta = _journal._qDeltaSum > 0 ? _journal._qDeltaSum / (_journal._qDeltaCount || 1) : 0;
+
+    // Phase 19C: Policy stability — fraction of states where top mood changed today
+    var policyChanges = _journal._policyChanges || 0;
+    var policyStability = total > 0 ? 1 - (policyChanges / Math.max(total, 1)) : 1;
+
     const agg = {
       day: _journal.lastDayKey,
       ageMs: age.elapsedMs,
@@ -2941,7 +3549,19 @@
       totalReward: Math.round(_journal.dayRewardSum * 100) / 100,
       personality: Array.from(pers),
       dominantTrait: dominantPersonalityTrait(pers),
+      // Phase 19C: Enhanced academic metrics
+      avgQDelta: Math.round(avgQDelta * 10000) / 10000,
+      policyStability: Math.round(policyStability * 1000) / 1000,
+      cumulativeReward: Math.round(_decision.totalReward * 100) / 100,
+      qtableSize: _qtable.size,
+      baselineMode: _baseline.mode,
+      season: _season.current,
     };
+
+    // Reset daily convergence trackers
+    _journal._qDeltaSum = 0;
+    _journal._qDeltaCount = 0;
+    _journal._policyChanges = 0;
 
     _journal.dailyAggregates.push(agg);
 
@@ -3112,6 +3732,57 @@
   }
 
   // =========================================================================
+  // 19C — CSV Export (daily aggregates → CSV for R/Python/Excel analysis)
+  // =========================================================================
+
+  function exportCSV() {
+    var aggs = _journal.dailyAggregates;
+    if (aggs.length === 0) {
+      console.warn('[Lili] No daily aggregates to export');
+      return null;
+    }
+
+    // Header
+    var header = 'day,ageMs,phase,decisions,avgReward,totalReward,cumulativeReward,' +
+      'explorationRate,entropy,lzc,qhash,qtableSize,policyStability,avgQDelta,' +
+      'baselineMode,season,dominantTrait';
+    for (var m = 0; m < MOOD_COUNT; m++) header += ',mood_' + CFG.moods[m];
+    for (var p = 0; p < MOOD_COUNT; p++) header += ',pers_' + CFG.moods[p];
+    header += '\n';
+
+    var rows = '';
+    for (var i = 0; i < aggs.length; i++) {
+      var a = aggs[i];
+      rows += a.day + ',' + a.ageMs + ',' + a.phase + ',' + a.decisions + ',' +
+        a.avgReward + ',' + a.totalReward + ',' + (a.cumulativeReward || '') + ',' +
+        a.explorationRate + ',' + a.entropy + ',' + a.lzc + ',' + a.qhash + ',' +
+        (a.qtableSize || '') + ',' + (a.policyStability || '') + ',' +
+        (a.avgQDelta || '') + ',' + (a.baselineMode || 'off') + ',' +
+        (a.season || '') + ',' + (a.dominantTrait || '');
+      for (var m2 = 0; m2 < MOOD_COUNT; m2++) {
+        rows += ',' + (a.moodDist ? a.moodDist[m2] : 0);
+      }
+      for (var p2 = 0; p2 < MOOD_COUNT; p2++) {
+        rows += ',' + (a.personality ? a.personality[p2].toFixed(3) : 0);
+      }
+      rows += '\n';
+    }
+
+    var csv = header + rows;
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var url = URL.createObjectURL(blob);
+    var el = document.createElement('a');
+    el.href = url;
+    el.download = 'lili_daily_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(el);
+    el.click();
+    document.body.removeChild(el);
+    URL.revokeObjectURL(url);
+    console.info('[Lili] CSV exported: ' + aggs.length + ' daily aggregates');
+    return csv;
+  }
+
+  // =========================================================================
   // 10A — Click detection + Tooltip
   // Click on Lili = factual tooltip (name, age, phase, preference, visits)
   // =========================================================================
@@ -3202,13 +3873,17 @@
     var pers = computePersonalityProfile();
     var dominant = dominantPersonalityTrait(pers);
 
+    var baselineTag = _baseline.mode !== 'off' ?
+      '<br><span style="color:#f88">BASELINE: ' + _baseline.mode + '</span>' : '';
+
     el.innerHTML =
       '<b style="color:#8cf">Lili</b> ' +
       '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;' +
       'background:' + dotColor + ';vertical-align:middle"></span><br>' +
       '<span style="color:#667">Autonomous octopus living on this page.</span><br>' +
       '<span style="color:#6a8">' + age.phase + '</span> · ' + ageStr + ' · ' + lili.mood +
-      '<br><span style="color:#a8a">' + dominant + ' personality</span>';
+      '<br><span style="color:#a8a">' + dominant + ' personality</span>' +
+      baselineTag;
 
     // Position: prefer above the click point, shift to stay in viewport
     document.body.appendChild(el);
@@ -3421,6 +4096,16 @@
         return s;
       })() + '\n' +
       'inkTrail: ' + _inkTrail.marks.length + '/' + CFG.ink.trailMaxMarks + '\n' +
+      '── Phase 19 (Academic) ─\n' +
+      'baseline: ' + _baseline.mode + '\n' +
+      'replay:   ' + (_replay.recording ? 'REC' : _replay.playing ? 'PLAY' : 'off') +
+        (_replay.events.length ? ' (' + _replay.events.length + ' ev)' : '') + '\n' +
+      'avgQΔ:    ' + (_journal._qDeltaCount > 0 ? (_journal._qDeltaSum / _journal._qDeltaCount).toFixed(5) : '—') + '\n' +
+      'polStab:  ' + (1 - (_journal._policyChanges / Math.max(_journal.dayDecisionCount, 1))).toFixed(3) + '\n' +
+      '── Phase 21-24 ─────────\n' +
+      'season:   ' + _season.current + '\n' +
+      'sound:    ' + (_sound.enabled ? 'on' : 'off') + '\n' +
+      'offspring:' + _offspring.count + '/' + CFG.offspring.maxOffspring + '\n' +
       '── Perf ────────────────\n' +
       'FPS:      ' + _fpsAvg.toFixed(1) + (_fpsAvg < 50 ? ' \u26A0' : '') + '\n' +
       'frame#:   ' + frameCount;
@@ -3489,8 +4174,54 @@
         console.info('[Lili] Active plan:', info);
         return info;
       },
+      // Phase 19A: Baseline controls
+      baseline: function (mode) {
+        if (mode && CFG.baseline.modes.indexOf(mode) >= 0) {
+          _baseline.mode = mode;
+          if (mode !== 'frozen') _baseline.frozenQtable = null;
+          try { localStorage.setItem(CFG.storageKeys.baseline, mode); } catch (e) { /**/ }
+          console.info('[Lili] Baseline mode: ' + mode);
+          return mode;
+        }
+        return cycleBaseline();
+      },
+      // Phase 19B: Replay controls
+      replayRecord: function () {
+        if (_replay.recording) { replayStopRecording(); return 'stopped'; }
+        replayStartRecording(); return 'recording';
+      },
+      replayPlay: function () {
+        if (_replay.playing) { replayStopPlayback(); return 'stopped'; }
+        replayStartPlayback(); return 'playing';
+      },
+      replayExport: function () { return replayExport(); },
+      // Phase 19C: CSV export
+      exportCSV: function () { return exportCSV(); },
+      // Phase 22: Sound toggle
+      sound: function () { return soundToggle(); },
+      // Phase 24: Offspring
+      reproduce: function () { return offspringCreate(); },
     });
-    console.info('[Lili] Console API ready — try: lili.status(), lili.personality(), lili.traces(), lili.export()');
+    console.info('[Lili] Console API ready — try: lili.status(), lili.baseline(), lili.exportCSV(), lili.sound(), lili.reproduce()');
+
+    // Keyboard handler (unified)
+    document.addEventListener('keydown', function (e) {
+      // Ignore if user is typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' ||
+          e.target.isContentEditable) return;
+
+      var k = e.key.toLowerCase();
+      if (k === 'd') toggleDebug();
+      else if (k === 'e') exportData();
+      else if (k === 'i') importData();
+      else if (k === 'b') cycleBaseline();
+      else if (k === 'r') {
+        if (_replay.recording) replayStopRecording();
+        else if (_replay.playing) replayStopPlayback();
+        else replayStartRecording();
+      }
+      else if (k === 's' && !e.ctrlKey && !e.metaKey) soundToggle();
+    });
   }
 
   // =========================================================================
@@ -3640,6 +4371,16 @@
       placeMemory: JSON.parse(placeMemorySerialize()),
       visitProfile: JSON.parse(visitProfileSerialize()),
       domLearning: JSON.parse(domLearningSerialize()),
+      // Phase 23: Social learning — aggregated anonymized behavioral stats
+      socialStats: {
+        avgStress: +stress.toFixed(3),
+        dominantMood: lili.mood,
+        personality: Array.from(computePersonalityProfile()),
+        entropy: _journal.dailyAggregates.length > 0 ?
+          _journal.dailyAggregates[_journal.dailyAggregates.length - 1].entropy : 0,
+        season: _season.current,
+        offspring: _offspring.count,
+      },
     };
   }
 
@@ -5142,11 +5883,16 @@
     const satPulse = _chromaBlend.satPulse > 0
       ? Math.sin(frameCount * 0.08) * _chromaBlend.satPulse * 100 : 0;
 
-    const h = baseHue + circadianHue + stressHue + moodHue + driftHue;
+    // Phase 21: Seasonal chromatophore modulation
+    const seasonHue = _season.hueShift;
+    const seasonSat = _season.satShift;
+    const seasonLit = _season.litShift;
+
+    const h = baseHue + circadianHue + stressHue + moodHue + driftHue + seasonHue;
     // Phase 18G: Ambient light adaptation (saturation shift for contrast)
-    const s = Math.min(Math.max(baseSat + stressSat + moodSat + satPulse + _ambient.satShift, 20), 100);
-    // Phase 18E+18G: Psychosomatic + ambient lightness shift
-    const l = Math.min(Math.max(baseLit + circadianLit + moodLit + _psychosom.lightness + _ambient.lightnessShift, 15), 85);
+    const s = Math.min(Math.max(baseSat + stressSat + moodSat + satPulse + _ambient.satShift + seasonSat, 20), 100);
+    // Phase 18E+18G+21: Psychosomatic + ambient + seasonal lightness shift
+    const l = Math.min(Math.max(baseLit + circadianLit + moodLit + _psychosom.lightness + _ambient.lightnessShift + seasonLit, 15), 85);
 
     return {
       bodyHsl: `hsl(${h}, ${s}%, ${l}%)`,
@@ -5740,9 +6486,13 @@
     updateCircadian();                   // Phase 15B: day/night rhythm
     updateSleepAnim();                   // Phase 18D: REM twitch management
     updateAmbient();                     // Phase 18G: background light awareness
+    // Phase 19B: Replay — feed recorded cursor data or record live cursor
+    if (!replayFeedCursor()) replayRecordCursor();
     updateMouse();
     updateSensors();
     updateStress();
+    // Phase 21: Seasonal modulation (affects chromatophores in updateMoodBlend)
+    updateSeason();
     brainDecisionCycle(); // Phase 8: RL mood selection before physics
     updateMoodBlend();   // Phase 13: smooth mood expression blending
     updateMicroExpr();   // Phase 18C: decay micro-expression intensities
@@ -5765,6 +6515,9 @@
     // Phase 16B: Bubble communication
     emitBubble();
     updateBubbles();
+
+    // Phase 22: Sound landscape update
+    soundUpdateBreathing();
 
     checkMidnightCleanup(); // Phase 9D: periodic midnight reset check
   }
@@ -5870,6 +6623,19 @@
     journalLoad();
     console.info('[Lili] Brain loaded: ' + _qtable.size + ' Q-states, ' +
       _decision.totalDecisions + ' lifetime decisions, mood=' + lili.mood);
+
+    // Phase 19A: Load baseline mode
+    loadBaseline();
+    if (_baseline.mode !== 'off') {
+      console.info('[Lili] Baseline mode active: ' + _baseline.mode);
+    }
+
+    // Phase 21: Initial season detection
+    _season.current = getSeason();
+    _season.lastCheck = Date.now();
+
+    // Phase 24: Load offspring data
+    offspringLoad();
 
     // Phase 9A: Word wrapping disabled — breaks React/framework hydration.
     // Lili interacts with existing DOM elements via spatial hash instead.

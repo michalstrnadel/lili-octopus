@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-17 hotovy, v2.0 brain upgrade**
+**Fáze: Implementace — Fáze 1-24 hotovy, akademická + technologická expanze**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -62,7 +62,24 @@ Hotovo:
   6. **Mood wander coherence** — playful=0.55 (erratický), calm=1.15 (hladký) → osobnost v pohybu
   7. **Parameter tuning** — chromatophore alpha ×1.8, ink threshold 0.65, hull +37%, breathing +33%, genesis ±40%, blend speed ×1.5, psychosom ×1.6
 
-**Další krok:** Testování Phase 18.5, případně další tuning.
+- ✅ **Fáze 19A:** Baseline System — 4 kontrolní podmínky (Random Policy, Frozen Policy, Myopic γ=0, Hard-coded Heuristic), klávesa B pro přepínání, persistence v localStorage, integrace do debug panelu + tooltip
+- ✅ **Fáze 19B:** Replay System — nahrávání cursor trajektorií + DOM state snapshots na decision points, playback mode pro paired testing, export/import replay dat, klávesa R pro ovládání
+- ✅ **Fáze 19C:** Enhanced Metrics & CSV Export — convergence křivky (avg |δQ| per update), policy stability index, cumulative reward, CSV export denních agregátů pro R/Python/Excel, rozšířené denní agregáty o baseline mode, season, qtableSize
+- ✅ **Fáze 20:** Observability Dashboard — `public/dashboard.html`, zero-deps vizualizace: entropy/reward/exploration/LZC křivky, mood distribution pie, personality radar, behavioral etogram, convergence plot, policy stability, tabulka denních agregátů, milestones log
+- ✅ **Fáze 21:** Seasonal Awareness — detekce ročního období (date-based, ne geolocation), chromatoforová modulace (hue/sat/lightness shift per season), movement speed modulation, integrováno do denních agregátů
+- ✅ **Fáze 22:** Sound Landscape — Web Audio API (zero deps), breathing drone (sinus oscilator, mood-dependent), bubble pop (freq randomized), ink splash (white noise burst), master volume, user-initiated (klávesa S), stress-modulated parametry
+- ✅ **Fáze 23:** Social Learning — rozšíření cloud sync o anonymizované behavioral stats (avgStress, dominantMood, personality, entropy, season, offspring count), připraveno pro multi-visitor agregaci
+- ✅ **Fáze 24:** Offspring / Generational Learning — reprodukce po dosažení mature fáze, Q-table crossover (50% náhodný výběr entries), gaussian mutace na zděděných Q-hodnotách, max 3 potomci, export jako JSON, journal milestone
+
+**Další krok:** Testování všech nových fází, tuning parametrů, příprava akademického paperu.
+
+**Keyboard shortcuts:**
+- `D` — toggle debug panel
+- `E` — export JSON
+- `I` — import JSON
+- `B` — cycle baseline modes (off → random → frozen → myopic → heuristic)
+- `R` — toggle replay recording/playback
+- `S` — toggle sound
 
 ## Co číst a kdy
 
@@ -94,7 +111,8 @@ lili-octopus/
 ├── LILI_PRD_v1.md           ← Product Requirements Document (ZDROJ PRAVDY)
 │
 ├── public/
-│   └── lili.js              ← JEDINÝ produkční soubor (zatím prázdný)
+│   ├── lili.js              ← JEDINÝ produkční soubor (~6727 řádků)
+│   └── dashboard.html       ← Observability dashboard (vizualizace exportovaných dat)
 │
 ├── docs/
 │   ├── PROJECT.md           ← Akademický popis projektu
@@ -180,5 +198,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-04-10 (Fáze 1-18.5 implementovány, lili.js ~5959 řádků)*
+*Poslední aktualizace: 2026-04-10 (Fáze 1-24 implementovány, lili.js ~6727 řádků, dashboard.html)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

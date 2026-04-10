@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lili — Observability Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    background: #0a0c12;
+    color: #c8ccd4;
+    padding: 24px;
+    line-height: 1.5;
+  }
+  h1 { color: #8cf; font-size: 18px; margin-bottom: 8px; }
+  h2 { color: #6a8; font-size: 14px; margin: 20px 0 8px; border-bottom: 1px solid #1a1e28; padding-bottom: 4px; }
+  .meta { color: #667; font-size: 12px; margin-bottom: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; }
+  .card {
+    background: rgba(20, 24, 36, 0.85);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    padding: 16px;
+    backdrop-filter: blur(6px);
+  }
+  .card h3 { color: #a8b; font-size: 13px; margin-bottom: 10px; }
+  canvas { width: 100%; height: 200px; display: block; border-radius: 4px; background: #0e1018; }
+  .stat { display: inline-block; margin-right: 20px; margin-bottom: 8px; }
+  .stat-val { color: #8cf; font-size: 16px; font-weight: bold; }
+  .stat-label { color: #667; font-size: 11px; }
+  .drop-zone {
+    border: 2px dashed #334;
+    border-radius: 8px;
+    padding: 40px;
+    text-align: center;
+    color: #667;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    margin-bottom: 20px;
+  }
+  .drop-zone:hover, .drop-zone.active { border-color: #8cf; color: #8cf; }
+  .drop-zone input { display: none; }
+  .radar-container { display: flex; justify-content: center; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { padding: 4px 8px; text-align: left; border-bottom: 1px solid #1a1e28; }
+  th { color: #6a8; }
+  .mood-bar { height: 12px; border-radius: 2px; display: inline-block; min-width: 2px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<h1>Lili — Observability Dashboard</h1>
+<p class="meta">Load a <code>lili_export_*.json</code> file to visualize behavioral data.</p>
+
+<div class="drop-zone" id="dropZone">
+  <p>Drop JSON export here or click to browse</p>
+  <input type="file" id="fileInput" accept=".json">
+</div>
+
+<div id="content" class="hidden">
+  <!-- Summary stats -->
+  <div id="stats" style="margin-bottom: 20px;"></div>
+
+  <div class="grid">
+    <!-- Entropy over time -->
+    <div class="card">
+      <h3>Shannon Entropy (daily)</h3>
+      <canvas id="chartEntropy"></canvas>
+    </div>
+
+    <!-- Reward curve -->
+    <div class="card">
+      <h3>Average Reward (daily)</h3>
+      <canvas id="chartReward"></canvas>
+    </div>
+
+    <!-- Exploration rate -->
+    <div class="card">
+      <h3>Exploration Rate</h3>
+      <canvas id="chartExploration"></canvas>
+    </div>
+
+    <!-- LZC -->
+    <div class="card">
+      <h3>Lempel-Ziv Complexity</h3>
+      <canvas id="chartLZC"></canvas>
+    </div>
+
+    <!-- Q-table growth -->
+    <div class="card">
+      <h3>Q-Table Size & Convergence</h3>
+      <canvas id="chartConvergence"></canvas>
+    </div>
+
+    <!-- Policy stability -->
+    <div class="card">
+      <h3>Policy Stability</h3>
+      <canvas id="chartStability"></canvas>
+    </div>
+
+    <!-- Mood distribution pie -->
+    <div class="card">
+      <h3>Mood Distribution (lifetime)</h3>
+      <canvas id="chartMoodPie"></canvas>
+    </div>
+
+    <!-- Personality radar -->
+    <div class="card">
+      <h3>Personality Profile</h3>
+      <div class="radar-container">
+        <canvas id="chartRadar" width="300" height="300"></canvas>
+      </div>
+    </div>
+
+    <!-- Etogram (behavioral timeline) -->
+    <div class="card" style="grid-column: 1 / -1;">
+      <h3>Behavioral Etogram (mood over time)</h3>
+      <canvas id="chartEtogram" style="height: 100px;"></canvas>
+    </div>
+
+    <!-- Daily aggregates table -->
+    <div class="card" style="grid-column: 1 / -1;">
+      <h3>Daily Aggregates</h3>
+      <div class="table-wrap">
+        <table id="aggTable">
+          <thead>
+            <tr>
+              <th>Day</th><th>Phase</th><th>Decisions</th><th>Avg Reward</th>
+              <th>Entropy</th><th>LZC</th><th>Exploration</th><th>Q-States</th>
+              <th>Stability</th><th>Dominant</th><th>Baseline</th><th>Season</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Milestones -->
+    <div class="card" style="grid-column: 1 / -1;">
+      <h3>Milestones</h3>
+      <div id="milestones" style="font-size: 12px; max-height: 300px; overflow-y: auto;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const MOODS = ['curious', 'playful', 'shy', 'calm', 'alert', 'idle', 'exploring'];
+const MOOD_COLORS = {
+  curious:   '#5dd9c4', playful: '#e8a84c', shy:    '#9baec0',
+  calm:      '#4a7fb5', alert:   '#e06050', idle:   '#6c7a8a',
+  exploring: '#6dd480',
+};
+
+// --- File loading ---
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('active'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('active'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('active');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fileInput.files[0]); });
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      render(data);
+    } catch (e) {
+      alert('Invalid JSON: ' + e.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// --- Rendering ---
+function render(data) {
+  document.getElementById('content').classList.remove('hidden');
+  dropZone.classList.add('hidden');
+
+  const meta = data.metadata || {};
+  const aggs = data.dailyAggregates || [];
+  const milestones = data.milestones || [];
+  const qtable = data.qtable || [];
+
+  // Summary stats
+  const ageDays = meta.ageMs ? (meta.ageMs / 86400000).toFixed(1) : '?';
+  document.getElementById('stats').innerHTML =
+    stat('Age', ageDays + ' days') +
+    stat('Phase', meta.phase || '?') +
+    stat('Decisions', (meta.totalDecisions || 0).toLocaleString()) +
+    stat('Total Reward', (meta.totalReward || 0).toFixed(1)) +
+    stat('Q-States', (meta.qtableSize || qtable.length).toLocaleString()) +
+    stat('Personality', meta.dominantTrait || '?') +
+    stat('Days Logged', aggs.length) +
+    stat('Milestones', milestones.length);
+
+  // Charts
+  if (aggs.length > 0) {
+    lineChart('chartEntropy', aggs.map(a => a.day), aggs.map(a => a.entropy), '#5dd9c4');
+    lineChart('chartReward', aggs.map(a => a.day), aggs.map(a => a.avgReward), '#e8a84c');
+    lineChart('chartExploration', aggs.map(a => a.day), aggs.map(a => a.explorationRate), '#6dd480');
+    lineChart('chartLZC', aggs.map(a => a.day), aggs.map(a => a.lzc || 0), '#a8a');
+    lineChart('chartConvergence', aggs.map(a => a.day), aggs.map(a => a.qtableSize || 0), '#8cf',
+      aggs.map(a => a.avgQDelta || 0), '#f88');
+    lineChart('chartStability', aggs.map(a => a.day), aggs.map(a => a.policyStability || 0), '#6a8');
+
+    moodPieChart('chartMoodPie', aggs);
+    etogramChart('chartEtogram', aggs);
+  }
+
+  // Personality radar
+  if (meta.personality) {
+    radarChart('chartRadar', meta.personality);
+  }
+
+  // Daily aggregates table
+  const tbody = document.querySelector('#aggTable tbody');
+  tbody.innerHTML = '';
+  for (let i = aggs.length - 1; i >= 0; i--) {
+    const a = aggs[i];
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      `<td>${a.day}</td><td>${a.phase}</td><td>${a.decisions}</td>` +
+      `<td>${a.avgReward}</td><td>${a.entropy}</td><td>${a.lzc || ''}</td>` +
+      `<td>${a.explorationRate}</td><td>${a.qtableSize || ''}</td>` +
+      `<td>${a.policyStability || ''}</td><td>${a.dominantTrait || ''}</td>` +
+      `<td>${a.baselineMode || ''}</td><td>${a.season || ''}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  // Milestones
+  const msDiv = document.getElementById('milestones');
+  msDiv.innerHTML = milestones.map(m => {
+    const d = m.ts ? new Date(m.ts).toLocaleDateString() : '';
+    return `<div style="margin-bottom:4px;"><span style="color:#6a8">${m.type}</span> ${d} ${m.mood || ''} ${m.inherited ? '(' + m.inherited + ' states)' : ''}</div>`;
+  }).join('');
+}
+
+function stat(label, value) {
+  return `<div class="stat"><div class="stat-val">${value}</div><div class="stat-label">${label}</div></div>`;
+}
+
+// --- Simple line chart (Canvas 2D, no deps) ---
+function lineChart(canvasId, labels, values, color, values2, color2) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width, h = rect.height;
+  const pad = { top: 10, right: 10, bottom: 20, left: 50 };
+  const pw = w - pad.left - pad.right;
+  const ph = h - pad.top - pad.bottom;
+
+  if (values.length === 0) return;
+
+  const minV = Math.min(...values.filter(v => v !== null && v !== undefined));
+  const maxV = Math.max(...values.filter(v => v !== null && v !== undefined));
+  const range = maxV - minV || 1;
+
+  // Grid lines
+  ctx.strokeStyle = '#1a1e28';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + ph * (1 - i / 4);
+    ctx.beginPath();
+    ctx.moveTo(pad.left, y);
+    ctx.lineTo(w - pad.right, y);
+    ctx.stroke();
+    ctx.fillStyle = '#445';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText((minV + range * i / 4).toFixed(2), pad.left - 4, y + 3);
+  }
+
+  // Line
+  drawLine(ctx, values, minV, range, pad, pw, ph, color);
+
+  // Second line if provided
+  if (values2 && color2) {
+    const minV2 = Math.min(...values2);
+    const maxV2 = Math.max(...values2);
+    const range2 = maxV2 - minV2 || 1;
+    drawLine(ctx, values2, minV2, range2, pad, pw, ph, color2);
+  }
+
+  // X-axis labels (first and last)
+  if (labels.length > 0) {
+    ctx.fillStyle = '#445';
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(labels[0], pad.left, h - 2);
+    ctx.textAlign = 'right';
+    ctx.fillText(labels[labels.length - 1], w - pad.right, h - 2);
+  }
+}
+
+function drawLine(ctx, values, minV, range, pad, pw, ph, color) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  let started = false;
+  for (let i = 0; i < values.length; i++) {
+    const v = values[i];
+    if (v === null || v === undefined) continue;
+    const x = pad.left + (i / Math.max(values.length - 1, 1)) * pw;
+    const y = pad.top + ph * (1 - (v - minV) / range);
+    if (!started) { ctx.moveTo(x, y); started = true; }
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+
+// --- Mood distribution pie chart ---
+function moodPieChart(canvasId, aggs) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Sum mood distributions across all days
+  const totals = new Array(MOODS.length).fill(0);
+  for (const a of aggs) {
+    if (a.moodDist) {
+      for (let i = 0; i < MOODS.length; i++) totals[i] += a.moodDist[i] || 0;
+    }
+  }
+  const sum = totals.reduce((a, b) => a + b, 0) || 1;
+
+  const cx = rect.width / 2;
+  const cy = rect.height / 2;
+  const r = Math.min(cx, cy) - 30;
+
+  let angle = -Math.PI / 2;
+  for (let i = 0; i < MOODS.length; i++) {
+    const slice = (totals[i] / sum) * Math.PI * 2;
+    if (slice < 0.001) continue;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, angle, angle + slice);
+    ctx.closePath();
+    ctx.fillStyle = MOOD_COLORS[MOODS[i]];
+    ctx.fill();
+
+    // Label
+    if (slice > 0.15) {
+      const mid = angle + slice / 2;
+      const lx = cx + Math.cos(mid) * r * 0.65;
+      const ly = cy + Math.sin(mid) * r * 0.65;
+      ctx.fillStyle = '#0a0c12';
+      ctx.font = '11px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(MOODS[i], lx, ly);
+      ctx.fillText(Math.round(totals[i] / sum * 100) + '%', lx, ly + 13);
+    }
+    angle += slice;
+  }
+}
+
+// --- Personality radar chart ---
+function radarChart(canvasId, personality) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = 150, cy = 150, r = 110;
+
+  ctx.clearRect(0, 0, 300, 300);
+
+  const n = MOODS.length;
+  const angleStep = (Math.PI * 2) / n;
+
+  // Grid circles
+  for (let ring = 1; ring <= 4; ring++) {
+    ctx.beginPath();
+    const rr = r * ring / 4;
+    for (let i = 0; i <= n; i++) {
+      const a = -Math.PI / 2 + i * angleStep;
+      const x = cx + Math.cos(a) * rr;
+      const y = cy + Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#1a1e28';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Axis lines and labels
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + i * angleStep;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+    ctx.strokeStyle = '#1a1e28';
+    ctx.stroke();
+
+    // Label
+    const lx = cx + Math.cos(a) * (r + 18);
+    const ly = cy + Math.sin(a) * (r + 18);
+    ctx.fillStyle = MOOD_COLORS[MOODS[i]];
+    ctx.font = '11px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(MOODS[i], lx, ly);
+  }
+
+  // Data polygon
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + i * angleStep;
+    const v = (personality[i] || 0) * r;
+    const x = cx + Math.cos(a) * v;
+    const y = cy + Math.sin(a) * v;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(93,217,196,0.15)';
+  ctx.fill();
+  ctx.strokeStyle = '#5dd9c4';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Data points
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + i * angleStep;
+    const v = (personality[i] || 0) * r;
+    const x = cx + Math.cos(a) * v;
+    const y = cy + Math.sin(a) * v;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#5dd9c4';
+    ctx.fill();
+  }
+}
+
+// --- Behavioral etogram (mood colored timeline) ---
+function etogramChart(canvasId, aggs) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const w = rect.width, h = rect.height;
+  const barH = h / MOODS.length;
+
+  // For each day, draw stacked mood proportions
+  const dayW = w / Math.max(aggs.length, 1);
+
+  for (let d = 0; d < aggs.length; d++) {
+    const a = aggs[d];
+    if (!a.moodDist) continue;
+    const total = a.moodDist.reduce((s, v) => s + v, 0) || 1;
+    let y = 0;
+    for (let m = 0; m < MOODS.length; m++) {
+      const mh = (a.moodDist[m] / total) * h;
+      ctx.fillStyle = MOOD_COLORS[MOODS[m]];
+      ctx.fillRect(d * dayW, y, dayW + 0.5, mh);
+      y += mh;
+    }
+  }
+
+  // Legend
+  ctx.font = '10px monospace';
+  for (let m = 0; m < MOODS.length; m++) {
+    const lx = w - 90;
+    const ly = 12 + m * 13;
+    ctx.fillStyle = MOOD_COLORS[MOODS[m]];
+    ctx.fillRect(lx, ly - 8, 8, 8);
+    ctx.fillStyle = '#889';
+    ctx.textAlign = 'left';
+    ctx.fillText(MOODS[m], lx + 12, ly);
+  }
+}
+</script>
+</body>
+</html>
