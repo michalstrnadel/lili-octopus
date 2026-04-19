@@ -225,13 +225,17 @@
     chromatophoreHueVariance: 20,
     // Color — WARM palette (Lili A uses 175–220 cool teal; B uses 0–30 red-orange)
     baseHue: 12,
-    baseSaturation: 55,
-    baseLightness: 38,
-    glowIntensity: 0.15,
+    baseSaturation: 62,
+    baseLightness: 48,
+    glowIntensity: 0.65,
     stressHueShift: -25,               // stress pulls hue toward deep red (345+)
     stressSaturationBoost: 15,
-    nightGlowBoost: 1.3,
-    eyeGlowAlpha: 0.25,
+    nightGlowBoost: 2.2,
+    eyeGlowAlpha: 0.3,
+    // Companion (Lili A) awareness — symmetric to A's reaction to B
+    companionRecoilDistance: 40,       // tip recoils when Lili body within (px + bodyR)
+    companionGazeDistanceN: 0.18,      // normalized; gaze tracks Lili when cursor inactive
+    companionProximityN: 0.12,         // chromatophore pulse boost within this distance
     // Genesis per-instance variation (±proportions)
     bodyXRange: 0.14,
     bodyYRange: 0.14,
@@ -1820,6 +1824,7 @@
       mood: 5,
       stress: 0,
       cursorX: 0, cursorY: 0, cursorActive: false,
+      otherX: 0, otherY: 0, otherBodyR: 0, otherActive: false, docDiag: 0,
       tentaclesInitialized: false
     };
 
@@ -2010,6 +2015,8 @@
     function updateTentacleLocalState(arm, frameDt, cursorActive, cursorX, cursorY, bodyR) {
       const tipX = arm.x[JOINTS - 1];
       const tipY = arm.y[JOINTS - 1];
+      let stressAccum = 0;
+      let anyProximity = false;
       if (cursorActive) {
         const cdx = tipX - cursorX;
         const cdy = tipY - cursorY;
@@ -2019,9 +2026,27 @@
           arm.recoilTimer = 0.4;
           arm.localStress = Math.min(arm.localStress + 0.3, 1);
         }
-        const proxStress = cursorDist < recoilDist * 2
+        stressAccum += cursorDist < recoilDist * 2
           ? (1 - cursorDist / (recoilDist * 2)) * 0.5 : 0;
-        arm.localStress += (proxStress - arm.localStress) * 0.05;
+        anyProximity = true;
+      }
+      // Companion (Lili A) body proximity — tip-level awareness mirroring cursor.
+      // Uses own `companionRecoilDistance` so we can tune B's reaction independently.
+      if (_s.otherActive) {
+        const odx = tipX - _s.otherX;
+        const ody = tipY - _s.otherY;
+        const oDist = Math.sqrt(odx * odx + ody * ody);
+        const oRecoilDist = VCFG.companionRecoilDistance + bodyR + (_s.otherBodyR || 0);
+        if (oDist < oRecoilDist && arm.recoilTimer <= 0) {
+          arm.recoilTimer = 0.4;
+          arm.localStress = Math.min(arm.localStress + 0.25, 1);
+        }
+        stressAccum += oDist < oRecoilDist * 2
+          ? (1 - oDist / (oRecoilDist * 2)) * 0.4 : 0;
+        anyProximity = true;
+      }
+      if (anyProximity) {
+        arm.localStress += (Math.min(stressAccum, 1) - arm.localStress) * 0.05;
       } else {
         arm.localStress *= 0.97;
       }
@@ -2077,6 +2102,12 @@
       _s.cursorX = sensor.cursorX;
       _s.cursorY = sensor.cursorY;
       _s.cursorActive = !!sensor.cursorActive;
+      // Companion awareness (Lili A world coords + body radius)
+      _s.otherX = sensor.otherX || 0;
+      _s.otherY = sensor.otherY || 0;
+      _s.otherBodyR = sensor.otherBodyR || 0;
+      _s.otherActive = !!sensor.otherActive;
+      _s.docDiag = sensor.docDiag || 0;
       _s.frameCount++;
 
       if (!_s.tentaclesInitialized) initTentaclePositions();
@@ -2106,9 +2137,27 @@
         applySegmentSpringDamper(arm);
       }
 
-      // Gaze — track cursor (or B position if cursor inactive)
-      const rawGazeX = _s.cursorActive ? _s.cursorX : (_s.x + Math.cos(_s.heading) * r * 3);
-      const rawGazeY = _s.cursorActive ? _s.cursorY : (_s.y + Math.sin(_s.heading) * r * 3);
+      // Gaze priority: cursor (attention focus) → Lili (if close) → forward-look.
+      // Uses document-diagonal normalization to match Phase 58 reward metric.
+      let rawGazeX, rawGazeY;
+      if (_s.cursorActive) {
+        rawGazeX = _s.cursorX;
+        rawGazeY = _s.cursorY;
+      } else if (_s.otherActive && _s.docDiag > 0) {
+        const odxG = _s.otherX - _s.x;
+        const odyG = _s.otherY - _s.y;
+        const oDistN = Math.sqrt(odxG * odxG + odyG * odyG) / _s.docDiag;
+        if (oDistN < VCFG.companionGazeDistanceN) {
+          rawGazeX = _s.otherX;
+          rawGazeY = _s.otherY;
+        } else {
+          rawGazeX = _s.x + Math.cos(_s.heading) * r * 3;
+          rawGazeY = _s.y + Math.sin(_s.heading) * r * 3;
+        }
+      } else {
+        rawGazeX = _s.x + Math.cos(_s.heading) * r * 3;
+        rawGazeY = _s.y + Math.sin(_s.heading) * r * 3;
+      }
       if (!gaze.initialized) {
         gaze.x = rawGazeX; gaze.y = rawGazeY; gaze.initialized = true;
       } else {
@@ -2222,8 +2271,8 @@
         glowIntensity *= 1 + Math.sin(breathT * moodVis.glowPulseHz * Math.PI * 2) * 0.2;
       }
       const glow = ctx.createRadialGradient(0, 0, r * 0.4, 0, 0, glowR);
-      glow.addColorStop(0, colors.bodyHslAlpha(glowIntensity * 0.12));
-      glow.addColorStop(0.5, colors.bodyHslAlpha(glowIntensity * 0.04));
+      glow.addColorStop(0, colors.bodyHslAlpha(glowIntensity * 0.18));
+      glow.addColorStop(0.4, colors.bodyHslAlpha(glowIntensity * 0.08));
       glow.addColorStop(1, colors.bodyHslAlpha(0));
       ctx.fillStyle = glow;
       ctx.beginPath();
@@ -2248,30 +2297,29 @@
       }
       ctx.closePath();
 
-      // Body fill (very translucent — ghostly glow, not solid sphere).
-      // Warm hues pop more than A's teal at same alpha, so we dim further.
+      // Body fill — match Lili A's depth (was too translucent, body barely visible).
       const bodyGrad = ctx.createRadialGradient(
         -finalRx * 0.15, -finalRy * 0.25, finalRx * 0.05,
         0, 0, Math.max(finalRx, finalRy));
-      bodyGrad.addColorStop(0, colors.bodyHslAlpha(0.35));
-      bodyGrad.addColorStop(0.45, colors.bodyHslAlpha(0.22));
-      bodyGrad.addColorStop(0.8, colors.bodyHslAlpha(0.12));
-      bodyGrad.addColorStop(1, colors.bodyHslAlpha(0.04));
+      bodyGrad.addColorStop(0, colors.bodyHslAlpha(0.88));
+      bodyGrad.addColorStop(0.45, colors.bodyHslAlpha(0.72));
+      bodyGrad.addColorStop(0.8, colors.bodyHslAlpha(0.55));
+      bodyGrad.addColorStop(1, colors.bodyHslAlpha(0.32));
       ctx.fillStyle = bodyGrad;
       ctx.fill();
 
-      // Body rim — soft outline at perimeter (matches A's ghostly feel).
-      ctx.strokeStyle = colors.bodyHslAlpha(0.45);
-      ctx.lineWidth = 0.7;
+      // Body rim — defined outline at perimeter.
+      ctx.strokeStyle = colors.bodyHslAlpha(0.7);
+      ctx.lineWidth = 0.9;
       ctx.stroke();
 
-      // Specular highlight (tiny spec, not a bright bulb)
-      const specSize = Math.min(finalRx, finalRy) * 0.12;
+      // Specular highlight (matches A's body depth lighting)
+      const specSize = Math.min(finalRx, finalRy) * 0.18;
       const specGrad = ctx.createRadialGradient(
         -finalRx * 0.28, -finalRy * 0.32, specSize * 0.1,
         -finalRx * 0.28, -finalRy * 0.32, specSize);
-      specGrad.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
-      specGrad.addColorStop(0.6, 'rgba(255, 255, 255, 0.02)');
+      specGrad.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+      specGrad.addColorStop(0.6, 'rgba(255, 255, 255, 0.08)');
       specGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
       ctx.fillStyle = specGrad;
       ctx.beginPath();
@@ -2867,6 +2915,7 @@
         brain.dqn.setEpsilon(brain.stabilizer.getRejuvEpsilon());
       }
 
+      const docDiag = Math.sqrt(world.docW * world.docW + world.docH * world.docH);
       visual.update(dt, {
         x: kSt.x, y: kSt.y,
         vx: kSt.vx, vy: kSt.vy,
@@ -2876,7 +2925,13 @@
         stress: kSt.stress,
         cursorX: cursorX,
         cursorY: cursorY,
-        cursorActive: aState.mouseActive
+        cursorActive: aState.mouseActive,
+        // Companion awareness — lets Evrin visually react to Lili (gaze, tentacle recoil)
+        otherX: aState.x,
+        otherY: aState.y,
+        otherBodyR: aState.bodyR,
+        otherActive: true,
+        docDiag: docDiag
       });
 
       // Render on A's shared canvas. A's render() already called restore on

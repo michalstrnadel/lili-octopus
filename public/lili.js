@@ -7822,9 +7822,30 @@
   // 3D — Local intelligence: recoil, stress update per tentacle
   // =========================================================================
 
+  // Phase 58b: Evrin position helper (null-safe). Cached per-frame to avoid
+  // repeated property lookups across 8 tentacles + eye gaze in the same tick.
+  var _evrinCachedAt = -1;
+  var _evrinCached = null;
+  function _evrinReadState() {
+    if (_evrinCachedAt === frameCount) return _evrinCached;
+    _evrinCachedAt = frameCount;
+    try {
+      if (typeof window !== 'undefined' && window.LiliB
+          && window.LiliB.runtime && window.LiliB.runtime.kin) {
+        _evrinCached = window.LiliB.runtime.kin.getState();
+      } else {
+        _evrinCached = null;
+      }
+    } catch (_e) { _evrinCached = null; }
+    return _evrinCached;
+  }
+
   function updateTentacleLocalState(arm, frameDt) {
     const tipX = arm.x[JOINTS - 1];
     const tipY = arm.y[JOINTS - 1];
+
+    let stressAccum = 0;
+    let anyProximity = false;
 
     // Cursor proximity → local stress + recoil trigger
     if (mouse.active) {
@@ -7839,10 +7860,33 @@
       }
 
       // Stress from cursor proximity (exponential decay)
-      const proxStress = cursorDist < recoilDist * 2
+      stressAccum += cursorDist < recoilDist * 2
         ? (1 - cursorDist / (recoilDist * 2)) * 0.5
         : 0;
-      arm.localStress += (proxStress - arm.localStress) * 0.05;
+      anyProximity = true;
+    }
+
+    // Phase 58b: Evrin body proximity — tip-level awareness mirroring cursor.
+    // Tentacles physically react to the other agent; visual recoil color makes
+    // the mutual recognition observable. Null-safe if Evrin module isn't loaded.
+    const evrinArmState = _evrinReadState();
+    if (evrinArmState && evrinArmState.born) {
+      const edx = tipX - evrinArmState.x;
+      const edy = tipY - evrinArmState.y;
+      const eDist = Math.sqrt(edx * edx + edy * edy);
+      const eRecoilDist = CFG.tentacleRecoilDistance + lili.bodyR + (evrinArmState.bodyR || 0);
+      if (eDist < eRecoilDist && arm.recoilTimer <= 0) {
+        arm.recoilTimer = 0.4;
+        arm.localStress = Math.min(arm.localStress + 0.25, 1);
+      }
+      stressAccum += eDist < eRecoilDist * 2
+        ? (1 - eDist / (eRecoilDist * 2)) * 0.4
+        : 0;
+      anyProximity = true;
+    }
+
+    if (anyProximity) {
+      arm.localStress += (Math.min(stressAccum, 1) - arm.localStress) * 0.05;
     } else {
       arm.localStress *= 0.97; // decay
     }
@@ -8762,6 +8806,22 @@
       if (nearbyGaze.length > 0) {
         rawGazeX = nearbyGaze[0].x + nearbyGaze[0].w * 0.5;
         rawGazeY = nearbyGaze[0].y + nearbyGaze[0].h * 0.5;
+      }
+    }
+    // Phase 58b: when cursor is idle, gaze shifts to Evrin if he's within
+    // social-bond distance. Mouse still wins when active (human > companion),
+    // matching the reward priority. Avoids a "they ignore each other" feel.
+    if (!mouse.active) {
+      var evrinGazeState = _evrinReadState();
+      if (evrinGazeState && evrinGazeState.born && docW > 0 && docH > 0) {
+        var gDiag = Math.sqrt(docW * docW + docH * docH);
+        var gdx = evrinGazeState.x - lili.pos.x;
+        var gdy = evrinGazeState.y - lili.pos.y;
+        var gDistN = Math.sqrt(gdx * gdx + gdy * gdy) / gDiag;
+        if (gDistN < 0.18) {
+          rawGazeX = evrinGazeState.x;
+          rawGazeY = evrinGazeState.y;
+        }
       }
     }
     if (!_gaze.initialized) {
