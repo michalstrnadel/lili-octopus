@@ -1,8 +1,24 @@
-# Lili — Autonomous Digital Companion
+# Lili & Evrin — Two Autonomous Digital Octopuses
 
-**An academic experiment in digital ontogenesis**
+**An academic experiment in digital ontogenesis, coevolution, and comparative reinforcement learning**
 
-Lili is an autonomous digital organism in the form of an octopus, living on a webpage as an ambient companion. Her behavior emerges from Reinforcement Learning (Q-Learning) — nothing is scripted. Lifecycle: 10 real years.
+Two autonomous digital octopuses share a single webpage as ambient, coevolving companions. Their behavior emerges entirely from **evidence-based reinforcement learning** — nothing is scripted, nothing is a pre-animation. Like animals in the wild, they are driven by a reward hierarchy rooted in biology:
+
+1. **Social bond** — the strongest positive signal. Being at a friendly distance from the other octopus yields the highest reward, mirroring pair-bonding and conspecific recognition in real cephalopods.
+2. **Food / attention** — an active cursor represents nourishment (user attention = feeding opportunity). Second-strongest reward.
+3. **Exploration** — discovering unvisited regions of the page (novelty bonus).
+4. **Safety** — avoiding body-overlap collisions, page edges, and prolonged stress.
+
+Both agents *see each other*: Evrin reads Lili's position/stress through a shared API, and Lili reads Evrin's through the reciprocal hook. Neither is scripted to seek the other — they learn to seek each other because it is rewarded, exactly as social behavior emerges in biological ontogeny.
+
+### The two agents
+
+- **Lili** — Q(λ)-Learning with eligibility traces, tabular brain (38,880 states). Cool teal palette. 10-year lifecycle. The original agent; *Evrin is added non-destructively via additive reward components, so Lili's learned Q-table remains intact and adapts via normal Bellman updates.*
+- **Evrin** — DQN (Deep Q-Network) with 50k replay buffer, target network, and full 7-stage stabilization suite (anchor rollback, Adam LR decay, ε re-juvenilization, gradient clip, loss explosion detector). Warm red-orange palette. 2-year observation window → conditional 10-year continuation.
+
+Secondary framing: comparative experiment — **vanilla Q-Learning vs. stabilized DQN** under decade-scale autonomous runtime in a browser, now with emergent social dynamics between the two learners.
+
+> Evrin's name comes from Ray Nayler's novel *The Mountain in the Sea* (CZ: *Hora v moři*) — in the book, Evrim is a sentient AI android; *evrim* is Turkish for "evolution."
 
 ## What Lili IS
 
@@ -33,9 +49,23 @@ Lili is an autonomous digital organism in the form of an octopus, living on a we
 - **Persistence:** localStorage + cloud sync (GitHub API via Vercel serverless)
 - **Analysis:** CSV export, observability dashboard, baseline comparison, replay system
 
-## Current State (2026-04-10)
+## Current State (2026-04-19)
 
-**56 implementation phases complete + visual polish** — `public/lili.js` (~9280 lines)
+**Lili A: 57 phases complete** — `public/lili.js` (~9280 lines, Q-Learning)
+**Evrin (Lili B): 11 phases complete, feature-complete** — `public/lili-b.js` (~2300 lines, DQN) + `public/lili-b.tests.js` (dev-only test suite)
+
+### Comparative experiment
+
+| Aspect | Lili | Evrin |
+|--------|------|--------|
+| Algorithm | Q(λ)-Learning, tabular, eligibility traces | DQN (Deep Q-Network), replay buffer, target net |
+| State | 38,880 discrete states | 26-dim continuous |
+| Exploration | Boltzmann (softmax) | ε-greedy with decay + re-juvenilization |
+| Stabilization | Curriculum, surprise signal | 7-stage: replay 50k, target /100, anchor rollback, Adam lr decay, ε rejuv, grad clip, loss detector |
+| Palette | Cool teal (hue 175→220) | Warm red-orange (hue 12) |
+| Lifecycle | 10 real years | 2-year observation → conditional 10-year continuation |
+| Mobile | Full | Inference-only (no training) |
+| Sees | Cursor, DOM, own state | Cursor, DOM, own state, **Lili A's position & stress** |
 
 | Phase | Description |
 |-------|-------------|
@@ -189,19 +219,22 @@ All new features (Phases 19-56) are **backward compatible** with existing data:
 ```
 lili-octopus/
 ├── README.md                    ← this file
-├── LILI_PRD_v1.md               ← Product Requirements Document
+├── LILI_PRD_v1.md               ← Product Requirements Document (Lili)
 ├── AGENTS.md                    ← AI entry point (context for Claude/Cursor)
 ├── LICENSE                      ← MIT License
 ├── public/
-│   ├── lili.js                  ← single production file (~9280 lines)
+│   ├── lili.js                  ← Lili — Q-Learning agent, production (~9280 lines)
+│   ├── lili-b.js                ← Evrin — DQN agent, production (~2300 lines)
+│   ├── lili-b.tests.js          ← Evrin — test suite (dev-only, ~1060 lines)
 │   └── dashboard.html           ← observability dashboard (data visualization)
 ├── data/
 │   └── state.json               ← production state (cloud sync source of truth)
 ├── docs/
 │   ├── PROJECT.md               ← academic project description
-│   ├── IMPLEMENTATION_PLAN.md   ← 12-phase implementation plan
+│   ├── IMPLEMENTATION_PLAN.md   ← Lili: 12-phase plan
+│   ├── IMPLEMENTATION_PLAN_LILI_B.md  ← Evrin: design brief
 │   ├── research/                ← deep research documents (7 researches)
-│   ├── journal/                 ← development journal
+│   ├── journal/                 ← development journal (Lili + Evrin phases)
 │   └── design/                  ← visual philosophy and references
 ```
 
@@ -209,22 +242,25 @@ lili-octopus/
 
 ```html
 <script src="/lili.js" defer></script>
+<script src="/lili-b.js" defer></script>
 ```
 
-Lili creates her own canvas, initializes the RL engine, and starts living.
+Lili creates the canvas and initializes her RL engine. Evrin attaches to the same canvas, reads Lili's state through a shared read-only API, and starts learning via DQN. Both live simultaneously, seeing each other as part of their world.
 
 ## Keyboard Shortcuts
 
-| Key | Function |
-|-----|----------|
-| **Click on Lili** | Tooltip with status (age, phase, preference) |
-| **Ctrl+Shift+L** | Toggle dev mode (unlocks debug shortcuts below) |
-| **D** | Debug panel *(dev mode only)* |
-| **E** | Export data as JSON *(dev mode only)* |
-| **I** | Import data from JSON file *(dev mode only)* |
-| **B** | Cycle baseline modes *(dev mode only)* |
-| **R** | Toggle replay recording/playback *(dev mode only)* |
-| **S** | Toggle ambient sound *(always available)* |
+| Key | Agent | Function |
+|-----|-------|----------|
+| **Click on Lili** | Lili | Tooltip with status (age, phase, preference) |
+| **Ctrl+Shift+L** | — | Toggle dev mode (unlocks debug shortcuts below) |
+| **D** | Lili | Debug panel *(dev mode only)* |
+| **E** | Lili | Export data as JSON *(dev mode only)* |
+| **I** | Lili | Import data from JSON file *(dev mode only)* |
+| **Shift+E** | Evrin | Export Evrin's brain + telemetry JSON *(dev mode only)* |
+| **Shift+I** | Evrin | Import Evrin's brain JSON *(dev mode only)* |
+| **B** | Lili | Cycle baseline modes *(dev mode only)* |
+| **R** | Lili | Toggle replay recording/playback *(dev mode only)* |
+| **S** | — | Toggle ambient sound *(always available)* |
 
 ## Console API
 

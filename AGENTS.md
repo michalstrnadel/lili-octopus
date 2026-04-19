@@ -10,7 +10,7 @@ Tento soubor je entry point pro jakékoli AI pracující na tomto projektu. Pře
 
 ## Aktuální stav
 
-**Fáze: Implementace — Fáze 1-57 hotovy, akademická + technologická expanze**
+**Fáze: Implementace — Lili A: Fáze 1-57 hotovy. Evrin (DQN agent): Fáze 1-11 hotovy (feature-complete).**
 
 Hotovo:
 - ✅ PRD (860 řádků) — `LILI_PRD_v1.md`
@@ -108,13 +108,30 @@ Hotovo:
 - ✅ **Fáze 53c:** Keyboard Security — dev shortcuts (D/E/I/B/R) locked behind Ctrl+Shift+L; only S (sound) public
 - ✅ **Fáze 57:** Visual Polish — ink turbulence (Perlin noise velocity field pro swirling ink), body specular highlight (3D depth), 3D bubble sphere shading (radial gradient + dual specular), tentacle stroke outline (0.5px definice)
 
-**Další krok:** Long-term observation, data collection, academic paper preparation.
+**Evrin (DQN — companion agent, `public/lili-b.js`):**
+- ✅ **Fáze 1:** NN foundation — Float32Array tiny NN engine, dense layers, ReLU, He init, i-k-j matmul, Adam + global-norm gradient clipping
+- ✅ **Fáze 2:** DQN core — circular replay buffer (50k, priority flag), target network hard sync, ε-greedy, TD target + minibatch training, grid-world convergence test
+- ✅ **Fáze 3:** State exposition API v `lili.js` — `window.LiliA = { getState, getWorld, getCanvas, onAfterRender }` (additive, A neupraveno)
+- ✅ **Fáze 4:** Phantom stimuli generator — 30s absence detection, smooth lerp+jitter+jumps, priority=0 flag pro replay, sharable with A
+- ✅ **Fáze 5:** Brain Interface + state assembly — INPUT_DIM=26 (A observables 16, cursor 4, B own 5, relative 3), 7-action space mirror A, pure reward (novelty+approach+stagnation+edge+Δstress), separate novelty grids A/B, **shadow reward logger** pro A (log-only, nikdy nevstoupí do A's Q-table)
+- ✅ **Fáze 6:** Render + kinematics + runtime glue — mobile detection (inference-only, shrunken replay), mood-modulated steering ve 7 náladách, 4 wavy tentacles + cool-palette body + 3 chromatophores, runtime stitches phantom+brain+kinematics+render+persist do `onAfterRender` hooku, decision cadence 45 frames (= A), train every 4 real / 16 phantom decisions
+- ✅ **Fáze 7:** Persistence + auto-init — localStorage `lili_b_weights` schema v1, anchor rotation stub (current + 3 anchors, weekly), periodic save 5min + beforeunload + visibilitychange, `autoAttach()` polling na window.LiliA s 10s timeoutem, graceful degradation pokud A chybí
+- ✅ **Fáze 8:** Stabilizační sada — `createStabilizer` unified modul (lossEMA + variance, wall-clock schedules), anchor rollback on 5σ explosion (restoruje váhy, flushne replay buffer, bumpe ε na 0.3, inkrementuje rollbackCount), Adam lr schedule (0.9× / 90 dní, floor 1e-5 přes `network.setLrMultiplier`), ε re-juvenilizace (ε → 0.3 / 6 měsíců), loss explosion detector (sigma pre-update tak spike nezasviní baseline, minSamples=200 guard); persistováno v brain schema v1 jako optional field (backward compat)
+- ✅ **Fáze 9:** Export/import — `Shift+E` stáhne `lili_b_export_v1` JSON (brain snapshot + runtime telemetry + persistence meta), `Shift+I` otevře file picker pro restore; oba gatované `LiliA.isDevMode()` (sdílený Ctrl+Shift+L chord), plain E/I v lili.js dostaly `!e.shiftKey` guard proti kolizi, import okamžitě persistuje, `bindKeys: false` opt-out pro test isolaci, new `isDevMode()` getter na `window.LiliA` API; 12/12 tests PASS (exportImportTest: format/telem/persistMeta/JSON roundtrip/weight-exact match/bad-reject/raw-snapshot path)
+- ✅ **Fáze 10:** Instrumentation — `createInstrumentation` modul s Float32Array loss ring bufferem (timestamp+loss páry, default cap 1024), rollback event log (cap 32, sigma/baseline/anchorAge/count), phantom/real ratio s kumulativními countery + rolling window 512 decisions; export schema bump `lili_b_export_v1` → `v2` (přidáno top-level `history` + `runtime.ratio`; import accepts both); `persist.markExport()` write-through stamp pro monthly reminder (console.info po 30 dnech bez exportu, mobile suppressed); 13/13 tests PASS (instrumentationTest: loss wrap / NaN reject / ratio window eviction / rollback cap / markExport / reminder fires+suppressed)
+- ✅ **Fáze 11:** Production/test split — extrahován test suite (13 funkcí) do samostatného `public/lili-b.tests.js` (IIFE destructuring z `window.LiliB`+`_internal`), production `lili-b.js` obsahuje jen runtime + helpery + stub `runAllTests()`; index.html přidává `<script src="lili-b.tests.js" defer>` (dev-only, production deploy neobsahuje); velikost 124 KB→86 KB raw, 35 KB→23.7 KB gzipped (-32%); 13/13 PASS post-split + production-only sanity check (tests blocked via page.route → stub fires, runtime attached, 0 errors); hard 15 KB gzipped cíl downgraded na soft goal (bandwidth rezerva 100× dostatečná, další redukce by vyžadovala build step nebo ztrátu komentářů)
+
+**Další krok:**
+- Lili A: long-term observation, data collection, academic paper preparation.
+- Evrin: **feature-complete**. Následuje deploy (kopírovat `lili-b.js` do michalstrnadel.com repo, NE `lili-b.tests.js`) → 2-year observation window → checkpoint (< 3 rollback/rok, FPS ≥ 55, loss nediverguje) → 10-year podmíněné pokračování.
 
 **Keyboard shortcuts:**
 - `Ctrl+Shift+L` — toggle dev mode (required for debug shortcuts below)
 - `D` — toggle debug panel *(dev mode only)*
-- `E` — export JSON *(dev mode only)*
-- `I` — import JSON *(dev mode only)*
+- `E` — export Lili A JSON (Q-table, aggregates) *(dev mode only)*
+- `Shift+E` — export Evrin JSON (brain + telemetry) *(dev mode only)*
+- `I` — import Lili A JSON *(dev mode only)*
+- `Shift+I` — import Evrin JSON *(dev mode only)*
 - `B` — cycle baseline modes *(dev mode only)*
 - `R` — toggle replay recording/playback *(dev mode only)*
 - `S` — toggle sound *(always available)*
@@ -149,7 +166,9 @@ lili-octopus/
 ├── LILI_PRD_v1.md           ← Product Requirements Document (ZDROJ PRAVDY)
 │
 ├── public/
-│   ├── lili.js              ← JEDINÝ produkční soubor (~8782 řádků)
+│   ├── lili.js              ← Lili A — Q-Learning agent (~9335 řádků)
+│   ├── lili-b.js            ← Evrin — DQN companion agent production (~2270 řádků, Fáze 1-11)
+│   ├── lili-b.tests.js      ← Evrin — test suite (dev-only, ~1060 řádků, Fáze 11 split)
 │   └── dashboard.html       ← Observability dashboard (vizualizace exportovaných dat)
 │
 ├── docs/
@@ -236,5 +255,5 @@ Pokud implementuješ a potřebuješ rychlý přehled:
 
 ---
 
-*Poslední aktualizace: 2026-04-10 (Fáze 1-57 implementovány, lili.js ~9280 řádků, dashboard.html)*
+*Poslední aktualizace: 2026-04-19 (Lili A: Fáze 1-57; Evrin: Fáze 1-11 hotovy — production/test split, `lili-b.js` 23.7 KB gzipped, `lili-b.tests.js` dev-only, 13/13 tests pass. Feature work complete → 2-year observation window.)*
 *Aktualizuj toto datum a sekci „Aktuální stav" při každé významné změně.*

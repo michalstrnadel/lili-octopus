@@ -245,11 +245,13 @@
     rewards: {
       whitespaceCalm:     +1.0,  // in whitespace, user reading, calm/idle mood
       fleeSuccess:        +0.8,  // escaped fast cursor
+      companionNear:      +0.6,  // Phase 58 — close to Evrin at ideal distance (social drive)
       exploreLowStress:   +0.5,  // near DOM, low stress, curious
       playfulInteraction: +0.3,  // tentacles touching DOM, user not reading
       edgeRespect:        +0.3,  // near edge, user active in center
       blockingRead:       -2.0,  // over text, cursor still (worst sin)
       heldBlocksRead:     -1.0,  // held element blocks reading
+      companionOverlap:   -0.3,  // Phase 58 — body-overlap with Evrin (collision penalty)
       idleTooLong:        -0.5,  // idle > threshold (modulated by age)
       unnecessaryFlee:    -0.3,  // shy/alert when cursor slow+far
       moodRepetition:     -0.2,  // same mood > N cycles
@@ -547,12 +549,20 @@
     curriculum: {
       // Reward component multipliers per life phase (gradual unlock)
       gates: {
-        hatchling: { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 0.3, playfulInteraction: 0, fleeSuccess: 0.2, edgeRespect: 0, moodRepetition: 0.5, idleTooLong: 0.3, unnecessaryFlee: 0, heldBlocksRead: 0.3 },
-        juvenile:  { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 0.7, playfulInteraction: 0.5, fleeSuccess: 0.7, edgeRespect: 0.3, moodRepetition: 0.8, idleTooLong: 0.7, unnecessaryFlee: 0.5, heldBlocksRead: 0.7 },
-        adult:     { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 1, playfulInteraction: 1, fleeSuccess: 1, edgeRespect: 1, moodRepetition: 1, idleTooLong: 1, unnecessaryFlee: 1, heldBlocksRead: 1 },
-        mature:    { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 1, playfulInteraction: 1, fleeSuccess: 1, edgeRespect: 1, moodRepetition: 1, idleTooLong: 1, unnecessaryFlee: 1, heldBlocksRead: 1 },
-        elder:     { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 1, playfulInteraction: 1, fleeSuccess: 1, edgeRespect: 1, moodRepetition: 1, idleTooLong: 1, unnecessaryFlee: 1, heldBlocksRead: 1 },
+        hatchling: { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 0.3, playfulInteraction: 0, fleeSuccess: 0.2, edgeRespect: 0, moodRepetition: 0.5, idleTooLong: 0.3, unnecessaryFlee: 0, heldBlocksRead: 0.3, companionNear: 0.5, companionOverlap: 1 },
+        juvenile:  { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 0.7, playfulInteraction: 0.5, fleeSuccess: 0.7, edgeRespect: 0.3, moodRepetition: 0.8, idleTooLong: 0.7, unnecessaryFlee: 0.5, heldBlocksRead: 0.7, companionNear: 0.8, companionOverlap: 1 },
+        adult:     { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 1, playfulInteraction: 1, fleeSuccess: 1, edgeRespect: 1, moodRepetition: 1, idleTooLong: 1, unnecessaryFlee: 1, heldBlocksRead: 1, companionNear: 1, companionOverlap: 1 },
+        mature:    { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 1, playfulInteraction: 1, fleeSuccess: 1, edgeRespect: 1, moodRepetition: 1, idleTooLong: 1, unnecessaryFlee: 1, heldBlocksRead: 1, companionNear: 1, companionOverlap: 1 },
+        elder:     { whitespaceCalm: 1, blockingRead: 1, exploreLowStress: 1, playfulInteraction: 1, fleeSuccess: 1, edgeRespect: 1, moodRepetition: 1, idleTooLong: 1, unnecessaryFlee: 1, heldBlocksRead: 1, companionNear: 0.9, companionOverlap: 1 },
       },
+    },
+
+    // --- Phase 58: Companion (Evrin) interaction ---
+    // Distances normalized by document diagonal (true Euclidean in normalized space).
+    // Reward fires when Evrin is within reach AND Lili is not in an avoidance mood.
+    companion: {
+      idealDistance: 0.12,    // peak companionNear reward at this normalized distance
+      falloffRate:   6,       // exponential decay rate for distances beyond ideal
     },
 
     // --- Phase 27: Habitat Awareness (page color adaptation) ---
@@ -4957,6 +4967,48 @@
       if (stressDev < 0.15) reward += CFG.temporal.baselineInfluence;
     }
 
+    // Phase 58 — Companion (Evrin) presence reward.
+    // ADDITIVE: does NOT extend state space (Q-table keys unchanged).
+    // Existing policy stays valid; new signal shifts Q-values via normal Bellman
+    // updates over time. Phase 48 meta-learning absorbs the non-stationary drift.
+    // Null-safe if Evrin module isn't loaded.
+    //
+    // Symmetric normalization: distance is true Euclidean / document diagonal,
+    // so the metric is isotropic regardless of viewport aspect ratio.
+    //
+    // Mood gating (sparsity): companionOverlap (collision penalty) ALWAYS fires;
+    // companionNear (positive bond) skips when Lili is in 'shy' or 'alert' mood
+    // — modeling that a fearful animal does not draw comfort from proximity.
+    var evrinState = null;
+    try {
+      if (typeof window !== 'undefined' && window.LiliB
+          && window.LiliB.runtime && window.LiliB.runtime.kin) {
+        evrinState = window.LiliB.runtime.kin.getState();
+      }
+    } catch (_e) { evrinState = null; }
+
+    if (evrinState && evrinState.born && docW > 0 && docH > 0) {
+      var docDiag = Math.sqrt(docW * docW + docH * docH);
+      var eDx = evrinState.x - lili.pos.x;
+      var eDy = evrinState.y - lili.pos.y;
+      var eDN = Math.sqrt(eDx * eDx + eDy * eDy) / docDiag;
+      var bodyRN = lili.bodyR / docDiag;
+      var idealN = CFG.companion.idealDistance;
+      var falloff = CFG.companion.falloffRate;
+      var minDN = Math.max(0.001, bodyRN * 2);
+      if (eDN < minDN) {
+        // Collision penalty fires regardless of mood (always undesirable).
+        reward += R.companionOverlap * gate.companionOverlap;
+      } else if (mood !== 'shy' && mood !== 'alert') {
+        if (eDN < idealN) {
+          var ramp = (eDN - minDN) / (idealN - minDN);
+          reward += R.companionNear * ramp * gate.companionNear;
+        } else {
+          reward += R.companionNear * Math.exp(-(eDN - idealN) * falloff) * gate.companionNear;
+        }
+      }
+    }
+
     return reward;
   }
 
@@ -6461,6 +6513,51 @@
     });
     console.info('[Lili] Console API ready — try: lili.status(), lili.narrative(), lili.pages(), lili.brain()');
 
+    // Lili B integration — read-only state exposition + canvas access + render hook.
+    // Only additive. No mutation of A's state, reward, Q-table, render logic, or canvas handling.
+    window.LiliA = Object.freeze({
+      version: 'lili-a-api-v1',
+      getState: function () {
+        return {
+          x: lili.pos.x, y: lili.pos.y,
+          xn: docW > 0 ? lili.pos.x / docW : 0,
+          yn: docH > 0 ? lili.pos.y / docH : 0,
+          vx: lili.vel.x, vy: lili.vel.y,
+          speed: lili.vel.mag(),
+          stress: lili.stress,
+          moodIndex: lili.moodIndex,
+          moodCount: CFG.moods.length,
+          ageT: age.t,
+          phaseIndex: age.phaseIndex,
+          phaseProgress: age.phaseProgress,
+          mouseActive: mouse.active,
+          mouseX: mouse.pos.x, mouseY: mouse.pos.y,
+          mouseSpeed: mouse.speedSmooth,
+          bodyR: lili.bodyR,
+          frameCount: frameCount,
+          paused: paused
+        };
+      },
+      getWorld: function () {
+        return {
+          W: W, H: H, dpr: dpr,
+          docW: docW, docH: docH,
+          scrollOx: scrollOx, scrollOy: scrollOy
+        };
+      },
+      getCanvas: function () { return canvas; },
+      getCtx: function () { return ctx; },
+      onAfterRender: function (fn) {
+        if (typeof fn === 'function') _liliAAfterRenderHooks.push(fn);
+      },
+      offAfterRender: function (fn) {
+        const i = _liliAAfterRenderHooks.indexOf(fn);
+        if (i >= 0) _liliAAfterRenderHooks.splice(i, 1);
+      },
+      // Dev-mode read-only accessor (used by Lili B to gate its Shift+E/I shortcuts).
+      isDevMode: function () { return _devMode; }
+    });
+
     // Dev mode — secret Ctrl+Shift+L combo unlocks debug shortcuts
     var _devMode = false;
 
@@ -6486,8 +6583,9 @@
       if (!_devMode) return;
 
       if (k === 'd') toggleDebug();
-      else if (k === 'e') exportData();
-      else if (k === 'i') importData();
+      // Plain E/I are Lili A; Shift+E/Shift+I are reserved for Lili B (handled in lili-b.js).
+      else if (k === 'e' && !e.shiftKey) exportData();
+      else if (k === 'i' && !e.shiftKey) importData();
       else if (k === 'b') cycleBaseline();
       else if (k === 'r') {
         if (_replay.recording) replayStopRecording();
@@ -8874,6 +8972,10 @@
   let W = 0, H = 0;          // viewport dimensions (CSS px)
   let dpr = 1;                // device pixel ratio
   let paused = false;         // tab hidden
+
+  // Lili B integration — external render hooks invoked at end of render().
+  // Registered via window.LiliA.onAfterRender(fn). See exposeConsoleAPI().
+  const _liliAAfterRenderHooks = [];
   let lastTime = 0;           // rAF timestamp
   let dt = 0;                 // delta time in seconds (capped)
   let frameCount = 0;
@@ -9092,6 +9194,14 @@
 
     // Phase 51: Q-table brain fingerprint visualization
     renderQtableVis();
+
+    // Lili B integration — invoke after-render hooks (draws on shared canvas).
+    // Hooks are wrapped in save/restore to prevent ctx state leakage into A.
+    for (let i = 0; i < _liliAAfterRenderHooks.length; i++) {
+      ctx.save();
+      try { _liliAAfterRenderHooks[i](ctx); } catch (_err) { /* isolate */ }
+      ctx.restore();
+    }
   }
 
   // =========================================================================
