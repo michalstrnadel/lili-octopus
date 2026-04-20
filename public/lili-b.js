@@ -244,7 +244,21 @@
     tentacleWidthRange: 0.30,
     headTiltRange: 0.09,
     // Heading smoothing
-    headingLerp: 0.10
+    headingLerp: 0.10,
+    // Bubbles — underwater emission tied to movement (mirrors Lili A style)
+    bubbles: {
+      poolSize: 12,
+      riseSpeed: 0.4,
+      swayAmplitude: 6,
+      swaySpeed: 0.03,
+      lifetimeMs: 2200,
+      cooldownMs: 1500,
+      radiusMin: 1.0,
+      radiusMax: 2.2,
+      spawnRadius: 12,
+      specularSize: 0.35,
+      speedThreshold: 10
+    }
   };
 
   // Mood → visual modulation lookup (instantaneous; no smoothing unlike A).
@@ -1815,6 +1829,16 @@
     const gaze = { x: 0, y: 0, initialized: false, saccadeX: 0, saccadeY: 0, saccadeTimer: 0 };
     const blink = { phase: 0, nextAt: VCFG.blinkIntervalBase };
 
+    // --- Bubble pool (movement-triggered underwater bubbles) ---
+    const bubbles = [];
+    let bubbleLastEmitMs = 0;
+    for (let i = 0; i < VCFG.bubbles.poolSize; i++) {
+      bubbles.push({
+        active: false, x: 0, y: 0, born: 0,
+        radius: 2, phase: 0, riseSpeedMul: 1, hueShift: 0
+      });
+    }
+
     // Persistent runtime counters (frameCount drives noise, breathing, chromatophore pulse).
     const _s = {
       frameCount: 0,
@@ -2059,6 +2083,104 @@
       }
     }
 
+    // --- Bubble emission / update / render ---
+    // Tied to movement speed; mood/stress modulates count+size+hue.
+    function chooseBubbleStyle() {
+      const BC = VCFG.bubbles;
+      const speed = Math.sqrt(_s.vx * _s.vx + _s.vy * _s.vy);
+      if (speed < BC.speedThreshold) return null;
+      if (_s.stress > 0.7) return { count: 2, sizeScale: 0.9, hueShift: -30 };
+      const moodVis = MOOD_VIS[_s.mood];
+      const boost = Math.min(1, speed / (BC.speedThreshold * 3));
+      return {
+        count: 1,
+        sizeScale: 0.6 + boost * 0.4,
+        hueShift: (moodVis.hueShift || 0) * 0.5
+      };
+    }
+
+    function emitBubble() {
+      const now = Date.now();
+      const BC = VCFG.bubbles;
+      if (now - bubbleLastEmitMs < BC.cooldownMs) return;
+      const style = chooseBubbleStyle();
+      if (!style) return;
+      let emitted = 0;
+      for (let i = 0; i < BC.poolSize && emitted < style.count; i++) {
+        const b = bubbles[i];
+        if (b.active) continue;
+        b.active = true;
+        b.x = _s.x + (rng() - 0.5) * BC.spawnRadius * 2;
+        b.y = _s.y - _s.bodyR * 0.6;
+        b.born = now + emitted * 120;
+        b.radius = BC.radiusMin + rng() * (BC.radiusMax - BC.radiusMin) * style.sizeScale;
+        b.phase = rng() * Math.PI * 2;
+        b.riseSpeedMul = 0.7 + rng() * 0.6;
+        b.hueShift = style.hueShift;
+        emitted++;
+      }
+      if (emitted > 0) bubbleLastEmitMs = now;
+    }
+
+    function updateBubbles() {
+      const now = Date.now();
+      const BC = VCFG.bubbles;
+      for (let i = 0; i < BC.poolSize; i++) {
+        const b = bubbles[i];
+        if (!b.active) continue;
+        const elapsed = now - b.born;
+        if (elapsed < 0) continue;
+        if (elapsed >= BC.lifetimeMs) { b.active = false; continue; }
+        b.y -= BC.riseSpeed * b.riseSpeedMul;
+        b.x += Math.sin(b.phase + elapsed * BC.swaySpeed) * BC.swayAmplitude * 0.015;
+        b.radius *= 1.0003;
+      }
+    }
+
+    function renderBubbles(ctx, colors) {
+      const now = Date.now();
+      const BC = VCFG.bubbles;
+      for (let i = 0; i < BC.poolSize; i++) {
+        const b = bubbles[i];
+        if (!b.active) continue;
+        const elapsed = now - b.born;
+        if (elapsed < 0) continue;
+        const t = elapsed / BC.lifetimeMs;
+        const alpha = t < 0.08 ? t / 0.08 : Math.max(0, 1 - t * t);
+        const r = b.radius;
+        const bx = b.x, by = b.y;
+        const wobblePhase = elapsed * 0.004 + b.phase;
+        const wobbleX = 1 + Math.sin(wobblePhase) * 0.12;
+        const wobbleY = 1 - Math.sin(wobblePhase) * 0.08;
+        let h = (colors.h || VCFG.baseHue) + b.hueShift;
+        while (h < 0) h += 360;
+        while (h >= 360) h -= 360;
+        const grad = ctx.createRadialGradient(
+          bx - r * 0.2 * wobbleX, by - r * 0.25 * wobbleY, r * 0.05,
+          bx, by, r * Math.max(wobbleX, wobbleY));
+        grad.addColorStop(0, 'hsla(' + h + ',50%,88%,' + (alpha * 0.28) + ')');
+        grad.addColorStop(0.4, 'hsla(' + h + ',40%,72%,' + (alpha * 0.18) + ')');
+        grad.addColorStop(0.8, 'hsla(' + h + ',35%,60%,' + (alpha * 0.1) + ')');
+        grad.addColorStop(1, 'hsla(' + h + ',30%,50%,' + (alpha * 0.04) + ')');
+        ctx.beginPath();
+        ctx.ellipse(bx, by, r * wobbleX, r * wobbleY, 0, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        ctx.strokeStyle = 'hsla(' + h + ',50%,85%,' + (alpha * 0.35) + ')';
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+        const specR = r * BC.specularSize;
+        ctx.beginPath();
+        ctx.arc(bx - r * 0.3, by - r * 0.3, specR * 1.2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,' + (alpha * 0.6) + ')';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(bx + r * 0.18, by + r * 0.15, specR * 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,' + (alpha * 0.25) + ')';
+        ctx.fill();
+      }
+    }
+
     // --- Color computation (warm palette, sensor-driven HSL) ---
     function computeColors(moodVis) {
       const stressHue = _s.stress * VCFG.stressHueShift;
@@ -2182,6 +2304,9 @@
         blink.phase = VCFG.blinkDurationFrames;
         blink.nextAt = VCFG.blinkIntervalBase + ((rng() * VCFG.blinkIntervalVar) | 0);
       }
+
+      emitBubble();
+      updateBubbles();
     }
 
     // --- Render the whole body: hull → body → eyes (z-order) ---
@@ -2231,22 +2356,25 @@
         const tipX = arm.x[JOINTS - 1];
         const tipY = arm.y[JOINTS - 1];
         const tipR = baseW * 0.5;
+        const glowR = tipR * 2.5;
         if (arm.recoilTimer > 0) {
-          ctx.fillStyle = 'rgba(255, 140, 110, 0.55)';
-          ctx.beginPath();
-          ctx.arc(tipX, tipY, tipR, 0, Math.PI * 2);
-          ctx.fill();
+          // Alert glow — bright red-orange "sensor" when cursor/Lili is close.
+          // Same radius as idle glow so the reaction is visible, not smaller.
+          const alertGlow = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, glowR);
+          alertGlow.addColorStop(0, 'rgba(255, 140, 110, 0.75)');
+          alertGlow.addColorStop(0.4, 'rgba(255, 110, 90, 0.45)');
+          alertGlow.addColorStop(1, 'rgba(255, 100, 80, 0)');
+          ctx.fillStyle = alertGlow;
         } else {
-          const glowR = tipR * 2.5;
           const tipGlow = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, glowR);
           tipGlow.addColorStop(0, colors.tentHslAlpha(tipAlpha * 1.6));
           tipGlow.addColorStop(0.4, colors.tentHslAlpha(tipAlpha * 0.7));
           tipGlow.addColorStop(1, colors.tentHslAlpha(0));
           ctx.fillStyle = tipGlow;
-          ctx.beginPath();
-          ctx.arc(tipX, tipY, glowR, 0, Math.PI * 2);
-          ctx.fill();
         }
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, glowR, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       // ===== Body =====
@@ -2471,6 +2599,9 @@
 
       drawEye(leftEyeX, leftEyeY, true);
       drawEye(rightEyeX, rightEyeY, false);
+
+      // Bubbles — drawn last so they float above body/eyes
+      renderBubbles(ctx, colors);
 
       ctx.restore();
     }
