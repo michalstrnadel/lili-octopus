@@ -6002,7 +6002,26 @@
   let _tooltipEl = null;
   let _tooltipTimer = 0;
 
+  // Phase 58c: Evrin hit test. Returns true if click landed on Evrin's body
+  // and tooltip was shown. Null-safe if Evrin module isn't loaded.
+  function _tryEvrinClick(clientX, clientY) {
+    var st = (typeof _evrinReadState === 'function') ? _evrinReadState() : null;
+    if (!st || !st.born) return false;
+    const docX = clientX + scrollOx;
+    const docY = clientY + scrollOy;
+    const dx = docX - st.x;
+    const dy = docY - st.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const r = st.bodyR || 18;
+    if (dist > r * CFG.clickHitboxScale) return false;
+    showEvrinTooltip(clientX, clientY, st);
+    return true;
+  }
+
   function onLiliClick(e) {
+    // Check Evrin first (companion overlay). If click lands on Evrin, show his tooltip.
+    if (_tryEvrinClick(e.clientX, e.clientY)) return;
+
     // Convert viewport click to document coords for hit test
     const docX = e.clientX + scrollOx;
     const docY = e.clientY + scrollOy;
@@ -6018,6 +6037,10 @@
   function onLiliTouch(e) {
     if (!e.touches || !e.touches[0]) return;
     const t = e.touches[0];
+
+    // Check Evrin first (companion overlay).
+    if (_tryEvrinClick(t.clientX, t.clientY)) return;
+
     // Convert viewport touch to document coords for hit test
     const docX = t.clientX + scrollOx;
     const docY = t.clientY + scrollOy;
@@ -6125,6 +6148,82 @@
         if (el.parentNode) el.parentNode.removeChild(el);
       }, 250);
     }
+  }
+
+  // Phase 58c: Evrin tooltip — parity with Lili's click tooltip, warm palette.
+  // Pulls runtime stats from window.LiliB.runtime.getStats() (null-safe).
+  function showEvrinTooltip(x, y, bodyState) {
+    hideTooltip();
+
+    // Pull companion stats (trainSteps, decisionCount, mood) — null-safe.
+    var stats = null;
+    try {
+      if (window.LiliB && window.LiliB.runtime
+          && typeof window.LiliB.runtime.getStats === 'function') {
+        stats = window.LiliB.runtime.getStats();
+      }
+    } catch (_e) { stats = null; }
+
+    var moodIdx = stats ? (stats.currentMood | 0) : ((bodyState && bodyState.mood) | 0);
+    var moodName = CFG.moods[moodIdx] || 'idle';
+    var trainSteps = stats ? (stats.trainSteps | 0) : 0;
+    var decisions  = stats ? (stats.decisionCount | 0) : 0;
+    var epsilon    = stats ? stats.epsilon : null;
+
+    // Format counts compactly: 12345 → "12.3k"
+    function fmtK(n) {
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000)    return (n / 1000).toFixed(1) + 'k';
+      return String(n);
+    }
+
+    // Mood dot colors (shared with Lili A tooltip).
+    const moodDotColors = {
+      curious:   '#5dd9c4', playful: '#e8a84c', shy:    '#9baec0',
+      calm:      '#4a7fb5', alert:   '#e06050', idle:   '#6c7a8a',
+      exploring: '#6dd480',
+    };
+    const dotColor = moodDotColors[moodName] || '#888';
+
+    const el = document.createElement('div');
+    el.className = 'lili-tooltip evrin-tooltip';
+    el.style.cssText =
+      'position:fixed;z-index:' + (CFG.canvasZIndex + 1) + ';' +
+      'font-family:monospace;font-size:12px;line-height:1.5;' +
+      'background:rgba(10,12,18,0.88);color:#e0e4ec;' +
+      'padding:8px 12px;border-radius:6px;pointer-events:none;' +
+      'white-space:nowrap;backdrop-filter:blur(4px);' +
+      'border:1px solid rgba(255,255,255,0.08);' +
+      'box-shadow:0 4px 12px rgba(0,0,0,0.3);' +
+      'opacity:0;transition:opacity 0.2s ease;';
+
+    var epsStr = (epsilon != null && isFinite(epsilon))
+      ? ' · ε=' + (epsilon).toFixed(2)
+      : '';
+
+    el.innerHTML =
+      '<b style="color:#ff9f4c">Evrin</b> ' +
+      '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;' +
+      'background:' + dotColor + ';vertical-align:middle"></span><br>' +
+      '<span style="color:#667">DQN companion agent learning alongside Lili.</span><br>' +
+      '<span style="color:#e8a84c">' + fmtK(trainSteps) + ' steps</span> · ' +
+      fmtK(decisions) + ' decisions · ' + moodName +
+      '<br><span style="color:#a8a">neural · exploratory' + epsStr + '</span>';
+
+    document.body.appendChild(el);
+    const rect = el.getBoundingClientRect();
+    let tx = x - rect.width * 0.5;
+    let ty = y - rect.height - 16;
+    if (ty < 4) ty = y + 20;
+    if (tx < 4) tx = 4;
+    if (tx + rect.width > W - 4) tx = W - rect.width - 4;
+    el.style.left = tx + 'px';
+    el.style.top = ty + 'px';
+
+    requestAnimationFrame(function () { el.style.opacity = '1'; });
+
+    _tooltipEl = el;
+    _tooltipTimer = setTimeout(hideTooltip, CFG.tooltipDurationMs);
   }
 
   // =========================================================================
