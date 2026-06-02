@@ -1,26 +1,26 @@
 {
   "format": "lili_state_v2",
   "stateVersion": 2,
-  "lastSync": "2026-06-02T08:11:49.621Z",
+  "lastSync": "2026-06-02T08:16:36.287Z",
   "metadata": {
     "genesis": 1773395030923,
     "visits": 133,
-    "totalDecisions": 35244,
-    "totalReward": -19.135537370470242,
+    "totalDecisions": 35321,
+    "totalReward": 36.97503289007201,
     "phase": "juvenile",
-    "phaseProgress": 0.8807381018518519,
-    "mood": "exploring",
+    "phaseProgress": 0.8807817470760234,
+    "mood": "curious",
     "psychosom": {
-      "s": 0.3,
-      "r": 0
+      "s": 0.2816,
+      "r": 0.0529
     }
   },
   "brain": {
     "v": 2,
     "stateVersion": 2,
-    "mood": 6,
-    "decisions": 35244,
-    "reward": -19.135537370470242,
+    "mood": 0,
+    "decisions": 35321,
+    "reward": 36.97503289007201,
     "entries": [
       [
         14853,
@@ -2677,13 +2677,13 @@
       [
         12612,
         [
-          5.495146006379277,
+          9.262971716225625,
           0,
           0,
           0,
-          5.462473020244871,
+          7.334059342607909,
           0.07012726399632994,
-          6.681787159012393
+          10.922973161496062
         ]
       ],
       [
@@ -2767,7 +2767,43 @@
           0,
           0.3130644173376745,
           0,
-          1.1399967770300405
+          2.9625171971793565
+        ]
+      ],
+      [
+        10452,
+        [
+          1.5509189229584328,
+          0,
+          0,
+          0,
+          0.6744591178258228,
+          0,
+          0
+        ]
+      ],
+      [
+        12609,
+        [
+          3.8094411903512584,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2.5116594857469488
+        ]
+      ],
+      [
+        10455,
+        [
+          1.77034350641913,
+          0,
+          0,
+          0,
+          0.6898206967542583,
+          0,
+          0
         ]
       ]
     ],
@@ -2806,7 +2842,7 @@
       ],
       [
         "12612,4",
-        19
+        42
       ],
       [
         "11532,0",
@@ -2850,11 +2886,11 @@
       ],
       [
         "12612,0",
-        18
+        37
       ],
       [
         "12612,6",
-        20
+        52
       ],
       [
         "12615,0",
@@ -2862,13 +2898,37 @@
       ],
       [
         "12615,6",
+        2
+      ],
+      [
+        "10452,4",
+        2
+      ],
+      [
+        "10452,0",
+        3
+      ],
+      [
+        "12609,0",
+        2
+      ],
+      [
+        "12609,6",
         1
+      ],
+      [
+        "10455,0",
+        1
+      ],
+      [
+        "10455,4",
+        2
       ]
     ],
     "stateVisits": [
       [
         12612,
-        54
+        118
       ],
       [
         9372,
@@ -2904,6 +2964,18 @@
       ],
       [
         12615,
+        4
+      ],
+      [
+        10452,
+        6
+      ],
+      [
+        12609,
+        3
+      ],
+      [
+        10455,
         3
       ]
     ]
@@ -3821,6 +3893,930 @@
         "stress": 0.07,
         "x": 1149,
         "y": 31
+      },
+      {
+        "ts": 1780387911267,
+        "ageMs": 6992880344,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.517,
+        "stress": 0.07,
+        "x": 1181,
+        "y": 37
+      },
+      {
+        "ts": 1780387914880,
+        "ageMs": 6992883956,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.375,
+        "stress": 0.07,
+        "x": 1184,
+        "y": 17
+      },
+      {
+        "ts": 1780387918562,
+        "ageMs": 6992887638,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.394,
+        "stress": 0.07,
+        "x": 1160,
+        "y": 17
+      },
+      {
+        "ts": 1780387922174,
+        "ageMs": 6992891250,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.509,
+        "stress": 0.07,
+        "x": 1110,
+        "y": 17
+      },
+      {
+        "ts": 1780387925813,
+        "ageMs": 6992894889,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.189,
+        "stress": 0.07,
+        "x": 1086,
+        "y": 80
+      },
+      {
+        "ts": 1780387929462,
+        "ageMs": 6992898538,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.055,
+        "stress": 0.07,
+        "x": 1093,
+        "y": 115
+      },
+      {
+        "ts": 1780387933113,
+        "ageMs": 6992902189,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.112,
+        "stress": 0.07,
+        "x": 1085,
+        "y": 124
+      },
+      {
+        "ts": 1780387936793,
+        "ageMs": 6992905869,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.971,
+        "stress": 0.07,
+        "x": 1080,
+        "y": 17
+      },
+      {
+        "ts": 1780387940531,
+        "ageMs": 6992909607,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.997,
+        "stress": 0.07,
+        "x": 1052,
+        "y": 34
+      },
+      {
+        "ts": 1780387944325,
+        "ageMs": 6992913401,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.734,
+        "stress": 0.07,
+        "x": 1031,
+        "y": 45
+      },
+      {
+        "ts": 1780387947946,
+        "ageMs": 6992917022,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.277,
+        "stress": 0.07,
+        "x": 983,
+        "y": 17
+      },
+      {
+        "ts": 1780387951559,
+        "ageMs": 6992920635,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.277,
+        "stress": 0.07,
+        "x": 906,
+        "y": 17
+      },
+      {
+        "ts": 1780387955269,
+        "ageMs": 6992924346,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.277,
+        "stress": 0.07,
+        "x": 861,
+        "y": 17
+      },
+      {
+        "ts": 1780387958962,
+        "ageMs": 6992928038,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.015,
+        "stress": 0.07,
+        "x": 948,
+        "y": 61
+      },
+      {
+        "ts": 1780387962698,
+        "ageMs": 6992931774,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.022,
+        "stress": 0.07,
+        "x": 961,
+        "y": 86
+      },
+      {
+        "ts": 1780387966563,
+        "ageMs": 6992935640,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.94,
+        "stress": 0.07,
+        "x": 965,
+        "y": 114
+      },
+      {
+        "ts": 1780387970248,
+        "ageMs": 6992939324,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.744,
+        "stress": 0.07,
+        "x": 965,
+        "y": 29
+      },
+      {
+        "ts": 1780387973929,
+        "ageMs": 6992943005,
+        "phase": "juvenile",
+        "state": 12615,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.628,
+        "stress": 0.07,
+        "x": 936,
+        "y": 39
+      },
+      {
+        "ts": 1780387977597,
+        "ageMs": 6992946673,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.627,
+        "stress": 0.07,
+        "x": 918,
+        "y": 17
+      },
+      {
+        "ts": 1780387981261,
+        "ageMs": 6992950337,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.275,
+        "stress": 0.07,
+        "x": 967,
+        "y": 17
+      },
+      {
+        "ts": 1780387984863,
+        "ageMs": 6992953939,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.374,
+        "stress": 0.07,
+        "x": 917,
+        "y": 17
+      },
+      {
+        "ts": 1780387988730,
+        "ageMs": 6992957806,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.392,
+        "stress": 0.07,
+        "x": 921,
+        "y": 17
+      },
+      {
+        "ts": 1780387992846,
+        "ageMs": 6992961923,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.891,
+        "stress": 0.07,
+        "x": 963,
+        "y": 94
+      },
+      {
+        "ts": 1780387996564,
+        "ageMs": 6992965640,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.888,
+        "stress": 0.07,
+        "x": 955,
+        "y": 116
+      },
+      {
+        "ts": 1780388000190,
+        "ageMs": 6992969265,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.877,
+        "stress": 0.07,
+        "x": 950,
+        "y": 124
+      },
+      {
+        "ts": 1780388003994,
+        "ageMs": 6992973071,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.701,
+        "stress": 0.07,
+        "x": 941,
+        "y": 18
+      },
+      {
+        "ts": 1780388007817,
+        "ageMs": 6992976893,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.726,
+        "stress": 0.07,
+        "x": 916,
+        "y": 40
+      },
+      {
+        "ts": 1780388011676,
+        "ageMs": 6992980752,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.733,
+        "stress": 0.07,
+        "x": 893,
+        "y": 27
+      },
+      {
+        "ts": 1780388015515,
+        "ageMs": 6992984591,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.466,
+        "stress": 0.07,
+        "x": 937,
+        "y": 17
+      },
+      {
+        "ts": 1780388019433,
+        "ageMs": 6992988509,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.481,
+        "stress": 0.07,
+        "x": 958,
+        "y": 17
+      },
+      {
+        "ts": 1780388023349,
+        "ageMs": 6992992424,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.486,
+        "stress": 0.07,
+        "x": 947,
+        "y": 17
+      },
+      {
+        "ts": 1780388026975,
+        "ageMs": 6992996050,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.835,
+        "stress": 0.07,
+        "x": 959,
+        "y": 94
+      },
+      {
+        "ts": 1780388030626,
+        "ageMs": 6992999702,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.84,
+        "stress": 0.07,
+        "x": 972,
+        "y": 111
+      },
+      {
+        "ts": 1780388034277,
+        "ageMs": 6993003353,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.144,
+        "stress": 0.07,
+        "x": 956,
+        "y": 78
+      },
+      {
+        "ts": 1780388037868,
+        "ageMs": 6993006944,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.786,
+        "stress": 0.07,
+        "x": 942,
+        "y": 17
+      },
+      {
+        "ts": 1780388041557,
+        "ageMs": 6993010633,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.792,
+        "stress": 0.07,
+        "x": 944,
+        "y": 28
+      },
+      {
+        "ts": 1780388045148,
+        "ageMs": 6993014223,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.661,
+        "stress": 0.07,
+        "x": 965,
+        "y": 27
+      },
+      {
+        "ts": 1780388048815,
+        "ageMs": 6993017892,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.508,
+        "stress": 0.07,
+        "x": 912,
+        "y": 17
+      },
+      {
+        "ts": 1780388052643,
+        "ageMs": 6993021719,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.51,
+        "stress": 0.07,
+        "x": 903,
+        "y": 17
+      },
+      {
+        "ts": 1780388056374,
+        "ageMs": 6993025451,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.386,
+        "stress": 0.07,
+        "x": 962,
+        "y": 17
+      },
+      {
+        "ts": 1780388060121,
+        "ageMs": 6993029198,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.949,
+        "stress": 0.07,
+        "x": 958,
+        "y": 89
+      },
+      {
+        "ts": 1780388063866,
+        "ageMs": 6993032943,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.969,
+        "stress": 0.07,
+        "x": 952,
+        "y": 118
+      },
+      {
+        "ts": 1780388067713,
+        "ageMs": 6993036789,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.996,
+        "stress": 0.07,
+        "x": 945,
+        "y": 134
+      },
+      {
+        "ts": 1780388071450,
+        "ageMs": 6993040526,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.818,
+        "stress": 0.07,
+        "x": 947,
+        "y": 55
+      },
+      {
+        "ts": 1780388075188,
+        "ageMs": 6993044263,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.807,
+        "stress": 0.07,
+        "x": 932,
+        "y": 34
+      },
+      {
+        "ts": 1780388078904,
+        "ageMs": 6993047980,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.811,
+        "stress": 0.07,
+        "x": 956,
+        "y": 19
+      },
+      {
+        "ts": 1780388082740,
+        "ageMs": 6993051816,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.521,
+        "stress": 0.07,
+        "x": 929,
+        "y": 17
+      },
+      {
+        "ts": 1780388086502,
+        "ageMs": 6993055578,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.402,
+        "stress": 0.07,
+        "x": 963,
+        "y": 18
+      },
+      {
+        "ts": 1780388090300,
+        "ageMs": 6993059376,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.521,
+        "stress": 0.07,
+        "x": 959,
+        "y": 18
+      },
+      {
+        "ts": 1780388094025,
+        "ageMs": 6993063101,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.957,
+        "stress": 0.07,
+        "x": 963,
+        "y": 97
+      },
+      {
+        "ts": 1780388097840,
+        "ageMs": 6993066917,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.991,
+        "stress": 0.07,
+        "x": 954,
+        "y": 91
+      },
+      {
+        "ts": 1780388101581,
+        "ageMs": 6993070657,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.07,
+        "stress": 0.07,
+        "x": 964,
+        "y": 60
+      },
+      {
+        "ts": 1780388105209,
+        "ageMs": 6993074285,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.796,
+        "stress": 0.07,
+        "x": 937,
+        "y": 19
+      },
+      {
+        "ts": 1780388108792,
+        "ageMs": 6993077869,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.784,
+        "stress": 0.07,
+        "x": 913,
+        "y": 42
+      },
+      {
+        "ts": 1780388112402,
+        "ageMs": 6993081478,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.771,
+        "stress": 0.07,
+        "x": 886,
+        "y": 26
+      },
+      {
+        "ts": 1780388116051,
+        "ageMs": 6993085127,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.455,
+        "stress": 0.07,
+        "x": 825,
+        "y": 17
+      },
+      {
+        "ts": 1780388119704,
+        "ageMs": 6993088780,
+        "phase": "juvenile",
+        "state": 10452,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.415,
+        "stress": 0.07,
+        "x": 794,
+        "y": 17
+      },
+      {
+        "ts": 1780388123428,
+        "ageMs": 6993092505,
+        "phase": "juvenile",
+        "state": 10452,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.392,
+        "stress": 0.07,
+        "x": 765,
+        "y": 17
+      },
+      {
+        "ts": 1780388127390,
+        "ageMs": 6993096467,
+        "phase": "juvenile",
+        "state": 10452,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.663,
+        "stress": 0.07,
+        "x": 793,
+        "y": 71
+      },
+      {
+        "ts": 1780388131051,
+        "ageMs": 6993100128,
+        "phase": "juvenile",
+        "state": 10452,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.13,
+        "stress": 0.07,
+        "x": 864,
+        "y": 61
+      },
+      {
+        "ts": 1780388134669,
+        "ageMs": 6993103745,
+        "phase": "juvenile",
+        "state": 12609,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.245,
+        "stress": 0.07,
+        "x": 947,
+        "y": 57
+      },
+      {
+        "ts": 1780388138408,
+        "ageMs": 6993107485,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.88,
+        "stress": 0.07,
+        "x": 930,
+        "y": 19
+      },
+      {
+        "ts": 1780388142048,
+        "ageMs": 6993111125,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 1.039,
+        "stress": 0.07,
+        "x": 934,
+        "y": 36
+      },
+      {
+        "ts": 1780388146110,
+        "ageMs": 6993115185,
+        "phase": "juvenile",
+        "state": 12609,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.814,
+        "stress": 0.07,
+        "x": 961,
+        "y": 31
+      },
+      {
+        "ts": 1780388149773,
+        "ageMs": 6993118849,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.458,
+        "stress": 0.07,
+        "x": 985,
+        "y": 56
+      },
+      {
+        "ts": 1780388153568,
+        "ageMs": 6993122644,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.537,
+        "stress": 0.07,
+        "x": 927,
+        "y": 17
+      },
+      {
+        "ts": 1780388157228,
+        "ageMs": 6993126304,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.455,
+        "stress": 0.07,
+        "x": 822,
+        "y": 17
+      },
+      {
+        "ts": 1780388160918,
+        "ageMs": 6993129995,
+        "phase": "juvenile",
+        "state": 10455,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.211,
+        "stress": 0.07,
+        "x": 853,
+        "y": 71
+      },
+      {
+        "ts": 1780388164698,
+        "ageMs": 6993133774,
+        "phase": "juvenile",
+        "state": 12609,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.195,
+        "stress": 0.07,
+        "x": 941,
+        "y": 84
+      },
+      {
+        "ts": 1780388168315,
+        "ageMs": 6993137391,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 0,
+        "exp": 1,
+        "reward": 1.081,
+        "stress": 0.07,
+        "x": 966,
+        "y": 111
+      },
+      {
+        "ts": 1780388171932,
+        "ageMs": 6993141008,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.848,
+        "stress": 0.07,
+        "x": 981,
+        "y": 17
+      },
+      {
+        "ts": 1780388175561,
+        "ageMs": 6993144636,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.873,
+        "stress": 0.07,
+        "x": 971,
+        "y": 48
+      },
+      {
+        "ts": 1780388179176,
+        "ageMs": 6993148253,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 6,
+        "exp": 1,
+        "reward": 0.889,
+        "stress": 0.07,
+        "x": 933,
+        "y": 19
+      },
+      {
+        "ts": 1780388182807,
+        "ageMs": 6993151883,
+        "phase": "juvenile",
+        "state": 12612,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.537,
+        "stress": 0.07,
+        "x": 821,
+        "y": 18
+      },
+      {
+        "ts": 1780388186452,
+        "ageMs": 6993155528,
+        "phase": "juvenile",
+        "state": 10455,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.392,
+        "stress": 0.07,
+        "x": 713,
+        "y": 17
+      },
+      {
+        "ts": 1780388190097,
+        "ageMs": 6993159174,
+        "phase": "juvenile",
+        "state": 10455,
+        "mood": 4,
+        "exp": 1,
+        "reward": 0.364,
+        "stress": 0.07,
+        "x": 649,
+        "y": 18
+      },
+      {
+        "ts": 1780388194461,
+        "ageMs": 6993163537,
+        "phase": "juvenile",
+        "state": 10452,
+        "mood": 0,
+        "exp": 1,
+        "reward": 0.664,
+        "stress": 0.07,
+        "x": 646,
+        "y": 86
       }
     ],
     "dailyAggregates": [
@@ -10445,6 +11441,43 @@
         "qtableSize": 229,
         "baselineMode": "off",
         "season": "summer"
+      },
+      {
+        "day": "2026-06-02",
+        "ageMs": 6993165264,
+        "phase": "juvenile",
+        "moodDist": [
+          50,
+          0,
+          3,
+          2,
+          49,
+          3,
+          46
+        ],
+        "avgReward": 0.661,
+        "explorationRate": 0.935,
+        "entropy": 1.879,
+        "lzc": 15,
+        "qhash": 431.87,
+        "decisions": 153,
+        "totalReward": 101.08,
+        "personality": [
+          0.8697916062449705,
+          0,
+          0.2598717488324019,
+          1,
+          0.5527647618130754,
+          0.9483281604809083,
+          0.8277233383163541
+        ],
+        "dominantTrait": "calm",
+        "avgQDelta": 2.027,
+        "policyStability": 0.98,
+        "cumulativeReward": 36.98,
+        "qtableSize": 232,
+        "baselineMode": "off",
+        "season": "summer"
       }
     ],
     "milestones": [
@@ -14432,23 +15465,31 @@
   "placeMemory": [
     [
       "5,2",
-      -0.606
+      -0.5195
     ],
     [
       "7,0",
-      0.0878
+      0.0753
     ],
     [
       "6,0",
-      0.088
+      0.0754
     ],
     [
       "5,0",
-      3.4769
+      2.9802
     ],
     [
       "4,0",
-      2.436
+      4.5343
+    ],
+    [
+      "3,0",
+      4.3837
+    ],
+    [
+      "2,0",
+      0.2988
     ]
   ],
   "visitProfile": {
@@ -14465,18 +15506,18 @@
     "other": 0
   },
   "socialStats": {
-    "avgStress": 0.071,
-    "dominantMood": "exploring",
+    "avgStress": 0.074,
+    "dominantMood": "curious",
     "personality": [
-      0.5774410041623045,
+      0.8697916062449705,
       0,
       0.2598717488324019,
       1,
-      0.4330507564979477,
+      0.5527647618130754,
       0.9483281604809083,
-      0.5091854030072405
+      0.8277233383163541
     ],
-    "entropy": 2.064,
+    "entropy": 1.879,
     "season": "summer",
     "offspring": 0
   }
