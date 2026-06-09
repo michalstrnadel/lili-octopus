@@ -1,7 +1,7 @@
 {
   "format": "lili_state_v2",
   "stateVersion": 2,
-  "lastSync": "2026-06-09T12:11:40.049Z",
+  "lastSync": "2026-06-09T13:12:33.493Z",
   "metadata": {
     "genesis": 1773395030923,
     "visits": 135,
@@ -11,8 +11,8 @@
     "phaseProgress": 0.9750316633162768,
     "mood": "idle",
     "psychosom": {
-      "s": 0.3,
-      "r": 0
+      "s": 0.2785,
+      "r": null
     }
   },
   "brain": {
@@ -12402,6 +12402,43 @@
         "dominantTrait": "curious",
         "avgQDelta": 0,
         "policyStability": 0.974,
+        "cumulativeReward": null,
+        "qtableSize": 216,
+        "baselineMode": "off",
+        "season": "summer"
+      },
+      {
+        "day": "2026-06-09",
+        "ageMs": 7612047914,
+        "phase": "juvenile",
+        "moodDist": [
+          21,
+          1,
+          3,
+          4,
+          20,
+          162,
+          21
+        ],
+        "avgReward": null,
+        "explorationRate": 0.754,
+        "entropy": 1.51,
+        "lzc": 15,
+        "qhash": null,
+        "decisions": 232,
+        "totalReward": null,
+        "personality": [
+          null,
+          0,
+          1,
+          null,
+          null,
+          null,
+          null
+        ],
+        "dominantTrait": "curious",
+        "avgQDelta": 0,
+        "policyStability": 1,
         "cumulativeReward": null,
         "qtableSize": 216,
         "baselineMode": "off",
